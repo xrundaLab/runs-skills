@@ -19,6 +19,7 @@ const req = { required: true };
 
 /** tts / infographic / immersive_explanation 共用音色表；不在表内只告警，不阻断。 */
 export const VOICE_VALUES = [
+  'zh_female_yingyujiaoxue_uranus_bigtts',
   'S_HJjtPNs22',
   'zh-CN-XiaoxiaoMultilingualNeural',
   'zh-CN-XiaoxiaoNeural',

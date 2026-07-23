@@ -153,7 +153,7 @@
 
 **voice**（`tts` / `infographic` / `immersive_explanation` 共用）
 
-`S_HJjtPNs22`（李晶晶克隆音色，默认）· `zh-CN-XiaoxiaoNeural` · `zh-CN-XiaoxiaoMultilingualNeural` · `zh-CN-YunyeNeural` · `zh-CN-YunyangNeural` · `zh-CN-YunzeNeural` · `zh-CN-YunfanMultilingualNeural` · `zh-CN-YunjianNeural` · `en-US-EmmaMultilingualNeural` · `en-US-AndrewMultilingualNeural`
+`S_HJjtPNs22`· `zh-CN-XiaoxiaoNeural` · `zh-CN-XiaoxiaoMultilingualNeural` · `zh-CN-YunyeNeural` · `zh-CN-YunyangNeural` · `zh-CN-YunzeNeural` · `zh-CN-YunfanMultilingualNeural` · `zh-CN-YunjianNeural` · `en-US-EmmaMultilingualNeural` · `en-US-AndrewMultilingualNeural` `zh_female_yingyujiaoxue_uranus_bigtts`
 
 **rate**：`default`（默认）· `x-slow` · `slow` · `medium` · `fast` · `x-fast`
 

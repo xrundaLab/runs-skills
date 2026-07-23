@@ -19,7 +19,7 @@
 ```json
 {
   "version": 1,
-  "baseUrl": "https://web.dev.xruns.cn/api/",
+  "baseUrl": "https://api.dev.xruns.cn/api/",
   "assets": {
     "images/step-1.png": {
       "key": "images/step-1.png",
