@@ -31,12 +31,18 @@ import {
   validatePageData,
 } from './lib/validate.mjs';
 import {
+  DEFAULT_BASE_URL,
+  DEFAULT_WEB_URL,
   buildCommitPayload,
+  getRuntimeConfig,
   guessMimeType,
   inferFileCategory,
+  maskToken,
+  missingTokenMessage,
   normalizeBaseUrl,
   buildCoursewareUrl,
 } from './lib/client.mjs';
+import { envFileCandidates, parseEnvFile, resetEnvCache } from './lib/env.mjs';
 
 const validDoc = () => ({
   title: '示例课程',
@@ -388,6 +394,82 @@ test('normalizeBaseUrl 自动补 /api/ 并避免重复', () => {
 test('buildCoursewareUrl 在无 coursewareId 时返回空串', () => {
   assert.equal(buildCoursewareUrl({ siteUrl: 'https://web.dev.xruns.cn/api/', coursewareId: 'cw1' }), 'https://web.dev.xruns.cn/creator/cw1');
   assert.equal(buildCoursewareUrl({ coursewareId: '' }), '');
+});
+
+test('buildCoursewareUrl 默认走 web 站点而非接口网关', () => {
+  assert.equal(buildCoursewareUrl({ coursewareId: 'cw1' }), 'https://web.dev.xruns.cn/creator/cw1');
+  assert.equal(DEFAULT_BASE_URL, 'https://api.dev.xruns.cn/api/');
+  assert.equal(DEFAULT_WEB_URL, 'https://web.dev.xruns.cn/');
+});
+
+// ---- 配置与 .env ----
+
+test('parseEnvFile 支持 export、引号与行尾注释', () => {
+  const parsed = parseEnvFile([
+    '# 注释行',
+    '',
+    'export XRUNS_COURSEWARE_TOKEN="abc123"',
+    "XRUNS_COURSEWARE_WEB_URL='https://web.dev.xruns.cn/'",
+    'XRUNS_COURSEWARE_BASE_URL=https://api.dev.xruns.cn/api/ # 网关',
+    '不是键值对',
+    '=空键',
+  ].join('\n'));
+
+  assert.deepEqual(parsed, {
+    XRUNS_COURSEWARE_TOKEN: 'abc123',
+    XRUNS_COURSEWARE_WEB_URL: 'https://web.dev.xruns.cn/',
+    XRUNS_COURSEWARE_BASE_URL: 'https://api.dev.xruns.cn/api/',
+  });
+});
+
+test('envFileCandidates 按显式 > cwd > 技能目录 排序且去重', () => {
+  const candidates = envFileCandidates({ cwd: '/work', skillDir: '/repo/skills/runs-page-data', explicit: '/custom.env' });
+  assert.equal(candidates[0], '/custom.env');
+  assert.equal(candidates[1], '/work/.env');
+  assert.equal(candidates[2], '/repo/skills/runs-page-data/.env');
+  assert.equal(candidates[3], '/repo/.env');
+  assert.equal(new Set(candidates).size, candidates.length);
+});
+
+test('getRuntimeConfig 按 参数 > 环境变量 > 默认值 取值', () => {
+  resetEnvCache();
+  const saved = { ...process.env };
+  process.env.XRUNS_COURSEWARE_TOKEN = 'env-token';
+  process.env.XRUNS_COURSEWARE_WEB_URL = 'https://web.example.com';
+  delete process.env.XRUNS_COURSEWARE_BASE_URL;
+  delete process.env.XRUNS_BASE_URL;
+  try {
+    const fromEnv = getRuntimeConfig({});
+    assert.equal(fromEnv.token, 'env-token');
+    assert.equal(fromEnv.webUrl, 'https://web.example.com/');
+    assert.equal(fromEnv.baseUrl, DEFAULT_BASE_URL);
+    // siteUrl 是 webUrl 的别名，不再从网关地址反推
+    assert.equal(fromEnv.siteUrl, fromEnv.webUrl);
+
+    const fromArgs = getRuntimeConfig({ token: 'arg-token', 'web-url': 'https://web.other.com' });
+    assert.equal(fromArgs.token, 'arg-token');
+    assert.equal(fromArgs.webUrl, 'https://web.other.com/');
+    assert.equal(fromArgs.envSources.XRUNS_COURSEWARE_TOKEN, '命令行参数');
+    assert.equal(fromArgs.envSources.XRUNS_COURSEWARE_WEB_URL, '命令行参数');
+  } finally {
+    process.env = saved;
+    resetEnvCache();
+  }
+});
+
+test('maskToken 不泄漏完整凭证', () => {
+  assert.equal(maskToken(''), '(未设置)');
+  assert.equal(maskToken('short'), 'sh****');
+  const masked = maskToken('Bearer abcdefghijklmnopqrstuvwxyz');
+  assert.ok(!masked.includes('abcdefghijklmnopqrstuvwxyz'));
+  assert.ok(masked.startsWith('abcdef'));
+});
+
+test('missingTokenMessage 指向 web 站点与 .env 写入位置', () => {
+  const message = missingTokenMessage({ webUrl: 'https://web.dev.xruns.cn/', envFiles: ['/repo/.env'] });
+  assert.ok(message.includes('https://web.dev.xruns.cn/'));
+  assert.ok(message.includes('/repo/.env'));
+  assert.ok(message.includes('XRUNS_COURSEWARE_TOKEN'));
 });
 
 test('guessMimeType 与 inferFileCategory 覆盖图片音频视频', () => {

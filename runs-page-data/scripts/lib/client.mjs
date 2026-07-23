@@ -7,7 +7,12 @@
 import { readFile } from 'node:fs/promises';
 import { basename, extname } from 'node:path';
 
-export const DEFAULT_BASE_URL = 'https://web.dev.xruns.cn';
+import { loadEnvFiles } from './env.mjs';
+
+/** 接口网关；.env 里的 XRUNS_COURSEWARE_BASE_URL 覆盖它。 */
+export const DEFAULT_BASE_URL = 'https://api.dev.xruns.cn/api/';
+/** 智课端站点，用于登录取 token 和拼课件预览链接；与网关是两个域名，不能互相推导。 */
+export const DEFAULT_WEB_URL = 'https://web.dev.xruns.cn/';
 export const DEFAULT_CLIENT_ID = '428a8310cd442757ae699df5d894f051';
 
 /** 上传凭证有效期只有 60s，因此每个文件都在上传前现取凭证，不做批量预取。 */
@@ -80,29 +85,65 @@ export function normalizeBaseUrl(input) {
 }
 
 export function normalizeSiteUrl(input) {
-  const raw = input || DEFAULT_BASE_URL;
+  const raw = input || DEFAULT_WEB_URL;
   const withoutApi = raw.replace(/\/api\/?$/i, '').replace(/\/api\/.*$/i, '');
   return withoutApi.endsWith('/') ? withoutApi : `${withoutApi}/`;
 }
 
-export function buildCoursewareUrl({ siteUrl = DEFAULT_BASE_URL, coursewareId }) {
+export function buildCoursewareUrl({ siteUrl = DEFAULT_WEB_URL, coursewareId }) {
   if (!coursewareId) return '';
   return `${normalizeSiteUrl(siteUrl)}creator/${encodeURIComponent(coursewareId)}`;
 }
 
+/**
+ * 配置优先级：命令行参数 > 真实环境变量 > .env 文件 > 内置默认值。
+ * 调用即触发 .env 加载，因此所有命令拿到的都是同一份解析结果。
+ */
 export function getRuntimeConfig(args = {}) {
+  const env = loadEnvFiles();
+  const webUrl = normalizeSiteUrl(
+    args['web-url'] || process.env.XRUNS_COURSEWARE_WEB_URL || process.env.XRUNS_WEB_URL || DEFAULT_WEB_URL,
+  );
+  // 命令行传入时来源要盖掉 .env，否则 config 回显会指错地方
+  const envSources = { ...env.sources };
+  if (args['base-url']) envSources.XRUNS_COURSEWARE_BASE_URL = '命令行参数';
+  if (args['web-url']) envSources.XRUNS_COURSEWARE_WEB_URL = '命令行参数';
+  if (args.token) envSources.XRUNS_COURSEWARE_TOKEN = '命令行参数';
   return {
     baseUrl: normalizeBaseUrl(
       args['base-url'] || process.env.XRUNS_COURSEWARE_BASE_URL || process.env.XRUNS_BASE_URL,
     ),
-    siteUrl: normalizeSiteUrl(
-      args['base-url'] || process.env.XRUNS_COURSEWARE_BASE_URL || process.env.XRUNS_BASE_URL,
-    ),
+    webUrl,
+    // 兼容旧字段名：预览链接一律走 webUrl，不再从网关地址反推
+    siteUrl: webUrl,
     token: args.token || process.env.XRUNS_COURSEWARE_TOKEN || process.env.XRUNS_TOKEN || '',
     clientId: args.clientid || args['client-id'] || process.env.XRUNS_COURSEWARE_CLIENT_ID || DEFAULT_CLIENT_ID,
     username: args.username || process.env.XRUNS_COURSEWARE_USERNAME || process.env.XRUNS_USERNAME || '',
     password: args.password || process.env.XRUNS_COURSEWARE_PASSWORD || process.env.XRUNS_PASSWORD || '',
+    envFiles: env.files,
+    envSources,
   };
+}
+
+/** token 只回显首尾，避免日志 / 对话里泄漏完整凭证。 */
+export function maskToken(token) {
+  if (!token) return '(未设置)';
+  const bare = token.replace(/^Bearer\s+/i, '');
+  if (bare.length <= 12) return `${bare.slice(0, 2)}****`;
+  return `${bare.slice(0, 6)}****${bare.slice(-4)}（${bare.length} 字符）`;
+}
+
+/** 缺 token 时统一的引导文案：先说去哪拿，再说写到哪。 */
+export function missingTokenMessage(config = {}) {
+  const webUrl = config.webUrl || DEFAULT_WEB_URL;
+  const target = config.envFiles?.[0] || '技能目录下的 .env';
+  return [
+    '缺少 XRUNS_COURSEWARE_TOKEN。',
+    `获取方式：浏览器打开 ${webUrl} 登录智课端，`,
+    'DevTools → Application → Local Storage 复制 access token（或 Network 面板任一请求的 Authorization 头，去掉 Bearer 前缀）。',
+    `然后写入 ${target}：XRUNS_COURSEWARE_TOKEN=<token>`,
+    '（也可临时用 --token 传入，或设置 XRUNS_COURSEWARE_USERNAME/XRUNS_COURSEWARE_PASSWORD 由脚本登录换取。）',
+  ].join('\n');
 }
 
 export function buildHeaders({ token, clientId }, headers = {}) {
@@ -149,9 +190,7 @@ export async function resolveToken(config) {
   if (config.token) return config.token;
   if (cachedAccessToken) return cachedAccessToken;
   if (!config.username || !config.password) {
-    throw new Error(
-      '缺少 token：请传 --token，设置 XRUNS_COURSEWARE_TOKEN，或设置 XRUNS_COURSEWARE_USERNAME/XRUNS_COURSEWARE_PASSWORD',
-    );
+    throw new Error(missingTokenMessage(config));
   }
 
   const response = await fetch(`${config.baseUrl}v1/user/auth/web/passwordLogin`, {

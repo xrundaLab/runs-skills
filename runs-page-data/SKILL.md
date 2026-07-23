@@ -1,8 +1,8 @@
 ---
 name: runs-page-data
 description: 当需要把本地图片 / 音频 / 视频上传到 RunS 服务，或需要编排、校验、提交智课端页面 JSON（顶层 pages[] 导入结构）时使用。覆盖素材上传、资产清单、占位符替换、组件结构校验与课件任务提交。
-version: 1.0.0
-metadata: {"requires":{"bins":["node"]},"env":["XRUNS_COURSEWARE_BASE_URL","XRUNS_COURSEWARE_TOKEN"]}
+version: 2.1.0
+metadata: {"requires":{"bins":["node"]},"env":["XRUNS_COURSEWARE_BASE_URL","XRUNS_COURSEWARE_WEB_URL","XRUNS_COURSEWARE_TOKEN"]}
 ---
 
 # RunS 页面数据编排
@@ -13,6 +13,8 @@ metadata: {"requires":{"bins":["node"]},"env":["XRUNS_COURSEWARE_BASE_URL","XRUN
 
 ### 禁止（NEVER）
 
+- **不要把 token 明文写进对话回复、页面 JSON、报告或任何会提交的文件**。token 只落在 `.env`（已被 `.gitignore` 忽略），回显一律用掩码。
+- **不要在命令行里长期硬编码 `--token` / `--base-url` / `--web-url`**。用户在对话里给了这三个值，就写进 `.env` 一次性固化，后续命令不再重复传参。
 - **不要把本地路径、`file://`、`@asset:` 写进最终提交的 JSON**。所有媒体字段必须是上传后的 `public_url`；提交前 `pages:validate` 会拦截残留引用。
 - **不要自己拼 `object_key` / `public_url`**。这两个值只能取上传凭证接口的返回，本地拼接会被服务端前缀校验拒绝（`object_key is not allowed for current user`）。
 - **不要把 page 级组件和其他组件放在同一页**。page 级组件独占整页，混放会被前端渲染规则判为非法。
@@ -22,6 +24,7 @@ metadata: {"requires":{"bins":["node"]},"env":["XRUNS_COURSEWARE_BASE_URL","XRUN
 
 ### 必须（MUST）
 
+- **任何写操作之前先跑 `pagedata.mjs config`**，确认 token / 网关 / 预览站点三项都已就位再动手；缺 token 就按下面的「配置」引导用户补齐，不要盲目重试。
 - 流程固定为 **上传素材 → 解析占位符 → 校验 → 提交**，每步产物落盘，任何一步失败都不进入下一步。
 - 素材上传与页面 JSON 编排必须共用同一份资产清单（默认 `assets.manifest.json`）。
 - 无组件页（`components: []`）必须提供 `prompt`，否则该页没有任何可生成内容。
@@ -35,6 +38,7 @@ metadata: {"requires":{"bins":["node"]},"env":["XRUNS_COURSEWARE_BASE_URL","XRUN
 
 | 场景 | 命令 |
 |------|------|
+| 查看生效配置与来源（不发请求） | `pagedata.mjs config` |
 | 验证 token / 网关连通 | `pagedata.mjs ping` |
 | 批量上传图片、音频、视频、字幕 | `pagedata.mjs assets:upload` |
 | 把 JSON 里的本地引用换成线上地址 | `pagedata.mjs pages:resolve` |
@@ -49,19 +53,46 @@ metadata: {"requires":{"bins":["node"]},"env":["XRUNS_COURSEWARE_BASE_URL","XRUN
 
 ---
 
-## 鉴权
+## 配置
 
-与 `scripts/runs-courseware/cli.mjs` 共用同一套环境变量：
+三项配置全部走 `.env`，用户说一次即可长期生效，不必每轮对话重复。
+
+| 变量 | 含义 | 默认值 |
+|------|------|--------|
+| `XRUNS_COURSEWARE_BASE_URL` | 接口网关（脚本自动补 `/api/`） | `https://api.dev.xruns.cn/api/` |
+| `XRUNS_COURSEWARE_WEB_URL` | 智课端站点：登录取 token 的地方，也用来拼课件预览链接 | `https://web.dev.xruns.cn/` |
+| `XRUNS_COURSEWARE_TOKEN` | access token | **空，必填** |
+| `XRUNS_COURSEWARE_USERNAME` / `_PASSWORD` | 可选，无 token 时登录换取 | 空 |
+
+**优先级**：命令行参数 > 环境变量 > `.env` > 内置默认值。
+**`.env` 查找顺序**：`$XRUNS_ENV_FILE` → `./.env` → `<技能目录>/.env` → `<仓库根>/.env`；先找到的先生效，只读 `XRUNS_` 前缀的键，已存在的真实环境变量不会被覆盖。
+
+### 首次配置
 
 ```bash
-export XRUNS_COURSEWARE_BASE_URL="https://web.dev.xruns.cn"   # 站点域名即可，脚本自动补 /api/
-export XRUNS_COURSEWARE_TOKEN="智课端登录态里的 access token"
-# 或者用账号密码，脚本运行时登录换取 token
-export XRUNS_COURSEWARE_USERNAME="账号"
-export XRUNS_COURSEWARE_PASSWORD="密码"
+cp .agents/skills/runs-page-data/.env.example .agents/skills/runs-page-data/.env
+# 编辑 .env，填入 XRUNS_COURSEWARE_TOKEN
+node .agents/skills/runs-page-data/scripts/pagedata.mjs config   # 看生效值与来源（token 掩码显示）
+node .agents/skills/runs-page-data/scripts/pagedata.mjs ping     # 验证连通性
 ```
 
-先跑 `node .agents/skills/runs-page-data/scripts/pagedata.mjs ping` 确认可用，再做任何写操作。
+### 处理用户输入的三个值
+
+- 用户在对话里给出 token / 网关地址 / 预览站点中的任意一个 → **先写进 `.env` 的对应键**（其余键保持已有值），再跑 `config` 回显确认，然后继续原任务。不要只用 `--token` 之类的临时参数把当前这条命令跑通。
+- 用户只给了「预览链接」形式的地址（如 `https://web.dev.xruns.cn/creator/xxx`）→ 取其站点根写进 `XRUNS_COURSEWARE_WEB_URL`，不要把课件路径一起写进去。
+- 用户没提但 `config` 显示缺 token → 停下来引导：**打开 `XRUNS_COURSEWARE_WEB_URL`（默认 https://web.dev.xruns.cn/ ）登录，DevTools → Application → Local Storage 复制 access token，或从 Network 面板任一请求的 `Authorization` 头去掉 `Bearer ` 前缀。** 拿到后由你写入 `.env`，不要让用户在对话里反复粘贴。
+- 回显 token 一律掩码（`config` 命令已经这么做），不要在回复里贴完整值。
+
+### 临时覆盖
+
+一次性换环境（例如临时打生产）用命令行参数，不落盘：
+
+```bash
+node .agents/skills/runs-page-data/scripts/pagedata.mjs ping \
+  --base-url https://api.xruns.cn/api/ --web-url https://web.xruns.cn/ --token <token>
+```
+
+或指定另一份配置文件：`XRUNS_ENV_FILE=./prod.env node ... pagedata.mjs ping`。
 
 ---
 
@@ -129,6 +160,8 @@ node .agents/skills/runs-page-data/scripts/pagedata.mjs pages:submit ./page.reso
   --template-id <templateId> --yes --watch --report ./report.csv
 ```
 
+提交成功后脚本会打印 `预览链接：<XRUNS_COURSEWARE_WEB_URL>creator/<coursewareId>`，报告里也有 `coursewareUrl` 一列。**报告结果时把这个链接原样给用户**；链接域名取自 `XRUNS_COURSEWARE_WEB_URL`，不要自己拼或从网关地址推导。
+
 两种提交模式：
 
 | 模式 | 参数 | 请求体 | 适用 |
@@ -155,7 +188,7 @@ node scripts/runs-courseware/cli.mjs tasks:create --template-id <id> --direct ./
 | page 级组件 | `course_intro` / `course_task` / `course_summary` / `image_save` / `infographic` / `immersive_explanation` / `select_question` / `galaxy_select_question` / `matching_question` / `ordering_question` / `categorization_question` —— 每页只能有一个，且不能与其他组件同页 |
 | block 级组件 | `text` / `rich_text` / `image` / `video` / `avatar` / `tts` / `podcast` / `word_card` / `learning_report` —— 可同页组合 |
 | 音频是否重生 | `tts_url` / `url` 已填 → 保留；留空且 `tts_text` 非空 → media worker 调 TTS 生成 |
-| 默认音色 | `S_HJjtPNs22`（李晶晶克隆音色） |
+| 默认音色 | `zh_female_yingyujiaoxue_uranus_bigtts` |
 
 ---
 

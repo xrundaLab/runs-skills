@@ -14,6 +14,7 @@ import { fileURLToPath } from 'node:url';
 
 import {
   DEFAULT_BASE_URL,
+  DEFAULT_WEB_URL,
   buildCoursewareUrl,
   getFlowTask,
   getRuntimeConfig,
@@ -21,6 +22,8 @@ import {
   fetchComponentDetail,
   fetchTemplateComponents,
   listFlowTasks,
+  maskToken,
+  missingTokenMessage,
   startFlowTask,
   uploadLocalFile,
 } from './lib/client.mjs';
@@ -39,7 +42,9 @@ import { applyAssetResolutions, collectAssetRefs, findResidualLocalRefs } from '
 import { formatReport, validatePageData } from './lib/validate.mjs';
 import { KNOWN_COMPONENT_TYPES, PAGE_LEVEL_TYPES } from './lib/component-spec.mjs';
 
-const COMMANDS = new Set(['ping', 'assets:upload', 'pages:resolve', 'pages:validate', 'pages:submit', 'help']);
+const COMMANDS = new Set([
+  'config', 'ping', 'assets:upload', 'pages:resolve', 'pages:validate', 'pages:submit', 'help',
+]);
 const BOOLEAN_FLAGS = new Set([
   'allow-unknown', 'as-file', 'dry-run', 'force', 'help', 'no-upload', 'strict', 'watch', 'yes',
 ]);
@@ -579,21 +584,60 @@ async function handlePagesSubmit(args) {
     fsFileId: fsFileId ?? '',
     status: finalTask?.status || task.status,
     coursewareId,
-    coursewareUrl: buildCoursewareUrl({ siteUrl: config.siteUrl, coursewareId }),
+    coursewareUrl: buildCoursewareUrl({ siteUrl: config.webUrl, coursewareId }),
     failedStage: finalTask?.failedStage || '',
     error: finalTask?.error || '',
   };
   console.log(JSON.stringify(row, null, 2));
+  if (row.coursewareUrl) console.log(`预览链接：${row.coursewareUrl}`);
   if (options.report) {
     await writeReport(resolvePath(options.report), [row]);
     console.log(`报告已写出：${resolvePath(options.report)}`);
   }
 }
 
+/** 打印生效配置及其来源，不发任何请求。 */
+function printConfig(config) {
+  const source = (key) => {
+    const from = config.envSources?.[key];
+    if (!from) return '默认值';
+    return from === 'environment' ? '环境变量' : from;
+  };
+  console.log(
+    config.envFiles.length > 0
+      ? `.env：${config.envFiles.join('、')}`
+      : '.env：未找到（可复制技能目录下的 .env.example）',
+  );
+  console.log(`网关地址 XRUNS_COURSEWARE_BASE_URL = ${config.baseUrl}（来源：${source('XRUNS_COURSEWARE_BASE_URL')}）`);
+  console.log(`预览站点 XRUNS_COURSEWARE_WEB_URL  = ${config.webUrl}（来源：${source('XRUNS_COURSEWARE_WEB_URL')}）`);
+  console.log(
+    config.token
+      ? `访问令牌 XRUNS_COURSEWARE_TOKEN    = ${maskToken(config.token)}（来源：${source('XRUNS_COURSEWARE_TOKEN')}）`
+      : '访问令牌 XRUNS_COURSEWARE_TOKEN    = (未设置)',
+  );
+  if (config.username) console.log(`兜底账号 XRUNS_COURSEWARE_USERNAME = ${config.username}`);
+}
+
+async function handleConfig(args) {
+  const config = getRuntimeConfig(args);
+  printConfig(config);
+  if (!config.token && !(config.username && config.password)) {
+    console.log('');
+    console.log(missingTokenMessage(config));
+    process.exitCode = 1;
+    return;
+  }
+  console.log('');
+  console.log('配置完整，可执行 ping 验证连通性。');
+}
+
 async function handlePing(args) {
   const config = getRuntimeConfig(args);
+  printConfig(config);
+  if (!config.token && !(config.username && config.password)) {
+    throw new Error(missingTokenMessage(config));
+  }
   const tasks = await listFlowTasks({ page: 1, pageSize: 1 }, config);
-  console.log(`网关：${config.baseUrl}`);
   console.log(`鉴权可用，任务列表返回 ${tasks.length} 条`);
 }
 
@@ -633,13 +677,19 @@ function printHelp() {
     --report <路径>                  写出 .csv / .json 报告
     --force                          校验有错误时仍然提交
 
+  config                             打印生效配置与来源（不发请求）
   ping                               验证 token 与网关连通性
   help                               显示帮助
 
-鉴权（与 scripts/runs-courseware/cli.mjs 共用同一套环境变量）：
-  XRUNS_COURSEWARE_BASE_URL          默认 ${DEFAULT_BASE_URL}
-  XRUNS_COURSEWARE_TOKEN             access token
+配置优先级：命令行参数 > 环境变量 > .env 文件 > 内置默认值
+.env 查找顺序：$XRUNS_ENV_FILE > ./.env > <技能目录>/.env > <仓库根>/.env（只读 XRUNS_ 前缀的键）
+
+  XRUNS_COURSEWARE_BASE_URL          接口网关，默认 ${DEFAULT_BASE_URL}
+  XRUNS_COURSEWARE_WEB_URL           智课端站点（登录取 token / 拼预览链接），默认 ${DEFAULT_WEB_URL}
+  XRUNS_COURSEWARE_TOKEN             access token，必填，登录 ${DEFAULT_WEB_URL} 后从浏览器复制
   XRUNS_COURSEWARE_USERNAME/PASSWORD 无 token 时用账号密码登录换取
+
+对应命令行参数：--base-url / --web-url / --token / --username / --password
 
 已知组件类型（${KNOWN_COMPONENT_TYPES.length} 个）：
   page 级（独占整页）：${PAGE_LEVEL_TYPES.join(' / ')}
@@ -652,6 +702,7 @@ async function main(argv) {
   const command = args._[0] || 'help';
   if (!COMMANDS.has(command)) throw new Error(`未知命令：${command}`);
   if (command === 'help' || args.help) return printHelp();
+  if (command === 'config') return handleConfig(args);
   if (command === 'ping') return handlePing(args);
   if (command === 'assets:upload') return handleAssetsUpload(args);
   if (command === 'pages:resolve') return handlePagesResolve(args);
