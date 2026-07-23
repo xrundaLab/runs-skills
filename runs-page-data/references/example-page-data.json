@@ -1,0 +1,121 @@
+{
+  "title": "示例课：光合作用入门",
+  "description": "用于演示页面 JSON 结构的样例，可直接复制后替换内容",
+  "pages": [
+    {
+      "tag": "课程导入",
+      "title": "课程封面",
+      "summary": "介绍课程主题与核心问题",
+      "components": [
+        {
+          "type": "course_intro",
+          "content": {
+            "packageFigureUrl": "@asset:images/cover.png",
+            "packageName": "自然科学启蒙",
+            "unitName": "第一单元 植物的秘密",
+            "courseNumber": "01",
+            "courseName": "光合作用入门",
+            "coreQuestion": "植物为什么离不开阳光？",
+            "body": "这节课我们一起弄清楚植物是怎么把阳光变成食物的。"
+          },
+          "componentId": "course_intro_demo001_p01"
+        }
+      ]
+    },
+    {
+      "tag": "知识讲解",
+      "title": "信息图讲解",
+      "summary": "用三张信息图讲清光合作用的输入与产物",
+      "components": [
+        {
+          "type": "infographic",
+          "content": [
+            {
+              "img_url": "@asset:images/step-1.png",
+              "img_desc": "叶片吸收阳光的示意图",
+              "tts_text": "植物的叶片像一块小小的太阳能板，负责把阳光收集起来。",
+              "tts_url": "@asset:audio/step-1.mp3",
+              "voice": "S_HJjtPNs22",
+              "is_follow": true
+            },
+            {
+              "img_url": "@asset:images/step-2.png",
+              "img_desc": "根部吸水与叶片吸收二氧化碳",
+              "tts_text": "同时，根从土里吸水，叶子从空气里吸收二氧化碳。",
+              "tts_url": "@asset:audio/step-2.mp3",
+              "voice": "S_HJjtPNs22"
+            },
+            {
+              "img_url": "@asset:images/step-3.png",
+              "img_desc": "生成氧气与养分",
+              "tts_text": "阳光、水和二氧化碳凑齐之后，植物就能造出养分，还会放出氧气。",
+              "tts_url": "@asset:audio/step-3.mp3",
+              "voice": "S_HJjtPNs22"
+            }
+          ],
+          "componentId": "infographic_demo001_p02"
+        }
+      ]
+    },
+    {
+      "tag": "知识讲解",
+      "title": "补充说明",
+      "summary": "文字与口播补充，走 HTML 生成",
+      "prompt": "生成一页图文排版，说明光合作用在清晨和正午的差异，风格清爽。",
+      "components": [
+        {
+          "type": "text",
+          "content": "光照强度不同，光合作用的效率也不同。"
+        },
+        {
+          "type": "tts",
+          "content": {
+            "text": "清晨阳光柔和，正午光照最强，光合作用也最旺盛。",
+            "url": "@asset:audio/extra.mp3",
+            "voice": "S_HJjtPNs22",
+            "rate": "default",
+            "volume": "100",
+            "is_follow": false
+          },
+          "componentId": "tts_demo001_p03"
+        }
+      ]
+    },
+    {
+      "tag": "小练习",
+      "title": "随堂检测",
+      "summary": "两道单选题检查理解",
+      "components": [
+        {
+          "type": "galaxy_select_question",
+          "content": {
+            "questions": [
+              {
+                "question": "光合作用需要下面哪一样？",
+                "options": [
+                  { "text": "阳光" },
+                  { "text": "月光" },
+                  { "text": "灯泡的热量" },
+                  { "text": "以上都不需要" }
+                ],
+                "isMultiple": false,
+                "answerIndex": [0],
+                "answer": ["阳光"],
+                "explanation": "光合作用依赖光能，最主要的来源是阳光。"
+              }
+            ],
+            "correctButtonText": "继续"
+          },
+          "componentId": "galaxy_select_question_demo001_p04"
+        }
+      ]
+    },
+    {
+      "tag": "课程总结",
+      "title": "无组件页示例",
+      "summary": "没有组件时必须提供 prompt，交给 AI 生成整页 HTML",
+      "prompt": "生成一页课程小结，用三句话回顾光合作用的原料、条件和产物，配一个鼓励语。",
+      "components": []
+    }
+  ]
+}
