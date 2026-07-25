@@ -70,6 +70,15 @@ creator 的 media worker 只在下列条件下调用 TTS：
 - **想让平台生成** → 只写 `tts_text` / `text`，把 url 留空；
 - **改了文案要重配音** → 置 `tts_needs_regen: true`。
 
+## 课件任务提交
+
+页面数据校验通过后，写操作固定分为两步：
+
+1. `POST v1/business/creator/courseware/create-with-template`，传入 `title` 与 `templateId`，取得 `coursewareId`。
+2. `POST v1/creator/courseware/flow/task`，在原有 `templateId`、`structuredJson` 或 `fsFileId` 基础上携带该 `coursewareId`。
+
+creator 根据 `coursewareId` 重新读取当前用户可访问的课程详情并验证模板，客户端不传 `category`、`prompt` 或 `parsePrompt`。这样课程在 flow worker 排队前已经进入 generation-history，orchestrator 重试也复用同一课程。
+
 ## 排障
 
 | 现象 | 原因 |

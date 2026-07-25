@@ -1,7 +1,6 @@
 ---
 name: runs-page-data
 description: 当需要把本地图片 / 音频 / 视频上传到 RunS 服务，或需要编排、校验、提交智课端页面 JSON（顶层 pages[] 导入结构）时使用。覆盖素材上传、资产清单、占位符替换、组件结构校验与课件任务提交。
-version: 2.1.0
 metadata: {"requires":{"bins":["node"]},"env":["XRUNS_COURSEWARE_BASE_URL","XRUNS_COURSEWARE_WEB_URL","XRUNS_COURSEWARE_TOKEN"]}
 ---
 
@@ -21,6 +20,7 @@ metadata: {"requires":{"bins":["node"]},"env":["XRUNS_COURSEWARE_BASE_URL","XRUN
 - **不要给素材开索引**。图片 / 音频 `should_index` 一律 `false`（脚本默认值），只有需要进知识库检索的文档才开。
 - 不要在没有 `--yes` 的情况下认为已经提交成功；`pages:submit` 不带 `--yes` 只做校验预览。
 - 不要绕过资产清单重复上传同一素材，清单是幂等与可追溯的唯一依据。
+- 不要直接提交缺少 `coursewareId` 的 flow task。脚本必须先调用 `create-with-template` 创建课程，再把返回的 ID 交给 creator 继续处理。
 
 ### 必须（MUST）
 
@@ -30,6 +30,7 @@ metadata: {"requires":{"bins":["node"]},"env":["XRUNS_COURSEWARE_BASE_URL","XRUN
 - 无组件页（`components: []`）必须提供 `prompt`，否则该页没有任何可生成内容。
 - 自带音频时把地址写进对应字段（`tts.content.url` / `infographic[].tts_url` / `immersive_explanation[].tts_url`）；**填了就不会被 media worker 重新生成**，留空才会触发 TTS。
 - 提交前先跑一次 `pages:validate --template-id <id>`，用模板组件白名单确认这些组件在目标模板里确实可用。
+- 提交顺序固定为 **创建模板课程 → 携带 `coursewareId` 创建 flow task**；不要把 `category` / `parsePrompt` 从客户端透传给 creator。
 - 报告结果时如实说明：上传了几个、跳过几个、失败几个，校验有几个错误几个告警。
 
 ---
@@ -162,12 +163,16 @@ node .agents/skills/runs-page-data/scripts/pagedata.mjs pages:submit ./page.reso
 
 提交成功后脚本会打印 `预览链接：<XRUNS_COURSEWARE_WEB_URL>creator/<coursewareId>`，报告里也有 `coursewareUrl` 一列。**报告结果时把这个链接原样给用户**；链接域名取自 `XRUNS_COURSEWARE_WEB_URL`，不要自己拼或从网关地址推导。
 
+实际提交时，脚本先调用 `POST v1/business/creator/courseware/create-with-template` 创建模板课程，再把返回的 `coursewareId` 放进 `POST v1/creator/courseware/flow/task`。creator 会读取该课程的模板、分类和 parsePrompt 后继续解析、建页、媒体与 HTML 流程，不会再次创建课程。
+
+如果课程创建成功但 flow task 提交失败，脚本使用 `FAILED_TO_SUBMIT` 输出并在报告中保留 `fsFileId`、`coursewareId` 和稳定预览链接；排障时复用这些 ID，不要重新创建课程。
+
 两种提交模式：
 
 | 模式 | 参数 | 请求体 | 适用 |
 |------|------|--------|------|
-| 内联结构化 JSON | 默认 | `{ templateId, structuredJson, batchNo }` | 单份页面数据，链路最短 |
-| 上传文件 + 直接解析 | `--as-file` | `{ templateId, fsFileId, direct: true, batchNo }` | 需要留存 JSON 文件、与智课端批量导入入口同一条链路 |
+| 内联结构化 JSON | 默认 | `{ templateId, coursewareId, structuredJson, batchNo }` | 单份页面数据，链路最短 |
+| 上传文件 + 直接解析 | `--as-file` | `{ templateId, coursewareId, fsFileId, direct: true, batchNo }` | 需要留存 JSON 文件、与智课端批量导入入口同一条链路 |
 
 批量导入多份 JSON 时也可以直接复用现成 CLI：
 

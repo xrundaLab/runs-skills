@@ -16,6 +16,7 @@ import {
   DEFAULT_BASE_URL,
   DEFAULT_WEB_URL,
   buildCoursewareUrl,
+  createCoursewareWithTemplate,
   getFlowTask,
   getRuntimeConfig,
   guessMimeType,
@@ -163,12 +164,14 @@ export function buildStructuredJson(doc) {
   };
 }
 
-export function buildStructuredTaskPayload({ templateId, structuredJson, batchNo }) {
-  return { templateId, structuredJson, ...(batchNo ? { batchNo } : {}) };
+export function buildStructuredTaskPayload({ templateId, coursewareId, structuredJson, batchNo }) {
+  if (!coursewareId) throw new Error('创建 flow task 前必须先创建课程并提供 coursewareId');
+  return { templateId, coursewareId, structuredJson, ...(batchNo ? { batchNo } : {}) };
 }
 
-export function buildDirectTaskPayload({ templateId, fsFileId, batchNo }) {
-  return { templateId, fsFileId, direct: true, ...(batchNo ? { batchNo } : {}) };
+export function buildDirectTaskPayload({ templateId, coursewareId, fsFileId, batchNo }) {
+  if (!coursewareId) throw new Error('创建 flow task 前必须先创建课程并提供 coursewareId');
+  return { templateId, coursewareId, fsFileId, direct: true, ...(batchNo ? { batchNo } : {}) };
 }
 
 export function summarizePageData(doc) {
@@ -559,16 +562,55 @@ async function handlePagesSubmit(args) {
   if (options.asFile) {
     const uploaded = await uploadLocalFile(jsonPath, config, { shouldIndex: false });
     fsFileId = uploaded.fileId;
-    payload = buildDirectTaskPayload({ templateId: options.templateId, fsFileId, batchNo });
+  }
+
+  const prepared = await createCoursewareWithTemplate({
+    templateId: options.templateId,
+    title: typeof doc.title === 'string' && doc.title.trim() ? doc.title.trim() : '新课件',
+  }, config);
+  const preparedCoursewareId = prepared.coursewareId;
+
+  if (options.asFile) {
+    payload = buildDirectTaskPayload({
+      templateId: options.templateId,
+      coursewareId: preparedCoursewareId,
+      fsFileId,
+      batchNo,
+    });
   } else {
     payload = buildStructuredTaskPayload({
       templateId: options.templateId,
+      coursewareId: preparedCoursewareId,
       structuredJson: buildStructuredJson(doc),
       batchNo,
     });
   }
 
-  const task = await startFlowTask(payload, config);
+  let task;
+  try {
+    task = await startFlowTask(payload, config);
+  } catch (err) {
+    const failedRow = {
+      file: options.file,
+      batchNo,
+      taskId: '',
+      fsFileId: fsFileId ?? '',
+      status: 'FAILED_TO_SUBMIT',
+      coursewareId: preparedCoursewareId,
+      coursewareUrl: buildCoursewareUrl({
+        siteUrl: config.webUrl,
+        coursewareId: preparedCoursewareId,
+      }),
+      failedStage: '',
+      error: err instanceof Error ? err.message : String(err),
+    };
+    console.error(JSON.stringify(failedRow, null, 2));
+    if (options.report) {
+      await writeReport(resolvePath(options.report), [failedRow]);
+      console.error(`失败报告已写出：${resolvePath(options.report)}`);
+    }
+    throw err;
+  }
   console.log(`已创建任务：taskId=${task.taskId} status=${task.status}`);
 
   let finalTask = task;
@@ -576,7 +618,7 @@ async function handlePagesSubmit(args) {
     finalTask = await watchTask(task.taskId, config) || task;
   }
 
-  const coursewareId = finalTask?.coursewareId || '';
+  const coursewareId = finalTask?.coursewareId || preparedCoursewareId;
   const row = {
     file: options.file,
     batchNo,

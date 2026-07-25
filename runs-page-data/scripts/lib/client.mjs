@@ -18,6 +18,7 @@ export const DEFAULT_CLIENT_ID = '428a8310cd442757ae699df5d894f051';
 /** 上传凭证有效期只有 60s，因此每个文件都在上传前现取凭证，不做批量预取。 */
 export const UPLOAD_TOKEN_PATH = 'v1/ai/fs/uploads/token';
 export const FILE_COMMIT_PATH = 'v1/ai/fs/files/commit';
+export const CREATE_COURSEWARE_PATH = 'v1/business/creator/courseware/create-with-template';
 export const FLOW_TASK_PATH = 'v1/creator/courseware/flow/task';
 
 const MIME_BY_EXTENSION = {
@@ -325,6 +326,20 @@ export async function startFlowTask(payload, config) {
   const result = response?.data ?? response;
   if (!result?.taskId) {
     throw new Error(result?.error || result?.msg || '启动课件任务失败');
+  }
+  return result;
+}
+
+export async function createCoursewareWithTemplate({ templateId, title = '新课件' }, config) {
+  const response = await apiRequest(CREATE_COURSEWARE_PATH, {
+    method: 'POST',
+    config,
+    json: true,
+    body: { title, templateId },
+  });
+  const result = response?.data ?? response;
+  if (!result?.coursewareId) {
+    throw new Error(result?.error || result?.msg || '从模板创建课件失败');
   }
   return result;
 }

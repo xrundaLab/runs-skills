@@ -134,13 +134,27 @@ test('buildStructuredJson 保留额外字段（服务端 passthrough）', () => 
 });
 
 test('两种提交载荷互斥且形态正确', () => {
-  assert.deepEqual(
-    buildStructuredTaskPayload({ templateId: 'tpl1', structuredJson: { title: 'T', pages: [] }, batchNo: 'b1' }),
-    { templateId: 'tpl1', structuredJson: { title: 'T', pages: [] }, batchNo: 'b1' },
+  assert.throws(
+    () => buildStructuredTaskPayload({ templateId: 'tpl1', structuredJson: { pages: [] } }),
+    /coursewareId/,
   );
   assert.deepEqual(
-    buildDirectTaskPayload({ templateId: 'tpl1', fsFileId: 9, batchNo: 'b1' }),
-    { templateId: 'tpl1', fsFileId: 9, direct: true, batchNo: 'b1' },
+    buildStructuredTaskPayload({
+      templateId: 'tpl1',
+      coursewareId: 'cw1',
+      structuredJson: { title: 'T', pages: [] },
+      batchNo: 'b1',
+    }),
+    { templateId: 'tpl1', coursewareId: 'cw1', structuredJson: { title: 'T', pages: [] }, batchNo: 'b1' },
+  );
+  assert.deepEqual(
+    buildDirectTaskPayload({
+      templateId: 'tpl1',
+      coursewareId: 'cw1',
+      fsFileId: 9,
+      batchNo: 'b1',
+    }),
+    { templateId: 'tpl1', coursewareId: 'cw1', fsFileId: 9, direct: true, batchNo: 'b1' },
   );
 });
 
