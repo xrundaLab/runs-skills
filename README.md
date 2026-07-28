@@ -26,8 +26,15 @@
    优先级：命令行参数 > 环境变量 > `.env` > 默认值。`.env` 已被 `.gitignore` 忽略。
 
 2. 在对话中直接描述需求：
+
    ```
    /runs-page-data 利用 runs 页面数据 skill，把课程 lesson002 上传到 runs 平台，选择银河轻课模板
+   ```
+
+   上传本地素材并按指定模板提交 pages data 的完整 Prompt 示例：
+
+   ```
+   利用 runs-page-data skill 把 /Users/yuanmengmeng/Documents/xrunda/runs-ai-monorepo/测试课程/故事关-打磨版_打磨版 中的素材上传 runs 服务器，并且根据其中的页面内容和结构，使用《银河课件带引入/任务/总结》模板把这节课的 pages data 提交到 runs
    ```
 
 3. 技能会按固定流程执行：**上传素材 → 解析占位符 → 校验 → 提交**，每步产物落盘，任一步失败不进入下一步。
