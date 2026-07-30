@@ -18,6 +18,7 @@ metadata: {"requires":{"bins":["node"]},"env":["XRUNS_COURSEWARE_BASE_URL","XRUN
 - **不要自己拼 `object_key` / `public_url`**。这两个值只能取上传凭证接口的返回，本地拼接会被服务端前缀校验拒绝（`object_key is not allowed for current user`）。
 - **不要把 page 级组件和其他组件放在同一页**。page 级组件独占整页，混放会被前端渲染规则判为非法。
 - **不要给素材开索引**。图片 / 音频 `should_index` 一律 `false`（脚本默认值），只有需要进知识库检索的文档才开。
+- **不要为了「先把素材备好」而整目录扫描上传**。`assets:upload --dir` 会把目录里所有匹配后缀的文件全部上传，页面 JSON 用不到的草稿、原图、废弃配音也一并进服务端——这是浪费额度也是污染清单。默认走 `pages:resolve` 按需上传（见「标准流程」），只上传页面 JSON 真正引用到的素材。
 - 不要在没有 `--yes` 的情况下认为已经提交成功；`pages:submit` 不带 `--yes` 只做校验预览。
 - 不要绕过资产清单重复上传同一素材，清单是幂等与可追溯的唯一依据。
 - 不要直接提交缺少 `coursewareId` 的 flow task。脚本必须先调用 `create-with-template` 创建课程，再把返回的 ID 交给 creator 继续处理。
@@ -25,7 +26,8 @@ metadata: {"requires":{"bins":["node"]},"env":["XRUNS_COURSEWARE_BASE_URL","XRUN
 ### 必须（MUST）
 
 - **任何写操作之前先跑 `pagedata.mjs config`**，确认 token / 网关 / 预览站点三项都已就位再动手；缺 token 就按下面的「配置」引导用户补齐，不要盲目重试。
-- 流程固定为 **上传素材 → 解析占位符 → 校验 → 提交**，每步产物落盘，任何一步失败都不进入下一步。
+- 流程固定为 **写页面 JSON（占位符）→ 解析占位符（按需上传）→ 校验 → 提交**，每步产物落盘，任何一步失败都不进入下一步。
+- **上传范围以页面 JSON 的引用为准**：先写好带 `@asset:` 占位符的页面 JSON，再由 `pages:resolve` 只上传被引用到的素材。素材目录里有多少文件与上传多少无关。
 - 素材上传与页面 JSON 编排必须共用同一份资产清单（默认 `assets.manifest.json`）。
 - 无组件页（`components: []`）必须提供 `prompt`，否则该页没有任何可生成内容。
 - 自带音频时把地址写进对应字段（`tts.content.url` / `infographic[].tts_url` / `immersive_explanation[].tts_url`）；**填了就不会被 media worker 重新生成**，留空才会触发 TTS。
@@ -41,8 +43,8 @@ metadata: {"requires":{"bins":["node"]},"env":["XRUNS_COURSEWARE_BASE_URL","XRUN
 |------|------|
 | 查看生效配置与来源（不发请求） | `pagedata.mjs config` |
 | 验证 token / 网关连通 | `pagedata.mjs ping` |
-| 批量上传图片、音频、视频、字幕 | `pagedata.mjs assets:upload` |
-| 把 JSON 里的本地引用换成线上地址 | `pagedata.mjs pages:resolve` |
+| **把 JSON 里的本地引用换成线上地址（同时按需上传，默认走这条）** | `pagedata.mjs pages:resolve` |
+| 手动上传指定的几个文件（显式列文件名） | `pagedata.mjs assets:upload a.png b.mp3` |
 | 校验页面 JSON 结构 | `pagedata.mjs pages:validate` |
 | 提交课件任务并追踪 | `pagedata.mjs pages:submit` |
 | 已有文档（pdf/docx/…）走做课任务 | 改用 `scripts/runs-courseware/cli.mjs tasks:create` |
@@ -99,19 +101,7 @@ node .agents/skills/runs-page-data/scripts/pagedata.mjs ping \
 
 ## 标准流程
 
-### 1. 上传素材，产出资产清单
-
-```bash
-node .agents/skills/runs-page-data/scripts/pagedata.mjs assets:upload \
-  --dir ./course-assets \
-  --manifest ./assets.manifest.json
-```
-
-- 递归扫描目录，默认只收图片 / 音频 / 视频 / 字幕后缀（`--ext png,mp3` 可覆盖）。
-- 清单按「相对清单目录的路径」为 key，记录 `url` / `fileId` / `sha256`；**同路径同内容重跑直接跳过**，改了内容才重传。
-- 先 `--dry-run` 看一遍将要上传什么，再实际执行。
-
-### 2. 写页面 JSON，媒体字段用占位符
+### 1. 写页面 JSON，媒体字段用占位符
 
 素材位置用 `@asset:` 引用，路径相对资产清单所在目录：
 
@@ -131,16 +121,21 @@ node .agents/skills/runs-page-data/scripts/pagedata.mjs assets:upload \
 
 顶层结构、各组件 content 结构见 [references/component-schemas.md](./references/component-schemas.md)。
 
-### 3. 解析占位符
+素材目录里有 200 张图不代表要上传 200 张——**只有写进 JSON 的那几个 `@asset:` 会被上传**。所以先把页面编排定下来，再动上传。
+
+### 2. 解析占位符（在这一步按需上传）
 
 ```bash
 node .agents/skills/runs-page-data/scripts/pagedata.mjs pages:resolve ./page.json \
   --manifest ./assets.manifest.json --out ./page.resolved.json
 ```
 
-清单里缺的素材会就地上传补齐并写回清单；只想用现成清单就加 `--no-upload`（缺条目直接报错）。存在未解析引用时不写出文件。
+- 只处理页面 JSON 里出现的引用：清单里已有的直接复用 `url`，缺的就地上传补齐并写回清单。**没被引用的文件一个都不会传。**
+- 清单按「相对清单目录的路径」为 key，记录 `url` / `fileId` / `sha256`；同路径同内容重跑直接跳过，改了内容才重传。
+- 想先预检且不实际上传：加 `--no-upload`。命令会复用清单中已有的 URL，并把清单缺失的引用逐条报错；这些缺失项就是去掉参数后将即时上传的候选素材。预检存在缺失项时不会写出文件。
+- 存在未解析引用时不写出文件。
 
-### 4. 校验
+### 3. 校验
 
 ```bash
 node .agents/skills/runs-page-data/scripts/pagedata.mjs pages:validate ./page.resolved.json \
@@ -149,7 +144,7 @@ node .agents/skills/runs-page-data/scripts/pagedata.mjs pages:validate ./page.re
 
 校验内容：顶层结构 → 组件类型是否已知、是否在模板白名单内 → content 结构与必填字段 → page 级组件独占整页 → 是否残留本地引用。`✗` 是错误（阻断提交），`!` 是告警（如音色不在推荐表、缺 `tag`、`componentId` 重复）。
 
-### 5. 提交
+### 4. 提交
 
 ```bash
 # 先预览（不带 --yes 只做校验和摘要）
@@ -179,6 +174,31 @@ node .agents/skills/runs-page-data/scripts/pagedata.mjs pages:submit ./page.reso
 ```bash
 node scripts/runs-courseware/cli.mjs tasks:create --template-id <id> --direct ./out/*.json --watch
 ```
+
+---
+
+## 什么时候才用 `assets:upload`
+
+`pages:resolve` 已经覆盖了 99% 的上传需求，`assets:upload` 只是「手动补一发」的口子，用的时候**始终显式列出文件**：
+
+```bash
+# 只传这两个，其他文件不动
+node .agents/skills/runs-page-data/scripts/pagedata.mjs assets:upload \
+  ./course-assets/images/cover.png ./course-assets/audio/intro.mp3 \
+  --manifest ./assets.manifest.json
+```
+
+适用场景仅限：
+- 页面 JSON 还没写，但要先拿到某个素材的 `public_url` 贴到别处；
+- 某个素材内容改了，想在 resolve 之前用 `--force` 单独重传覆盖清单条目。
+
+`--dir` 是**整目录递归扫描并全部上传**，只有用户明确要求「把这个目录都传上去」时才用，且必须：
+
+1. 先 `--dry-run` 打印待传清单；
+2. 把文件数和总体积告诉用户，确认后才去掉 `--dry-run`；
+3. 需要收窄范围时配合 `--ext`（如 `--ext mp3`）或换成显式文件列表。
+
+判断标准很简单：**如果这个文件不会出现在最终页面 JSON 里，它就不该被上传。**
 
 ---
 

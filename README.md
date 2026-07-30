@@ -34,9 +34,9 @@
    上传本地素材并按指定模板提交 pages data 的完整 Prompt 示例：
 
    ```
-   利用 runs-page-data skill 把 /Users/yuanmengmeng/Documents/xrunda/runs-ai-monorepo/测试课程/故事关-打磨版_打磨版 中的素材上传 runs 服务器，并且根据其中的页面内容和结构，使用《银河课件带引入/任务/总结》模板把这节课的 pages data 提交到 runs
+   利用 runs-page-data skill 把 `测试课程/故事关-打磨版` 中页面实际引用的素材上传 runs 服务器，并根据其中的页面内容和结构，使用「kiki-测试模板」把这节课的 pages data 提交到 runs
    ```
 
-3. 技能会按固定流程执行：**上传素材 → 解析占位符 → 校验 → 提交**，每步产物落盘，任一步失败不进入下一步。
+3. 技能会按固定流程执行：**编排页面 JSON → 解析占位符并按需上传 → 校验 → 提交**，每步产物落盘，任一步失败不进入下一步。
 
 详细规则、命令、组件 schema 见 [runs-page-data/SKILL.md](./runs-page-data/SKILL.md)。

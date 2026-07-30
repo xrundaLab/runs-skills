@@ -3,8 +3,8 @@
  * RunS 页面数据 CLI —— 把本地图片 / 音频上传到 RunS，并编排、校验、提交页面 JSON。
  *
  * 命令：
- *   assets:upload   批量上传素材，产出可复用的资产清单
- *   pages:resolve   把页面 JSON 里的本地引用替换成 public_url（缺失的顺手上传）
+ *   assets:upload   手动上传指定素材，产出可复用的资产清单（--dir 会整目录全传，慎用）
+ *   pages:resolve   把页面 JSON 里的本地引用替换成 public_url（缺失的顺手上传，只传被引用的）
  *   pages:validate  校验页面 JSON（内置规格 + 可选模板组件白名单与示例比对）
  *   pages:submit    提交课件任务（structuredJson 内联 / 上传 JSON 直接解析）
  */
@@ -690,8 +690,9 @@ function printHelp() {
   node pagedata.mjs <命令> [参数]
 
 命令：
-  assets:upload <文件...>            批量上传图片 / 音频 / 视频 / 字幕，写入资产清单
-    --dir <目录>                     递归扫描目录（与显式文件可同时使用）
+  assets:upload <文件...>            手动上传指定素材，写入资产清单
+                                     （常规流程用 pages:resolve 按需上传，只传被引用到的素材）
+    --dir <目录>                     递归扫描目录并全部上传（会连用不上的素材一起传，先 --dry-run 确认）
     --ext png,mp3                    覆盖默认后缀白名单
     --manifest <路径>                资产清单，默认 ${DEFAULT_MANIFEST}
     --folder-id <id>                 归档到指定业务文件夹
@@ -699,10 +700,10 @@ function printHelp() {
     --force                          忽略清单，强制重传
     --dry-run                        只列出将要上传的文件
 
-  pages:resolve <page.json>          把 @asset: / 相对路径替换成 public_url
+  pages:resolve <page.json>          把 @asset: / 相对路径替换成 public_url，并按需上传被引用的素材
     --manifest <路径>                资产清单
     --out <路径>                     输出文件，默认原地覆盖
-    --no-upload                      缺失素材不即时上传，直接报错
+    --no-upload                      预检模式：不即时上传，逐条报告清单缺失的引用
     --folder-id <id>                 即时上传时的业务文件夹
 
   pages:validate <page.json>         校验页面 JSON
