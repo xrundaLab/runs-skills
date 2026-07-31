@@ -28,6 +28,7 @@ metadata: {"requires":{"bins":["node"]},"env":["XRUNS_COURSEWARE_BASE_URL","XRUN
 - **任何写操作之前先跑 `pagedata.mjs config`**，确认 token / 网关 / 预览站点三项都已就位再动手；缺 token 就按下面的「配置」引导用户补齐，不要盲目重试。
 - 用户指定模板名称时，先通过 `templates:list` 使用 `v1/business/creator/template/list` 查询，并按名称相似度解析业务 `templateId`；允许省略“模板 / 课件 / 课程”、忽略大小写、空格和标点，也容忍少量错字。找不到或多个候选匹配度接近时必须停止并报告候选项，**不要猜 ID**。
 - 模板名称解析完成后，校验、创建模板课程和创建 flow task 必须复用同一个 `templateId`，不得在流程中重新选择模板。
+- 指定模板后，组件可用性与 page/block 级别必须以 `GET v1/business/creator/template/{templateId}/components` 返回的 `componentType` / `compositionMode` 为准；组件结构通过 `GET v1/business/creator/component/{componentId}` 的 `dataStructure` 校验。`COMPONENT_SPECS` 只是未指定模板时的离线兜底与已知组件的增强校验，**不得用它拒绝模板刚新增的组件**。
 - 流程固定为 **写页面 JSON（占位符）→ 解析占位符（按需上传）→ 校验 → 提交**，每步产物落盘，任何一步失败都不进入下一步。
 - **上传范围以页面 JSON 的引用为准**：先写好带 `@asset:` 占位符的页面 JSON，再由 `pages:resolve` 只上传被引用到的素材。素材目录里有多少文件与上传多少无关。
 - 素材上传与页面 JSON 编排必须共用同一份资产清单（默认 `assets.manifest.json`）。
@@ -165,7 +166,9 @@ node .agents/skills/runs-page-data/scripts/pagedata.mjs pages:validate ./page.re
   --template "银河互动课件"
 ```
 
-也可用已知的 `--template-id <templateId>`。校验内容：顶层结构 → 组件类型是否已知、是否在模板白名单内 → content 结构与必填字段 → page 级组件独占整页 → 是否残留本地引用。`✗` 是错误（阻断提交），`!` 是告警（如音色不在推荐表、缺 `tag`、`componentId` 重复）。
+也可用已知的 `--template-id <templateId>`。指定模板时，脚本先读取模板组件清单，再按实际用到的 `componentType` 拉取组件详情：模板清单决定组件是否可用及 `compositionMode`，`dataStructure` 决定动态组件的 content 结构。新增组件无需先补进本地 `COMPONENT_SPECS`；没有内置规格但在模板内且 `dataStructure` 合法的组件可以直接使用。
+
+校验内容：顶层结构 → 是否属于模板 → content 是否符合内置规格或模板 `dataStructure` → 模板 page 级组件是否独占整页 → 是否残留本地引用。动态组件的 `dataStructure` 不匹配是错误；模板组件未配置可解析的 `dataStructure` 时会放行并给出告警。`✗` 是错误（阻断提交），`!` 是告警（如音色不在推荐表、缺 `tag`、`componentId` 重复）。
 
 ### 4. 提交
 
@@ -237,8 +240,8 @@ node .agents/skills/runs-page-data/scripts/pagedata.mjs assets:upload \
 | `object_key` / `public_url` | 只能用凭证接口返回值，且两者必须匹配 |
 | 模板选择 | `--template <name>` 与 `--template-id <id>` 二选一；名称支持模糊匹配，候选接近时必须改用明确 ID |
 | `should_index` | 素材一律 `false` |
-| page 级组件 | `course_intro` / `course_task` / `course_summary` / `image_save` / `infographic` / `immersive_explanation` / `select_question` / `galaxy_select_question` / `matching_question` / `ordering_question` / `categorization_question` —— 每页只能有一个，且不能与其他组件同页 |
-| block 级组件 | `text` / `rich_text` / `image` / `video` / `avatar` / `tts` / `podcast` / `word_card` / `learning_report` —— 可同页组合 |
+| page / block 级别 | 指定模板时以组件接口的 `compositionMode` 为准；page 级每页只能有一个且不能混放。未指定模板时才使用本地内置级别兜底 |
+| 动态模板组件 | 模板接口包含该 `componentType` 即视为可用；有 `dataStructure` 时按示例结构校验，不要求先加入 `COMPONENT_SPECS` |
 | 音频是否重生 | `tts_url` / `url` 已填 → 保留；留空且 `tts_text` 非空 → media worker 调 TTS 生成 |
 | 默认音色 | `zh_female_yingyujiaoxue_uranus_bigtts` |
 

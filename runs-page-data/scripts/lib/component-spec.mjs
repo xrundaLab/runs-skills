@@ -2,8 +2,8 @@
  * 内置组件规格表（离线校验用）。
  *
  * 来源：doc/feat/制课端组件工具schema.md 与 frontend/app/components/page-runtime/widgets/*\/schema.ts。
- * 权威定义始终以模板组件接口返回的 dataStructure 为准；本表用于无网络 / 未指定模板时的兜底校验，
- * 校验策略与前端 validateJsonAgainstExample 一致：只卡结构与类型，额外字段一律放行。
+ * 权威定义始终以模板组件接口返回的 componentType / compositionMode / dataStructure 为准；
+ * 本表用于未指定模板时的离线兜底，以及已知组件的增强校验。模板新增组件不需要先登记到本表。
  */
 
 /** 字段描述子构造器。media 标记该字段承载媒体地址，供占位符解析与本地路径残留检查复用。 */

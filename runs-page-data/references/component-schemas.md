@@ -34,18 +34,25 @@
 | `pages[].components` | 否 | 无组件时为 `[]` |
 | `components[].componentId` | 否 | 建议 `{type}_{lessonId}_{pageIndex}`，全文档唯一 |
 
-## 组件级别
+## 组件来源与级别
 
-**page 级（独占整页，同页不得再有任何组件）**
+指定模板时，组件列表不是下面这份静态速查表，而是动态读取：
+
+- `GET v1/business/creator/template/{templateId}/components`：`componentType` 决定可用性，`compositionMode` 决定 page/block；
+- `GET v1/business/creator/component/{componentId}`：`dataStructure` 提供动态组件的 content 示例结构。
+
+因此模板新配置的组件即使尚未加入本地 `COMPONENT_SPECS`，也可以参与编排和校验。下面只列出未指定模板时可离线校验的内置组件。
+
+**内置 page 级（离线兜底；独占整页，同页不得再有任何组件）**
 
 `course_intro` · `course_task` · `course_summary` · `image_save` · `infographic` · `immersive_explanation` · `select_question` · `galaxy_select_question` · `matching_question` · `ordering_question` · `categorization_question`
 
-**block 级（可同页组合）**
+**内置 block 级（离线兜底；可同页组合）**
 
 `text` · `rich_text` · `image` · `video` · `avatar` · `tts` · `podcast` · `word_card` · `learning_report`
 
-> 权威来源是模板组件接口的 `compositionMode`；用 `pages:validate --template-id <id>` 或
-> `pages:validate --template <name>` 可直接按目标模板核对。名称模式会先查询并解析业务模板 ID。
+> 权威来源始终是模板组件接口。用 `pages:validate --template-id <id>` 或
+> `pages:validate --template <name>` 可按目标模板核对可用类型、结构和组合规则。名称模式会先查询并解析业务模板 ID。
 
 ## 常用组件 content
 

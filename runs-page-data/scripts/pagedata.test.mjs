@@ -389,6 +389,124 @@ test('validatePageData 按模板组件清单限制可用类型', () => {
   assert.ok(report.errors.some((item) => /模板未配置该组件类型：course_intro/.test(item.message)));
 });
 
+test('validatePageData 接受模板接口提供但 COMPONENT_SPECS 未内置的动态组件', () => {
+  const type = 'kikitalk_enter';
+  const doc = {
+    title: 'T',
+    pages: [{
+      tag: '进场',
+      title: '听故事',
+      components: [{
+        type,
+        content: {
+          linkName: '听故事/完整听一遍',
+          linkSubtitle: '竖起小耳朵，一起听故事',
+          characterImageUrl: 'https://res.example/aura.png',
+          audioUrl: 'https://res.example/listen.mp3',
+        },
+      }],
+    }],
+  };
+  const report = validatePageData(doc, {
+    templateComponents: [{ componentType: type, compositionMode: 'page' }],
+    componentExamples: {
+      [type]: {
+        components: [{
+          type,
+          content: {
+            linkName: '示例标题',
+            linkSubtitle: '示例副标题',
+            characterImageUrl: 'https://example.com/character.png',
+            audioUrl: 'https://example.com/audio.mp3',
+          },
+        }],
+      },
+    },
+  });
+
+  assert.deepEqual(report.errors, []);
+  assert.deepEqual(report.warnings, []);
+});
+
+test('validatePageData 用 dataStructure 阻断动态组件 content 结构错误', () => {
+  const type = 'kikitalk_listen_to_picture_books';
+  const report = validatePageData({
+    title: 'T',
+    pages: [{
+      tag: '听绘本',
+      title: '绘本',
+      components: [{ type, content: { frames: [] } }],
+    }],
+  }, {
+    templateComponents: [{ componentType: type, compositionMode: 'page' }],
+    componentExamples: {
+      [type]: {
+        components: [{
+          type,
+          content: [{
+            imageUrl: 'https://example.com/1.png',
+            storyText: 'Hello',
+            audioUrl: 'https://example.com/1.mp3',
+          }],
+        }],
+      },
+    },
+  });
+
+  assert.ok(report.errors.some((item) => /与模板示例结构不一致/.test(item.message)));
+  assert.deepEqual(report.warnings, []);
+});
+
+test('validatePageData 使用模板 compositionMode 强制动态 page 组件独占整页', () => {
+  const report = validatePageData({
+    title: 'T',
+    pages: [{
+      tag: '混排',
+      title: '非法混排',
+      components: [
+        { type: 'kikitalk_enter', content: { linkName: '听故事' } },
+        { type: 'text', content: '不能混放' },
+      ],
+    }],
+  }, {
+    templateComponents: [
+      { componentType: 'kikitalk_enter', compositionMode: 'page' },
+      { componentType: 'text', compositionMode: 'block' },
+    ],
+    componentExamples: {
+      kikitalk_enter: {
+        components: [{ type: 'kikitalk_enter', content: { linkName: '示例' } }],
+      },
+    },
+  });
+
+  assert.ok(report.errors.some((item) => /page 级组件独占整页：kikitalk_enter/.test(item.message)));
+});
+
+test('validatePageData 在模板组件清单为空时拒绝所有组件', () => {
+  const report = validatePageData({
+    title: 'T',
+    pages: [{ tag: 'a', title: 'p', components: [{ type: 'text', content: '正文' }] }],
+  }, {
+    templateComponents: [],
+  });
+  assert.ok(report.errors.some((item) => /模板未配置该组件类型：text/.test(item.message)));
+});
+
+test('validatePageData 对模板动态组件缺少 dataStructure 给出告警但不误报未知类型', () => {
+  const type = 'future_component';
+  const report = validatePageData({
+    title: 'T',
+    pages: [{ tag: 'a', title: 'p', components: [{ type, content: { value: 1 } }] }],
+  }, {
+    templateComponents: [{ componentType: type, compositionMode: 'block' }],
+  });
+
+  assert.deepEqual(report.errors, []);
+  assert.ok(report.warnings.some((item) => /未提供可解析的 dataStructure/.test(item.message)));
+  assert.ok(!report.warnings.some((item) => /未知组件类型/.test(item.message)));
+});
+
 test('validatePageData 音色不在推荐表内只告警', () => {
   const report = validatePageData({
     title: 'T',

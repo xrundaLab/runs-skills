@@ -822,7 +822,7 @@ function printHelp() {
 
 对应命令行参数：--base-url / --web-url / --token / --username / --password
 
-已知组件类型（${KNOWN_COMPONENT_TYPES.length} 个）：
+离线内置组件类型（${KNOWN_COMPONENT_TYPES.length} 个；指定模板时以模板组件接口为准）：
   page 级（独占整页）：${PAGE_LEVEL_TYPES.join(' / ')}
   block 级（可组合）：${KNOWN_COMPONENT_TYPES.filter((t) => !PAGE_LEVEL_TYPES.includes(t)).join(' / ')}
 `);

@@ -3,7 +3,8 @@
  *
  * 分两层：
  * 1. 顶层导入结构（title / pages[] / components[]）+ page 级组件独占整页规则；
- * 2. 组件 content 结构，默认用内置规格表，指定模板时叠加模板组件白名单与 dataStructure 示例比对。
+ * 2. 组件 content 结构：未指定模板时用内置规格表；指定模板时以模板组件清单为
+ *    可用性与 compositionMode 的权威来源，并用组件详情 dataStructure 校验动态组件。
  *
  * errors 阻断提交，warnings 只提示（例如音色不在推荐表内、缺 tag）。
  */
@@ -196,18 +197,21 @@ function validateComponent(component, path, report, options) {
   }
 
   const spec = COMPONENT_SPECS[type];
-  if (!spec) {
+  const templateComponent = options.templateComponentByType?.get(type);
+  const hasTemplateContext = Boolean(options.templateComponentByType);
+
+  if (hasTemplateContext && !templateComponent) {
+    report.error(`${path}.type`, `模板未配置该组件类型：${type}`);
+  } else if (!hasTemplateContext && !spec) {
     const message = `未知组件类型 ${type}；已知类型：${KNOWN_COMPONENT_TYPES.join(' / ')}`;
     if (options.allowUnknownTypes) report.warn(`${path}.type`, message);
     else report.error(`${path}.type`, message);
     return type;
   }
 
-  if (options.allowedTypes && !options.allowedTypes.has(type)) {
-    report.error(`${path}.type`, `模板未配置该组件类型：${type}`);
+  if (spec) {
+    validateAgainstDescriptor(spec.content, component.content, `${path}.content`, report);
   }
-
-  validateAgainstDescriptor(spec.content, component.content, `${path}.content`, report);
 
   const example = options.componentExamples?.[type];
   if (example !== undefined) {
@@ -216,8 +220,18 @@ function validateComponent(component, path, report, options) {
       component.content,
       `${path}.content`,
     );
-    // 示例比对是补充信号：内置规格已通过时降级为告警，避免示例本身的偶发差异阻断提交。
-    if (err) report.warn(`${path}.content`, `与模板示例结构不一致：${err}`);
+    if (err && spec) {
+      // 内置规格已覆盖的组件，dataStructure 继续作为模板配置漂移的补充信号。
+      report.warn(`${path}.content`, `与模板示例结构不一致：${err}`);
+    } else if (err) {
+      // 动态组件没有内置规格，dataStructure 是唯一可执行的结构契约，必须阻断错误数据。
+      report.error(`${path}.content`, `与模板示例结构不一致：${err}`);
+    }
+  } else if (templateComponent && !spec) {
+    report.warn(
+      `${path}.content`,
+      `模板组件 ${type} 未提供可解析的 dataStructure，已放行但无法校验 content 结构`,
+    );
   }
 
   return type;
@@ -259,7 +273,10 @@ function validatePage(page, path, report, options) {
     .map((component, index) => validateComponent(component, `${path}.components[${index}]`, report, options))
     .filter(Boolean);
 
-  const pageLevel = types.filter((type) => getCompositionMode(type) === 'page');
+  const pageLevel = types.filter((type) => {
+    const templateMode = options.templateComponentByType?.get(type)?.compositionMode;
+    return (templateMode || getCompositionMode(type)) === 'page';
+  });
   if (pageLevel.length > 0 && types.length > 1) {
     report.error(
       `${path}.components`,
@@ -272,15 +289,15 @@ function validatePage(page, path, report, options) {
  * 校验顶层导入 JSON。
  * options：
  * - allowUnknownTypes：未知组件类型降级为告警
- * - templateComponents：模板组件清单，用于限制可用类型
+ * - templateComponents：模板组件清单；一旦提供，即作为可用类型与 compositionMode 的权威来源
  * - componentExamples：{ [type]: dataStructure 示例 }，用于示例比对
  */
 export function validatePageData(doc, options = {}) {
   const report = createReport();
-  const allowedTypes = Array.isArray(options.templateComponents) && options.templateComponents.length > 0
-    ? new Set(options.templateComponents.map((item) => item.componentType))
+  const templateComponentByType = Array.isArray(options.templateComponents)
+    ? new Map(options.templateComponents.map((item) => [item.componentType, item]))
     : null;
-  const context = { ...options, allowedTypes };
+  const context = { ...options, templateComponentByType };
 
   if (!isPlainObject(doc)) {
     report.error('', `顶层应为对象，实际是${typeLabel(doc)}`);
