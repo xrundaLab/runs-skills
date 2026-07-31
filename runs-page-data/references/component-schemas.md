@@ -44,7 +44,8 @@
 
 `text` · `rich_text` · `image` · `video` · `avatar` · `tts` · `podcast` · `word_card` · `learning_report`
 
-> 权威来源是模板组件接口的 `compositionMode`；用 `pages:validate --template-id` 可直接按目标模板核对。
+> 权威来源是模板组件接口的 `compositionMode`；用 `pages:validate --template-id <id>` 或
+> `pages:validate --template <name>` 可直接按目标模板核对。名称模式会先查询并解析业务模板 ID。
 
 ## 常用组件 content
 

@@ -9,6 +9,7 @@ import {
   parseArgv,
   parseAssetsUploadArgs,
   parseSubmitArgs,
+  parseTemplateSelector,
   summarizePageData,
 } from './pagedata.mjs';
 import {
@@ -34,13 +35,23 @@ import {
   DEFAULT_BASE_URL,
   DEFAULT_WEB_URL,
   buildCommitPayload,
+  buildTemplateListPath,
+  findTemplateByName,
   getRuntimeConfig,
   guessMimeType,
   inferFileCategory,
+  listAllTemplates,
   maskToken,
   missingTokenMessage,
   normalizeBaseUrl,
+  normalizeTemplateName,
+  normalizeTemplateListPayload,
+  rankTemplatesByName,
   buildCoursewareUrl,
+  resolveTemplateByName,
+  scoreTemplateNameMatch,
+  summarizeTemplates,
+  templateBusinessId,
 } from './lib/client.mjs';
 import { envFileCandidates, parseEnvFile, resetEnvCache } from './lib/env.mjs';
 
@@ -99,16 +110,49 @@ test('parseAssetsUploadArgs 拒绝非法并发数', () => {
 
 test('parseSubmitArgs 校验必填项', () => {
   assert.throws(() => parseSubmitArgs(parseArgv(['pages:submit'])), /缺少页面 JSON 路径/);
-  assert.throws(() => parseSubmitArgs(parseArgv(['pages:submit', 'p.json'])), /缺少 --template-id/);
+  assert.throws(() => parseSubmitArgs(parseArgv(['pages:submit', 'p.json'])), /缺少 --template-id 或 --template/);
   // 有 flag 无取值时 parseArgv 会置为 true，不能被当成合法模板 ID
-  assert.throws(() => parseSubmitArgs(parseArgv(['pages:submit', 'p.json', '--template-id'])), /缺少 --template-id/);
-  assert.throws(() => parseSubmitArgs(parseArgv(['pages:submit', 'p.json', '--template-id=  '])), /缺少 --template-id/);
+  assert.throws(
+    () => parseSubmitArgs(parseArgv(['pages:submit', 'p.json', '--template-id'])),
+    /--template-id 缺少值/,
+  );
+  assert.throws(
+    () => parseSubmitArgs(parseArgv(['pages:submit', 'p.json', '--template-id=  '])),
+    /--template-id 缺少值/,
+  );
 
   const options = parseSubmitArgs(parseArgv(['pages:submit', 'p.json', '--template-id', 'tpl1', '--yes', '--watch']));
   assert.equal(options.templateId, 'tpl1');
+  assert.equal(options.templateName, undefined);
   assert.equal(options.yes, true);
   assert.equal(options.watch, true);
   assert.equal(options.asFile, false);
+});
+
+test('模板选择支持名称，并拒绝 ID 与名称同时出现', () => {
+  assert.deepEqual(
+    parseTemplateSelector(parseArgv(['pages:validate', 'p.json', '--template', ' 银河互动课件 '])),
+    { templateId: undefined, templateName: '银河互动课件' },
+  );
+  assert.equal(
+    parseSubmitArgs(parseArgv(['pages:submit', 'p.json', '--template', '银河互动课件'])).templateName,
+    '银河互动课件',
+  );
+  assert.throws(
+    () => parseTemplateSelector(parseArgv([
+      'pages:validate',
+      'p.json',
+      '--template-id',
+      'tpl1',
+      '--template',
+      '银河互动课件',
+    ])),
+    /只能提供一个/,
+  );
+  assert.throws(
+    () => parseTemplateSelector(parseArgv(['pages:validate', 'p.json', '--template'])),
+    /--template 缺少值/,
+  );
 });
 
 test('createBatchNo 使用注入的时钟', () => {
@@ -414,6 +458,143 @@ test('buildCoursewareUrl 默认走 web 站点而非接口网关', () => {
   assert.equal(buildCoursewareUrl({ coursewareId: 'cw1' }), 'https://web.dev.xruns.cn/creator/cw1');
   assert.equal(DEFAULT_BASE_URL, 'https://api.dev.xruns.cn/api/');
   assert.equal(DEFAULT_WEB_URL, 'https://web.dev.xruns.cn/');
+});
+
+test('模板列表路径与响应归一化符合业务接口契约', () => {
+  assert.equal(
+    buildTemplateListPath({ page: 2, pageSize: 50, templateModuleType: 'galaxy interactive' }),
+    'v1/business/creator/template/list?pageNum=2&pageSize=50&templateModuleType=galaxy+interactive',
+  );
+  assert.deepEqual(
+    normalizeTemplateListPayload({
+      code: 200,
+      data: {
+        list: [{ id: 1, templateId: 'tpl1', templateName: '银河互动课件' }],
+        total: 7,
+      },
+    }),
+    {
+      items: [{ id: 1, templateId: 'tpl1', templateName: '银河互动课件' }],
+      total: 7,
+    },
+  );
+});
+
+test('模板名称支持省略后缀、标点和少量错字，并返回业务 templateId', () => {
+  const templates = [
+    { id: 10001, templateId: 'tpl-normal', templateName: '普通模板' },
+    { id: 10015, templateId: 'tpl-galaxy', templateName: '银河互动课件' },
+  ];
+  assert.equal(normalizeTemplateName(' KIKI - 测试模板 '), 'kiki测试模板');
+  assert.equal(templateBusinessId(findTemplateByName(templates, '银河互动模板')), 'tpl-galaxy');
+  assert.equal(templateBusinessId(findTemplateByName(templates, '银河互功课件')), 'tpl-galaxy');
+  assert.ok(scoreTemplateNameMatch('KIKI-测试模板', 'kiki测试') >= 95);
+  assert.throws(() => findTemplateByName(templates, '完全无关'), /未找到模板/);
+});
+
+test('模糊匹配按相似度排序，候选接近时不自动猜测', () => {
+  const templates = [
+    { templateId: 'tpl-galaxy', templateName: '银河互动课件' },
+    { templateId: 'tpl-galaxy-test', templateName: '银河互动测试模板' },
+    { templateId: 'tpl-light', templateName: '银河轻课模板' },
+  ];
+  const ranked = rankTemplatesByName(templates, '银河互动测');
+  assert.equal(ranked[0].template.templateId, 'tpl-galaxy-test');
+  assert.throws(
+    () => findTemplateByName(templates, '银河互动测'),
+    /匹配到多个相近模板/,
+  );
+  assert.equal(
+    findTemplateByName(templates, '银河互动').templateId,
+    'tpl-galaxy',
+    '省略通用后缀后核心名称唯一命中时应自动选择',
+  );
+  assert.equal(
+    findTemplateByName(templates, '银河互动课件').templateId,
+    'tpl-galaxy',
+    '完整名称唯一命中时应优先于相近候选',
+  );
+});
+
+test('模板摘要不输出 prompt 等大字段', () => {
+  assert.deepEqual(
+    summarizeTemplates([{
+      id: 10015,
+      templateId: 'tpl-galaxy',
+      templateName: '银河互动课件',
+      templateModuleTypeText: '任务模板',
+      typeCode: 'galaxy_interactive',
+      statusText: '上架中',
+      permissionTypeText: '共享',
+      updateTime: '2026-07-31',
+      prompt: '不应输出',
+    }]),
+    [{
+      templateId: 'tpl-galaxy',
+      templateName: '银河互动课件',
+      templateModuleType: '任务模板',
+      typeCode: 'galaxy_interactive',
+      status: '上架中',
+      permission: '共享',
+      updateTime: '2026-07-31',
+    }],
+  );
+});
+
+test('模板查询复用客户端鉴权并自动翻页，名称解析返回业务 templateId', async () => {
+  const originalFetch = globalThis.fetch;
+  const urls = [];
+  globalThis.fetch = async (url) => {
+    urls.push(String(url));
+    const requestUrl = new URL(String(url));
+    const page = requestUrl.searchParams.get('pageNum');
+    const pageSize = requestUrl.searchParams.get('pageSize');
+    const data = pageSize === '2'
+      ? page === '1'
+        ? {
+          list: [
+            { id: 1, templateId: 'tpl1', templateName: '普通模板' },
+            { id: 2, templateId: 'tpl2', templateName: '另一个模板' },
+          ],
+          total: 3,
+        }
+        : {
+          list: [{ id: 3, templateId: 'tpl-galaxy', templateName: '银河互动课件' }],
+          total: 3,
+        }
+      : {
+        list: [
+          { id: 1, templateId: 'tpl1', templateName: '普通模板' },
+          { id: 2, templateId: 'tpl2', templateName: '另一个模板' },
+          { id: 3, templateId: 'tpl-galaxy', templateName: '银河互动课件' },
+        ],
+        total: 3,
+      };
+    return new Response(JSON.stringify({ code: 200, data }), {
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+    });
+  };
+
+  const config = {
+    baseUrl: 'https://api.example.com/api/',
+    webUrl: 'https://web.example.com/',
+    token: 'test-token',
+    clientId: 'test-client',
+  };
+  try {
+    const all = await listAllTemplates(config, { pageSize: 2 });
+    assert.equal(all.length, 3);
+    assert.equal(urls.length, 2);
+
+    urls.length = 0;
+    const resolved = await resolveTemplateByName('银河互动课件', config);
+    assert.equal(resolved.templateId, 'tpl-galaxy');
+    assert.equal(resolved.templateName, '银河互动课件');
+    assert.equal(urls.length, 1, '默认每页 100 条时一页即可取完');
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
 
 // ---- 配置与 .env ----

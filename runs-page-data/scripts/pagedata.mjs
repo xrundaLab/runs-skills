@@ -16,16 +16,21 @@ import {
   DEFAULT_BASE_URL,
   DEFAULT_WEB_URL,
   buildCoursewareUrl,
+  listAllTemplates,
   createCoursewareWithTemplate,
   getFlowTask,
   getRuntimeConfig,
   guessMimeType,
   fetchComponentDetail,
   fetchTemplateComponents,
+  listTemplates,
   listFlowTasks,
   maskToken,
   missingTokenMessage,
+  rankTemplatesByName,
+  resolveTemplateByName,
   startFlowTask,
+  summarizeTemplates,
   uploadLocalFile,
 } from './lib/client.mjs';
 import {
@@ -44,7 +49,7 @@ import { formatReport, validatePageData } from './lib/validate.mjs';
 import { KNOWN_COMPONENT_TYPES, PAGE_LEVEL_TYPES } from './lib/component-spec.mjs';
 
 const COMMANDS = new Set([
-  'config', 'ping', 'assets:upload', 'pages:resolve', 'pages:validate', 'pages:submit', 'help',
+  'config', 'ping', 'templates:list', 'assets:upload', 'pages:resolve', 'pages:validate', 'pages:submit', 'help',
 ]);
 const BOOLEAN_FLAGS = new Set([
   'allow-unknown', 'as-file', 'dry-run', 'force', 'help', 'no-upload', 'strict', 'watch', 'yes',
@@ -130,18 +135,36 @@ export function parseAssetsUploadArgs(args) {
 export function parseSubmitArgs(args) {
   const file = args._[1];
   if (!file) throw new Error('缺少页面 JSON 路径');
-  // parseArgv 对「有 flag 无取值」的写法会置为 true，这里必须要求真实字符串
-  const templateId = typeof args['template-id'] === 'string' ? args['template-id'].trim() : '';
-  if (!templateId) throw new Error('缺少 --template-id');
+  const selector = parseTemplateSelector(args, { required: true });
   return {
     file: String(file),
-    templateId,
+    ...selector,
     batchNo: args['batch-no'] ? String(args['batch-no']) : undefined,
     asFile: Boolean(args['as-file']),
     watch: Boolean(args.watch),
     yes: Boolean(args.yes),
     force: Boolean(args.force),
     report: args.report ? String(args.report) : undefined,
+  };
+}
+
+export function parseTemplateSelector(args, { required = false } = {}) {
+  // parseArgv 对「有 flag 无取值」的写法会置为 true，这里必须要求真实字符串
+  const hasTemplateId = Object.prototype.hasOwnProperty.call(args, 'template-id');
+  const hasTemplateName = Object.prototype.hasOwnProperty.call(args, 'template');
+  const templateId = typeof args['template-id'] === 'string' ? args['template-id'].trim() : '';
+  const templateName = typeof args.template === 'string' ? args.template.trim() : '';
+  if (hasTemplateId && !templateId) throw new Error('--template-id 缺少值');
+  if (hasTemplateName && !templateName) throw new Error('--template 缺少值');
+  if (templateId && templateName) {
+    throw new Error('--template-id 与 --template 只能提供一个');
+  }
+  if (required && !templateId && !templateName) {
+    throw new Error('缺少 --template-id 或 --template');
+  }
+  return {
+    templateId: templateId || undefined,
+    templateName: templateName || undefined,
   };
 }
 
@@ -458,9 +481,30 @@ async function loadTemplateContext(templateId, doc, config) {
   return { templateComponents, componentExamples };
 }
 
-async function runValidation(doc, args) {
+async function resolveTemplateSelection(selector, config) {
+  if (selector.templateId) {
+    return {
+      templateId: selector.templateId,
+      templateName: undefined,
+      resolvedBy: 'id',
+    };
+  }
+  if (!selector.templateName) return undefined;
+  const resolved = await resolveTemplateByName(selector.templateName, config);
+  return { ...resolved, resolvedBy: 'name' };
+}
+
+function printResolvedTemplate(template) {
+  if (!template) return;
+  if (template.resolvedBy === 'name') {
+    console.log(`模板解析：${template.templateName} → ${template.templateId}`);
+  } else {
+    console.log(`模板 ID：${template.templateId}`);
+  }
+}
+
+async function runValidation(doc, args, { templateId } = {}) {
   const options = { allowUnknownTypes: Boolean(args['allow-unknown']) };
-  const templateId = typeof args['template-id'] === 'string' ? args['template-id'].trim() : '';
   if (templateId) {
     const config = getRuntimeConfig(args);
     Object.assign(options, await loadTemplateContext(templateId, doc, config));
@@ -478,8 +522,11 @@ async function handlePagesValidate(args) {
   const file = args._[1];
   if (!file) throw new Error('缺少页面 JSON 路径');
   const doc = await readJsonFile(resolvePath(String(file)));
-  const report = await runValidation(doc, args);
+  const selector = parseTemplateSelector(args);
+  const template = await resolveTemplateSelection(selector, getRuntimeConfig(args));
+  const report = await runValidation(doc, args, { templateId: template?.templateId });
 
+  printResolvedTemplate(template);
   console.log(JSON.stringify(summarizePageData(doc), null, 2));
   const formatted = formatReport(report);
   if (formatted) console.log(formatted);
@@ -533,13 +580,16 @@ async function writeReport(reportPath, rows) {
 async function handlePagesSubmit(args) {
   const options = parseSubmitArgs(args);
   const config = getRuntimeConfig(args);
+  const template = await resolveTemplateSelection(options, config);
+  options.templateId = template.templateId;
   const jsonPath = resolvePath(options.file);
   const doc = await readJsonFile(jsonPath);
 
-  const report = await runValidation(doc, args);
+  const report = await runValidation(doc, args, { templateId: options.templateId });
   const formatted = formatReport(report);
   if (formatted) console.log(formatted);
 
+  printResolvedTemplate(template);
   console.log(JSON.stringify(summarizePageData(doc), null, 2));
 
   if (report.errors.length > 0 && !options.force) {
@@ -683,6 +733,36 @@ async function handlePing(args) {
   console.log(`鉴权可用，任务列表返回 ${tasks.length} 条`);
 }
 
+function positiveInteger(value, fallback, flag) {
+  if (value === true || value === '') throw new Error(`${flag} 缺少值`);
+  const parsed = value === undefined ? fallback : Number(value);
+  if (!Number.isInteger(parsed) || parsed < 1) throw new Error(`${flag} 必须是正整数`);
+  return parsed;
+}
+
+async function handleTemplatesList(args) {
+  const config = getRuntimeConfig(args);
+  if (args.keyword === true) throw new Error('--keyword 缺少值');
+  if (args['template-module-type'] === true) throw new Error('--template-module-type 缺少值');
+  const keyword = typeof args.keyword === 'string' ? args.keyword.trim() : '';
+  const pageSize = positiveInteger(args['page-size'], 100, '--page-size');
+  const templateModuleType = typeof args['template-module-type'] === 'string'
+    ? args['template-module-type'].trim()
+    : '';
+
+  let templates;
+  if (keyword) {
+    const all = await listAllTemplates(config, { pageSize, templateModuleType });
+    templates = rankTemplatesByName(all, keyword)
+      .filter((item) => item.score >= 60)
+      .map((item) => item.template);
+  } else {
+    const page = positiveInteger(args.page, 1, '--page');
+    templates = (await listTemplates({ page, pageSize, templateModuleType }, config)).items;
+  }
+  console.log(JSON.stringify(summarizeTemplates(templates), null, 2));
+}
+
 function printHelp() {
   console.log(`RunS 页面数据 CLI
 
@@ -707,18 +787,26 @@ function printHelp() {
     --folder-id <id>                 即时上传时的业务文件夹
 
   pages:validate <page.json>         校验页面 JSON
-    --template-id <id>               叠加模板组件白名单与 dataStructure 示例比对
+    --template-id <id>               按业务模板 ID 叠加组件白名单与 dataStructure 示例比对
+    --template <name>                按模板名称查询并解析业务模板 ID
     --allow-unknown                  未知组件类型降级为告警
     --strict                         告警也视为失败
 
   pages:submit <page.json>           提交课件任务（默认只预览）
-    --template-id <id>               必填
+    --template-id <id>               业务模板 ID；与 --template 二选一
+    --template <name>                模板名称；自动查询并解析 ID，与 --template-id 二选一
     --yes                            确认提交（不加则只做校验预览）
     --as-file                        上传 JSON 走 direct 直接解析链路
     --batch-no <no>                  指定批次号
     --watch                          轮询任务状态到终态
     --report <路径>                  写出 .csv / .json 报告
     --force                          校验有错误时仍然提交
+
+  templates:list                    查询当前用户可用的模板及其业务模板 ID
+    --keyword <name>                 按模板名称模糊过滤并排序（会遍历模板列表）
+    --page <n>                       不带关键词时查询指定页，默认 1
+    --page-size <n>                  每页数量，默认 100
+    --template-module-type <type>    可选模板模块类型
 
   config                             打印生效配置与来源（不发请求）
   ping                               验证 token 与网关连通性
@@ -747,6 +835,7 @@ async function main(argv) {
   if (command === 'help' || args.help) return printHelp();
   if (command === 'config') return handleConfig(args);
   if (command === 'ping') return handlePing(args);
+  if (command === 'templates:list') return handleTemplatesList(args);
   if (command === 'assets:upload') return handleAssetsUpload(args);
   if (command === 'pages:resolve') return handlePagesResolve(args);
   if (command === 'pages:validate') return handlePagesValidate(args);

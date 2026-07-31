@@ -15,12 +15,6 @@ export const DEFAULT_BASE_URL = 'https://api.dev.xruns.cn/api/';
 export const DEFAULT_WEB_URL = 'https://web.dev.xruns.cn/';
 export const DEFAULT_CLIENT_ID = '428a8310cd442757ae699df5d894f051';
 
-/** 上传凭证有效期只有 60s，因此每个文件都在上传前现取凭证，不做批量预取。 */
-export const UPLOAD_TOKEN_PATH = 'v1/ai/fs/uploads/token';
-export const FILE_COMMIT_PATH = 'v1/ai/fs/files/commit';
-export const CREATE_COURSEWARE_PATH = 'v1/business/creator/courseware/create-with-template';
-export const FLOW_TASK_PATH = 'v1/creator/courseware/flow/task';
-
 const MIME_BY_EXTENSION = {
   '.png': 'image/png',
   '.jpg': 'image/jpeg',
@@ -258,7 +252,7 @@ export function buildCommitPayload(uploaded, { folderId, shouldIndex = false, fi
  * object_key / public_url 一律以服务端返回为准，不在本地拼接，否则 commit 会被前缀校验拒绝。
  */
 export async function uploadBytesToOss({ bytes, filename, mimeType, folderId }, config) {
-  const tokenResponse = await apiRequest(UPLOAD_TOKEN_PATH, {
+  const tokenResponse = await apiRequest(`v1/ai/fs/uploads/token`, {
     method: 'POST',
     config,
     body: {
@@ -291,7 +285,7 @@ export async function uploadBytesToOss({ bytes, filename, mimeType, folderId }, 
 }
 
 export async function commitFile(uploaded, config, options = {}) {
-  const response = await apiRequest(FILE_COMMIT_PATH, {
+  const response = await apiRequest(`v1/ai/fs/files/commit`, {
     method: 'POST',
     config,
     body: buildCommitPayload(uploaded, options),
@@ -322,7 +316,7 @@ export async function uploadLocalFile(filePath, config, { folderId, shouldIndex 
 }
 
 export async function startFlowTask(payload, config) {
-  const response = await apiRequest(FLOW_TASK_PATH, { method: 'POST', config, json: true, body: payload });
+  const response = await apiRequest(`v1/creator/courseware/flow/task`, { method: 'POST', config, json: true, body: payload });
   const result = response?.data ?? response;
   if (!result?.taskId) {
     throw new Error(result?.error || result?.msg || '启动课件任务失败');
@@ -330,8 +324,205 @@ export async function startFlowTask(payload, config) {
   return result;
 }
 
+export function buildTemplateListPath({
+  page = 1,
+  pageSize = 100,
+  templateModuleType = '',
+} = {}) {
+  const params = new URLSearchParams();
+  params.set('pageNum', String(page));
+  params.set('pageSize', String(pageSize));
+  params.set('templateModuleType', String(templateModuleType));
+  return `v1/business/creator/template/list?${params.toString()}`;
+}
+
+export function templateBusinessId(template) {
+  return template?.templateId || template?.id || '';
+}
+
+export function templateDisplayName(template) {
+  return template?.templateName
+    || template?.name
+    || template?.title
+    || template?.template_name
+    || '';
+}
+
+export function normalizeTemplateName(value) {
+  return String(value || '')
+    .normalize('NFKC')
+    .toLocaleLowerCase('zh-CN')
+    .replace(/[\p{P}\p{S}\s]+/gu, '');
+}
+
+function templateNameCore(value) {
+  let core = normalizeTemplateName(value);
+  let previous = '';
+  while (core && core !== previous) {
+    previous = core;
+    core = core.replace(/(?:课程模板|模板|课件|课程)$/u, '');
+  }
+  return core;
+}
+
+function levenshteinDistance(left, right) {
+  const a = Array.from(left);
+  const b = Array.from(right);
+  const previous = Array.from({ length: b.length + 1 }, (_, index) => index);
+  for (let i = 1; i <= a.length; i += 1) {
+    const current = [i];
+    for (let j = 1; j <= b.length; j += 1) {
+      current[j] = Math.min(
+        current[j - 1] + 1,
+        previous[j] + 1,
+        previous[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1),
+      );
+    }
+    previous.splice(0, previous.length, ...current);
+  }
+  return previous[b.length];
+}
+
+export function scoreTemplateNameMatch(templateName, query) {
+  const name = normalizeTemplateName(templateName);
+  const expected = normalizeTemplateName(query);
+  if (!name || !expected) return 0;
+  if (name === expected) return 100;
+
+  const nameCore = templateNameCore(name);
+  const expectedCore = templateNameCore(expected);
+  if (nameCore && expectedCore && nameCore === expectedCore) return 95;
+
+  let score = 0;
+  for (const [left, right] of [[name, expected], [nameCore, expectedCore]]) {
+    if (!left || !right) continue;
+    const maxLength = Math.max(Array.from(left).length, Array.from(right).length);
+    const minLength = Math.min(Array.from(left).length, Array.from(right).length);
+    if (left.includes(right) || right.includes(left)) {
+      score = Math.max(score, 75 + (20 * minLength) / maxLength);
+    }
+    const similarity = 1 - levenshteinDistance(left, right) / maxLength;
+    score = Math.max(score, similarity * 85);
+  }
+  return Math.round(score * 10) / 10;
+}
+
+export function rankTemplatesByName(templates, query) {
+  return templates
+    .map((template) => ({
+      template,
+      score: scoreTemplateNameMatch(templateDisplayName(template), query),
+    }))
+    .filter((item) => item.score > 0)
+    .sort((left, right) => (
+      right.score - left.score
+      || templateDisplayName(left.template).localeCompare(templateDisplayName(right.template), 'zh-CN')
+    ));
+}
+
+export function normalizeTemplateListPayload(payload) {
+  const data = payload?.data ?? payload;
+  let items = [];
+  if (Array.isArray(data)) items = data;
+  else if (Array.isArray(data?.list)) items = data.list;
+  else if (Array.isArray(data?.records)) items = data.records;
+  else if (Array.isArray(data?.items)) items = data.items;
+  else if (Array.isArray(data?.rows)) items = data.rows;
+
+  const rawTotal = data?.total ?? payload?.total;
+  const parsedTotal = Number(rawTotal);
+  return {
+    items,
+    total: rawTotal !== undefined && Number.isFinite(parsedTotal) ? parsedTotal : undefined,
+  };
+}
+
+export function findTemplateByName(templates, templateName) {
+  const expected = String(templateName || '').trim();
+  const normalizedExpected = normalizeTemplateName(expected);
+  const ranked = rankTemplatesByName(templates, expected);
+  const matches = ranked.filter((item) => item.score >= 60);
+  if (!normalizedExpected || matches.length === 0) {
+    throw new Error(`未找到模板：${expected}。请先执行 templates:list --keyword "${expected}" 查看可用模板`);
+  }
+
+  const topScore = matches[0].score;
+  const topMatches = matches.filter((item) => item.score === topScore);
+  const isStrongUniqueMatch = topScore >= 95 && topMatches.length === 1;
+  const isClearlyAhead = matches.length === 1 || topScore - matches[1].score >= 8;
+  if (!isStrongUniqueMatch && !isClearlyAhead) {
+    const choices = matches
+      .slice(0, 10)
+      .map(({ template, score }) => (
+        `${templateBusinessId(template)}: ${templateDisplayName(template)}（匹配度 ${score}）`
+      ))
+      .join('\n');
+    throw new Error(`匹配到多个相近模板：${expected}\n${choices}\n请改用 --template-id 明确指定`);
+  }
+  const matched = matches[0].template;
+  const templateId = String(templateBusinessId(matched)).trim();
+  if (!templateId) throw new Error(`模板「${expected}」缺少业务模板 ID`);
+  return matched;
+}
+
+export function summarizeTemplates(templates) {
+  return templates.map((template) => ({
+    templateId: templateBusinessId(template),
+    templateName: templateDisplayName(template),
+    templateModuleType: template.templateModuleTypeText || template.templateModuleType || '',
+    typeCode: template.typeCode || template.templateCode || '',
+    status: template.statusText || template.status || '',
+    permission: template.permissionTypeText || template.permissionType || '',
+    updateTime: template.updateTime || template.updatedAt || '',
+  }));
+}
+
+export async function listTemplates({
+  page = 1,
+  pageSize = 100,
+  templateModuleType = '',
+} = {}, config) {
+  const response = await apiRequest(
+    buildTemplateListPath({ page, pageSize, templateModuleType }),
+    { config },
+  );
+  if (!response || (response.code !== undefined && ![0, 200].includes(Number(response.code)))) {
+    throw new Error(response?.msg || '获取模板列表失败');
+  }
+  return normalizeTemplateListPayload(response);
+}
+
+export async function listAllTemplates(config, {
+  pageSize = 100,
+  templateModuleType = '',
+  maxPages = 100,
+} = {}) {
+  const all = [];
+  for (let page = 1; page <= maxPages; page += 1) {
+    const result = await listTemplates({ page, pageSize, templateModuleType }, config);
+    all.push(...result.items);
+
+    const reachedTotal = result.total !== undefined && all.length >= result.total;
+    const exhaustedWithoutTotal = result.total === undefined && result.items.length < pageSize;
+    if (reachedTotal || result.items.length === 0 || exhaustedWithoutTotal) return all;
+  }
+  throw new Error(`模板列表超过 ${maxPages} 页，已停止查询；请改用 --template-id 明确指定`);
+}
+
+export async function resolveTemplateByName(templateName, config) {
+  const expected = String(templateName || '').trim();
+  if (!expected) throw new Error('模板名称不能为空');
+  const templates = await listAllTemplates(config);
+  const template = findTemplateByName(templates, expected);
+  return {
+    templateId: String(templateBusinessId(template)),
+    templateName: templateDisplayName(template),
+    template,
+  };
+}
+
 export async function createCoursewareWithTemplate({ templateId, title = '新课件' }, config) {
-  const response = await apiRequest(CREATE_COURSEWARE_PATH, {
+  const response = await apiRequest(`v1/business/creator/courseware/create-with-template`, {
     method: 'POST',
     config,
     json: true,

@@ -26,12 +26,14 @@ metadata: {"requires":{"bins":["node"]},"env":["XRUNS_COURSEWARE_BASE_URL","XRUN
 ### 必须（MUST）
 
 - **任何写操作之前先跑 `pagedata.mjs config`**，确认 token / 网关 / 预览站点三项都已就位再动手；缺 token 就按下面的「配置」引导用户补齐，不要盲目重试。
+- 用户指定模板名称时，先通过 `templates:list` 使用 `v1/business/creator/template/list` 查询，并按名称相似度解析业务 `templateId`；允许省略“模板 / 课件 / 课程”、忽略大小写、空格和标点，也容忍少量错字。找不到或多个候选匹配度接近时必须停止并报告候选项，**不要猜 ID**。
+- 模板名称解析完成后，校验、创建模板课程和创建 flow task 必须复用同一个 `templateId`，不得在流程中重新选择模板。
 - 流程固定为 **写页面 JSON（占位符）→ 解析占位符（按需上传）→ 校验 → 提交**，每步产物落盘，任何一步失败都不进入下一步。
 - **上传范围以页面 JSON 的引用为准**：先写好带 `@asset:` 占位符的页面 JSON，再由 `pages:resolve` 只上传被引用到的素材。素材目录里有多少文件与上传多少无关。
 - 素材上传与页面 JSON 编排必须共用同一份资产清单（默认 `assets.manifest.json`）。
 - 无组件页（`components: []`）必须提供 `prompt`，否则该页没有任何可生成内容。
 - 自带音频时把地址写进对应字段（`tts.content.url` / `infographic[].tts_url` / `immersive_explanation[].tts_url`）；**填了就不会被 media worker 重新生成**，留空才会触发 TTS。
-- 提交前先跑一次 `pages:validate --template-id <id>`，用模板组件白名单确认这些组件在目标模板里确实可用。
+- 提交前先跑一次 `pages:validate --template-id <id>` 或 `pages:validate --template <name>`，用模板组件白名单确认这些组件在目标模板里确实可用。
 - 提交顺序固定为 **创建模板课程 → 携带 `coursewareId` 创建 flow task**；不要把 `category` / `parsePrompt` 从客户端透传给 creator。
 - 报告结果时如实说明：上传了几个、跳过几个、失败几个，校验有几个错误几个告警。
 
@@ -43,6 +45,7 @@ metadata: {"requires":{"bins":["node"]},"env":["XRUNS_COURSEWARE_BASE_URL","XRUN
 |------|------|
 | 查看生效配置与来源（不发请求） | `pagedata.mjs config` |
 | 验证 token / 网关连通 | `pagedata.mjs ping` |
+| 查询可用模板及业务模板 ID | `pagedata.mjs templates:list` |
 | **把 JSON 里的本地引用换成线上地址（同时按需上传，默认走这条）** | `pagedata.mjs pages:resolve` |
 | 手动上传指定的几个文件（显式列文件名） | `pagedata.mjs assets:upload a.png b.mp3` |
 | 校验页面 JSON 结构 | `pagedata.mjs pages:validate` |
@@ -101,6 +104,26 @@ node .agents/skills/runs-page-data/scripts/pagedata.mjs ping \
 
 ## 标准流程
 
+### 0. 确定目标模板
+
+用户给业务模板 ID 时直接使用：
+
+```bash
+--template-id <templateId>
+```
+
+用户给模板名称时，先查询确认：
+
+```bash
+node .agents/skills/runs-page-data/scripts/pagedata.mjs templates:list \
+  --keyword "银河互动课件"
+```
+
+`pages:validate` 和 `pages:submit` 也支持直接传 `--template "模板名称"`，脚本会通过
+`GET v1/business/creator/template/list` 遍历当前用户可用模板，将用户输入归一化后按名称相似度
+排序并解析业务 `templateId`。完整名称唯一命中时直接使用；用户省略后缀、标点或有少量错字时，
+只有最佳候选明显领先才自动使用。无匹配或多个候选过于接近时脚本会中止并列出候选 ID。
+
 ### 1. 写页面 JSON，媒体字段用占位符
 
 素材位置用 `@asset:` 引用，路径相对资产清单所在目录：
@@ -139,22 +162,25 @@ node .agents/skills/runs-page-data/scripts/pagedata.mjs pages:resolve ./page.jso
 
 ```bash
 node .agents/skills/runs-page-data/scripts/pagedata.mjs pages:validate ./page.resolved.json \
-  --template-id <templateId>
+  --template "银河互动课件"
 ```
 
-校验内容：顶层结构 → 组件类型是否已知、是否在模板白名单内 → content 结构与必填字段 → page 级组件独占整页 → 是否残留本地引用。`✗` 是错误（阻断提交），`!` 是告警（如音色不在推荐表、缺 `tag`、`componentId` 重复）。
+也可用已知的 `--template-id <templateId>`。校验内容：顶层结构 → 组件类型是否已知、是否在模板白名单内 → content 结构与必填字段 → page 级组件独占整页 → 是否残留本地引用。`✗` 是错误（阻断提交），`!` 是告警（如音色不在推荐表、缺 `tag`、`componentId` 重复）。
 
 ### 4. 提交
 
 ```bash
 # 先预览（不带 --yes 只做校验和摘要）
 node .agents/skills/runs-page-data/scripts/pagedata.mjs pages:submit ./page.resolved.json \
-  --template-id <templateId>
+  --template "银河互动课件"
 
 # 确认后提交并追踪
 node .agents/skills/runs-page-data/scripts/pagedata.mjs pages:submit ./page.resolved.json \
-  --template-id <templateId> --yes --watch --report ./report.csv
+  --template "银河互动课件" --yes --watch --report ./report.csv
 ```
+
+`--template <name>` 与 `--template-id <id>` 二选一。使用名称时，脚本会先打印
+`模板解析：<name> → <templateId>`，后续请求统一使用解析出的 ID。
 
 提交成功后脚本会打印 `预览链接：<XRUNS_COURSEWARE_WEB_URL>creator/<coursewareId>`，报告里也有 `coursewareUrl` 一列。**报告结果时把这个链接原样给用户**；链接域名取自 `XRUNS_COURSEWARE_WEB_URL`，不要自己拼或从网关地址推导。
 
@@ -209,6 +235,7 @@ node .agents/skills/runs-page-data/scripts/pagedata.mjs assets:upload \
 | 上传凭证有效期 | 60 秒，取到即用，不要预取一批 |
 | 单文件大小 | ≤ 100MB |
 | `object_key` / `public_url` | 只能用凭证接口返回值，且两者必须匹配 |
+| 模板选择 | `--template <name>` 与 `--template-id <id>` 二选一；名称支持模糊匹配，候选接近时必须改用明确 ID |
 | `should_index` | 素材一律 `false` |
 | page 级组件 | `course_intro` / `course_task` / `course_summary` / `image_save` / `infographic` / `immersive_explanation` / `select_question` / `galaxy_select_question` / `matching_question` / `ordering_question` / `categorization_question` —— 每页只能有一个，且不能与其他组件同页 |
 | block 级组件 | `text` / `rich_text` / `image` / `video` / `avatar` / `tts` / `podcast` / `word_card` / `learning_report` —— 可同页组合 |

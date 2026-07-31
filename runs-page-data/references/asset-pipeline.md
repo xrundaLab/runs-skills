@@ -75,7 +75,13 @@ creator 的 media worker 只在下列条件下调用 TTS：
 
 ## 课件任务提交
 
-页面数据校验通过后，写操作固定分为两步：
+用户提供模板名称时，先通过
+`GET v1/business/creator/template/list?pageNum=<n>&pageSize=<n>&templateModuleType=`
+遍历当前用户可用模板。脚本会忽略大小写、空格和标点，允许省略“模板 / 课件 / 课程”
+等后缀，并以编辑距离容忍少量错字，再按相似度解析业务 `templateId`。名称找不到或多个
+候选匹配度接近时停止，不进入写操作。
+
+页面数据校验通过后，写操作固定分为两步，并全程复用上述 `templateId`：
 
 1. `POST v1/business/creator/courseware/create-with-template`，传入 `title` 与 `templateId`，取得 `coursewareId`。
 2. `POST v1/creator/courseware/flow/task`，在原有 `templateId`、`structuredJson` 或 `fsFileId` 基础上携带该 `coursewareId`。
