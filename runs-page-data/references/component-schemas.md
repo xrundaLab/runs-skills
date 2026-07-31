@@ -1,7 +1,6 @@
 # 页面 JSON 与组件结构速查
 
-完整字段说明以 [doc/feat/制课端组件工具schema.md](../../../../doc/feat/制课端组件工具schema.md) 为准，本页只保留编排时最常查的部分。
-运行时权威定义在 `frontend/app/components/page-runtime/widgets/*/schema.ts` 与模板组件接口返回的 `dataStructure`。
+本页示例只帮助理解页面 JSON 形态，不作为校验依据。组件可用性、级别和 content 结构只以当前模板组件接口返回的数据为准。
 
 ## 顶层结构
 
@@ -36,25 +35,16 @@
 
 ## 组件来源与级别
 
-指定模板时，组件列表不是下面这份静态速查表，而是动态读取：
+组件列表和结构必须动态读取：
 
 - `GET v1/business/creator/template/{templateId}/components`：`componentType` 决定可用性，`compositionMode` 决定 page/block；
-- `GET v1/business/creator/component/{componentId}`：`dataStructure` 提供动态组件的 content 示例结构。
+- `GET v1/business/creator/component/{componentId}`：`dataStructure` 是 content 的唯一结构契约。
 
-因此模板新配置的组件即使尚未加入本地 `COMPONENT_SPECS`，也可以参与编排和校验。下面只列出未指定模板时可离线校验的内置组件。
+不提供模板、不在模板清单内、缺少或无法解析 `dataStructure` 都会阻断校验。校验要求示例字段全部存在并保持对象/数组层级，但允许额外字段和标量类型变化。
 
-**内置 page 级（离线兜底；独占整页，同页不得再有任何组件）**
+> 用 `pages:validate --template-id <id>` 或 `pages:validate --template <name>` 按目标模板核对。名称模式会先查询并解析业务模板 ID。
 
-`course_intro` · `course_task` · `course_summary` · `image_save` · `infographic` · `immersive_explanation` · `select_question` · `galaxy_select_question` · `matching_question` · `ordering_question` · `categorization_question`
-
-**内置 block 级（离线兜底；可同页组合）**
-
-`text` · `rich_text` · `image` · `video` · `avatar` · `tts` · `podcast` · `word_card` · `learning_report`
-
-> 权威来源始终是模板组件接口。用 `pages:validate --template-id <id>` 或
-> `pages:validate --template <name>` 可按目标模板核对可用类型、结构和组合规则。名称模式会先查询并解析业务模板 ID。
-
-## 常用组件 content
+## 常见形态示例（仅供理解，不参与校验）
 
 ### text / rich_text（block）
 

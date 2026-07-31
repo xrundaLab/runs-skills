@@ -111,6 +111,10 @@ test('parseAssetsUploadArgs 拒绝非法并发数', () => {
 test('parseSubmitArgs 校验必填项', () => {
   assert.throws(() => parseSubmitArgs(parseArgv(['pages:submit'])), /缺少页面 JSON 路径/);
   assert.throws(() => parseSubmitArgs(parseArgv(['pages:submit', 'p.json'])), /缺少 --template-id 或 --template/);
+  assert.throws(
+    () => parseSubmitArgs(parseArgv(['pages:submit', 'p.json', '--template-id', 'tpl1', '--force'])),
+    /不支持 --force/,
+  );
   // 有 flag 无取值时 parseArgv 会置为 true，不能被当成合法模板 ID
   assert.throws(
     () => parseSubmitArgs(parseArgv(['pages:submit', 'p.json', '--template-id'])),
@@ -292,264 +296,162 @@ test('findAsset 文件名歧义时不猜，交由调用方报错', () => {
 
 // ---- 页面校验 ----
 
-test('validatePageData 通过合法文档', () => {
-  const report = validatePageData(validDoc());
+const templateOptions = () => ({
+  templateComponents: [
+    { componentType: 'page_demo', compositionMode: 'page' },
+    { componentType: 'block_demo', compositionMode: 'block' },
+  ],
+  componentExamples: {
+    page_demo: {
+      components: [{
+        type: 'page_demo',
+        content: {
+          title: '示例',
+          media: { url: 'https://example.com/a.png', caption: '' },
+          items: [{ id: '1', label: '项目' }],
+        },
+      }],
+    },
+    block_demo: {
+      type: 'block_demo',
+      content: { text: '示例', enabled: true },
+    },
+  },
+});
+
+const templateDoc = () => ({
+  title: 'T',
+  pages: [{
+    tag: '演示',
+    title: '页面',
+    components: [{
+      type: 'page_demo',
+      componentId: 'page_demo_1',
+      content: {
+        title: '实际标题',
+        media: { url: 'https://res.example/a.png', caption: '' },
+        items: [{ id: 1, label: '项目一', extra: '允许额外字段' }],
+        extra: true,
+      },
+    }],
+  }],
+});
+
+test('validatePageData 禁止缺少模板组件接口上下文的本地兜底校验', () => {
+  const report = validatePageData(templateDoc());
+  assert.ok(report.errors.some((item) => item.path === 'template' && /禁止使用本地兜底规格/.test(item.message)));
+});
+
+test('validatePageData 按模板 dataStructure 通过结构完整的数据并允许额外字段和标量类型变化', () => {
+  const report = validatePageData(templateDoc(), templateOptions());
   assert.deepEqual(report.errors, []);
+  assert.deepEqual(report.warnings, []);
 });
 
 test('validatePageData 卡住顶层结构问题', () => {
-  const missingTitle = validatePageData({ pages: [] });
+  const missingTitle = validatePageData({ pages: [] }, { templateComponents: [], componentExamples: {} });
   assert.ok(missingTitle.errors.some((item) => item.path === 'title'));
   assert.ok(missingTitle.errors.some((item) => item.path === 'pages' && /不能为空/.test(item.message)));
 
-  const notArray = validatePageData({ title: 'T', pages: {} });
+  const notArray = validatePageData({ title: 'T', pages: {} }, { templateComponents: [], componentExamples: {} });
   assert.ok(notArray.errors.some((item) => item.path === 'pages'));
 });
 
-test('validatePageData 强制 page 级组件独占整页', () => {
-  const doc = validDoc();
-  doc.pages[0].components.push({ type: 'text', content: '不该出现' });
-
-  const report = validatePageData(doc);
-  assert.ok(report.errors.some((item) => /page 级组件独占整页/.test(item.message)));
+test('validatePageData 要求 dataStructure 中的对象字段完整', () => {
+  const doc = templateDoc();
+  delete doc.pages[0].components[0].content.media.caption;
+  const report = validatePageData(doc, templateOptions());
+  assert.ok(report.errors.some((item) => /content\.media\.caption：字段缺失/.test(item.message)));
 });
 
-test('validatePageData 允许多个 block 级组件同页', () => {
+test('validatePageData 保持对象、数组与标量的结构类别', () => {
+  assert.match(validateJsonAgainstExample({ a: '' }, ['x']), /应为对象/);
+  assert.match(validateJsonAgainstExample([{ a: '' }], []), /数组不能为空/);
+  assert.match(validateJsonAgainstExample({ a: '' }, { a: {} }), /应为标量/);
+  assert.equal(
+    validateJsonAgainstExample({ count: 1, enabled: true }, { count: '01', enabled: 'yes' }),
+    null,
+  );
+});
+
+test('validatePageData 逐项检查非空数组的条目结构', () => {
+  const doc = templateDoc();
+  delete doc.pages[0].components[0].content.items[0].label;
+  const report = validatePageData(doc, templateOptions());
+  assert.ok(report.errors.some((item) => /content\.items\[0\]\.label：字段缺失/.test(item.message)));
+});
+
+test('validatePageData 拒绝模板未配置的组件', () => {
+  const doc = templateDoc();
+  doc.pages[0].components[0].type = 'not_in_template';
+  const report = validatePageData(doc, templateOptions());
+  assert.ok(report.errors.some((item) => /模板未配置该组件类型/.test(item.message)));
+});
+
+test('validatePageData 拒绝没有可解析 dataStructure 的模板组件', () => {
+  const doc = templateDoc();
+  const options = templateOptions();
+  delete options.componentExamples.page_demo;
+  const report = validatePageData(doc, options);
+  assert.ok(report.errors.some((item) => /未提供可解析的 dataStructure/.test(item.message)));
+});
+
+test('validatePageData 使用模板 compositionMode 强制 page 组件独占整页', () => {
+  const doc = templateDoc();
+  doc.pages[0].components.push({
+    type: 'block_demo',
+    content: { text: '正文', enabled: false },
+  });
+  const report = validatePageData(doc, templateOptions());
+  assert.ok(report.errors.some((item) => /page 级组件独占整页：page_demo/.test(item.message)));
+});
+
+test('validatePageData 允许模板声明的多个 block 组件同页', () => {
   const doc = {
     title: 'T',
     pages: [{
-      tag: '讲解',
+      tag: '演示',
       title: '页面',
       components: [
-        { type: 'text', content: '文本' },
-        { type: 'image', content: [{ url: 'https://res/a.png' }] },
-        { type: 'tts', content: { text: '口播' } },
+        { type: 'block_demo', content: { text: 'A', enabled: true } },
+        { type: 'block_demo', content: { text: 'B', enabled: false } },
       ],
     }],
   };
-  assert.deepEqual(validatePageData(doc).errors, []);
+  assert.deepEqual(validatePageData(doc, templateOptions()).errors, []);
 });
 
 test('validatePageData 要求无组件页提供 prompt', () => {
-  const withoutPrompt = validatePageData({ title: 'T', pages: [{ tag: 'a', title: '空页', components: [] }] });
+  const options = { templateComponents: [], componentExamples: {} };
+  const withoutPrompt = validatePageData(
+    { title: 'T', pages: [{ tag: 'a', title: '空页', components: [] }] },
+    options,
+  );
   assert.ok(withoutPrompt.errors.some((item) => item.path === 'pages[0].prompt'));
 
   const withPrompt = validatePageData({
     title: 'T',
     pages: [{ tag: 'a', title: '空页', prompt: '生成一页导入', components: [] }],
-  });
+  }, options);
   assert.deepEqual(withPrompt.errors, []);
 });
 
-test('validatePageData 检查组件必填字段与类型', () => {
-  const missingRequired = validatePageData({
-    title: 'T',
-    pages: [{ tag: 'a', title: 'p', components: [{ type: 'image_save', content: { title: '缺少 img_url' } }] }],
-  });
-  assert.ok(missingRequired.errors.some((item) => item.path === 'pages[0].components[0].content.img_url'));
-
-  const wrongType = validatePageData({
-    title: 'T',
-    pages: [{ tag: 'a', title: 'p', components: [{ type: 'text', content: { not: 'a string' } }] }],
-  });
-  assert.ok(wrongType.errors.some((item) => /类型应为字符串/.test(item.message)));
-});
-
-test('validatePageData 拒绝空数组类内容并逐项定位', () => {
-  const emptyArray = validatePageData({
-    title: 'T',
-    pages: [{ tag: 'a', title: 'p', components: [{ type: 'infographic', content: [] }] }],
-  });
-  assert.ok(emptyArray.errors.some((item) => /数组不能为空/.test(item.message)));
-
-  const badItem = validatePageData({
-    title: 'T',
-    pages: [{
-      tag: 'a',
-      title: 'p',
-      components: [{ type: 'ordering_question', content: { questions: [{ id: 'q1', stem: '排序', items: [{ id: 'i1' }] }] } }],
-    }],
-  });
-  assert.ok(badItem.errors.some((item) => item.path === 'pages[0].components[0].content.questions[0].items[0].name'));
-});
-
-test('validatePageData 对未知组件类型默认报错，--allow-unknown 时降级告警', () => {
-  const doc = { title: 'T', pages: [{ tag: 'a', title: 'p', components: [{ type: 'mystery', content: {} }] }] };
-
-  assert.ok(validatePageData(doc).errors.some((item) => /未知组件类型/.test(item.message)));
-  const relaxed = validatePageData(doc, { allowUnknownTypes: true });
-  assert.deepEqual(relaxed.errors, []);
-  assert.ok(relaxed.warnings.some((item) => /未知组件类型/.test(item.message)));
-});
-
-test('validatePageData 按模板组件清单限制可用类型', () => {
-  const report = validatePageData(validDoc(), {
-    templateComponents: [{ componentType: 'text' }, { componentType: 'tts' }],
-  });
-  assert.ok(report.errors.some((item) => /模板未配置该组件类型：course_intro/.test(item.message)));
-});
-
-test('validatePageData 接受模板接口提供但 COMPONENT_SPECS 未内置的动态组件', () => {
-  const type = 'kikitalk_enter';
+test('validatePageData 对重复 componentId 告警', () => {
   const doc = {
     title: 'T',
-    pages: [{
-      tag: '进场',
-      title: '听故事',
-      components: [{
-        type,
-        content: {
-          linkName: '听故事/完整听一遍',
-          linkSubtitle: '竖起小耳朵，一起听故事',
-          characterImageUrl: 'https://res.example/aura.png',
-          audioUrl: 'https://res.example/listen.mp3',
-        },
-      }],
-    }],
-  };
-  const report = validatePageData(doc, {
-    templateComponents: [{ componentType: type, compositionMode: 'page' }],
-    componentExamples: {
-      [type]: {
-        components: [{
-          type,
-          content: {
-            linkName: '示例标题',
-            linkSubtitle: '示例副标题',
-            characterImageUrl: 'https://example.com/character.png',
-            audioUrl: 'https://example.com/audio.mp3',
-          },
-        }],
-      },
-    },
-  });
-
-  assert.deepEqual(report.errors, []);
-  assert.deepEqual(report.warnings, []);
-});
-
-test('validatePageData 用 dataStructure 阻断动态组件 content 结构错误', () => {
-  const type = 'kikitalk_listen_to_picture_books';
-  const report = validatePageData({
-    title: 'T',
-    pages: [{
-      tag: '听绘本',
-      title: '绘本',
-      components: [{ type, content: { frames: [] } }],
-    }],
-  }, {
-    templateComponents: [{ componentType: type, compositionMode: 'page' }],
-    componentExamples: {
-      [type]: {
-        components: [{
-          type,
-          content: [{
-            imageUrl: 'https://example.com/1.png',
-            storyText: 'Hello',
-            audioUrl: 'https://example.com/1.mp3',
-          }],
-        }],
-      },
-    },
-  });
-
-  assert.ok(report.errors.some((item) => /与模板示例结构不一致/.test(item.message)));
-  assert.deepEqual(report.warnings, []);
-});
-
-test('validatePageData 使用模板 compositionMode 强制动态 page 组件独占整页', () => {
-  const report = validatePageData({
-    title: 'T',
-    pages: [{
-      tag: '混排',
-      title: '非法混排',
-      components: [
-        { type: 'kikitalk_enter', content: { linkName: '听故事' } },
-        { type: 'text', content: '不能混放' },
-      ],
-    }],
-  }, {
-    templateComponents: [
-      { componentType: 'kikitalk_enter', compositionMode: 'page' },
-      { componentType: 'text', compositionMode: 'block' },
-    ],
-    componentExamples: {
-      kikitalk_enter: {
-        components: [{ type: 'kikitalk_enter', content: { linkName: '示例' } }],
-      },
-    },
-  });
-
-  assert.ok(report.errors.some((item) => /page 级组件独占整页：kikitalk_enter/.test(item.message)));
-});
-
-test('validatePageData 在模板组件清单为空时拒绝所有组件', () => {
-  const report = validatePageData({
-    title: 'T',
-    pages: [{ tag: 'a', title: 'p', components: [{ type: 'text', content: '正文' }] }],
-  }, {
-    templateComponents: [],
-  });
-  assert.ok(report.errors.some((item) => /模板未配置该组件类型：text/.test(item.message)));
-});
-
-test('validatePageData 对模板动态组件缺少 dataStructure 给出告警但不误报未知类型', () => {
-  const type = 'future_component';
-  const report = validatePageData({
-    title: 'T',
-    pages: [{ tag: 'a', title: 'p', components: [{ type, content: { value: 1 } }] }],
-  }, {
-    templateComponents: [{ componentType: type, compositionMode: 'block' }],
-  });
-
-  assert.deepEqual(report.errors, []);
-  assert.ok(report.warnings.some((item) => /未提供可解析的 dataStructure/.test(item.message)));
-  assert.ok(!report.warnings.some((item) => /未知组件类型/.test(item.message)));
-});
-
-test('validatePageData 音色不在推荐表内只告警', () => {
-  const report = validatePageData({
-    title: 'T',
-    pages: [{ tag: 'a', title: 'p', components: [{ type: 'tts', content: { text: '稿子', voice: 'not-a-voice' } }] }],
-  });
-  assert.deepEqual(report.errors, []);
-  assert.ok(report.warnings.some((item) => /不在推荐枚举内/.test(item.message)));
-});
-
-test('validatePageData 对重复 componentId 告警', () => {
-  const report = validatePageData({
-    title: 'T',
     pages: [
-      { tag: 'a', title: 'p1', components: [{ type: 'text', content: 'a', componentId: 'dup' }] },
-      { tag: 'b', title: 'p2', components: [{ type: 'text', content: 'b', componentId: 'dup' }] },
+      { tag: 'a', title: 'p1', components: [{ type: 'block_demo', content: { text: 'a', enabled: true }, componentId: 'dup' }] },
+      { tag: 'b', title: 'p2', components: [{ type: 'block_demo', content: { text: 'b', enabled: false }, componentId: 'dup' }] },
     ],
-  });
+  };
+  const report = validatePageData(doc, templateOptions());
   assert.deepEqual(report.errors, []);
   assert.ok(report.warnings.some((item) => /componentId 重复/.test(item.message)));
 });
 
-test('validatePageData 接受选项的字符串与对象两种形态', () => {
-  const build = (options) => ({
-    title: 'T',
-    pages: [{
-      tag: 'a',
-      title: 'p',
-      components: [{ type: 'select_question', content: { questions: [{ question: '题干', options }] } }],
-    }],
-  });
-
-  assert.deepEqual(validatePageData(build(['A', 'B'])).errors, []);
-  assert.deepEqual(validatePageData(build([{ text: 'A', audio: 'https://res/a.mp3' }])).errors, []);
-  assert.ok(validatePageData(build([{ audio: 'https://res/a.mp3' }])).errors.length > 0);
-});
-
-// ---- 示例比对（与前端 validate-json-by-example 同语义）----
-
-test('validateJsonAgainstExample 放行多余字段，卡住结构种类不一致', () => {
+test('validateJsonAgainstExample 放行额外字段但拒绝缺失字段', () => {
   assert.equal(validateJsonAgainstExample({ a: '', b: 0 }, { a: 'x', b: 1, extra: true }), null);
-  assert.match(validateJsonAgainstExample({ a: '' }, ['x']), /应为对象/);
-  assert.match(validateJsonAgainstExample([{ a: '' }], []), /数组不能为空/);
-  assert.match(validateJsonAgainstExample({ a: '' }, { b: 1 }), /与组件示例结构不匹配/);
+  assert.match(validateJsonAgainstExample({ a: '', b: 0 }, { a: 'x' }), /b：字段缺失/);
 });
 
 test('extractComponentContentExample 从页面级示例中取出 content', () => {

@@ -3,16 +3,11 @@
  *
  * 分两层：
  * 1. 顶层导入结构（title / pages[] / components[]）+ page 级组件独占整页规则；
- * 2. 组件 content 结构：未指定模板时用内置规格表；指定模板时以模板组件清单为
- *    可用性与 compositionMode 的权威来源，并用组件详情 dataStructure 校验动态组件。
+ * 2. 组件 content 结构：必须以模板组件接口为唯一来源，并按组件详情 dataStructure
+ *    校验字段与容器结构完整性。
  *
- * errors 阻断提交，warnings 只提示（例如音色不在推荐表内、缺 tag）。
+ * errors 阻断提交，warnings 只提示（例如缺 tag、componentId 重复）。
  */
-import {
-  COMPONENT_SPECS,
-  KNOWN_COMPONENT_TYPES,
-  getCompositionMode,
-} from './component-spec.mjs';
 
 const typeLabel = (value) => {
   if (value === null) return 'null';
@@ -40,98 +35,21 @@ function createReport() {
 
 const isPlainObject = (value) => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 
-/** 判断值是否匹配描述子，用于 union 分支选择（不产出报错）。 */
-function matchesDescriptor(descriptor, value) {
-  if (!descriptor || descriptor.kind === 'any') return true;
-  switch (descriptor.kind) {
-    case 'string': return typeof value === 'string';
-    case 'number': return typeof value === 'number';
-    case 'boolean': return typeof value === 'boolean';
-    case 'array': return Array.isArray(value);
-    case 'object': return isPlainObject(value);
-    case 'union': return descriptor.options.some((option) => matchesDescriptor(option, value));
-    default: return true;
-  }
-}
-
-export function validateAgainstDescriptor(descriptor, value, path, report) {
-  if (!descriptor) return;
-
-  if (value === undefined || value === null) {
-    if (descriptor.required) report.error(path, '必填字段缺失');
-    return;
-  }
-
-  switch (descriptor.kind) {
-    case 'any':
-      return;
-
-    case 'union': {
-      const matched = descriptor.options.find((option) => matchesDescriptor(option, value));
-      if (!matched) {
-        const kinds = descriptor.options.map((option) => option.kind).join(' | ');
-        report.error(path, `类型应为 ${kinds}，实际是${typeLabel(value)}`);
-        return;
-      }
-      validateAgainstDescriptor(matched, value, path, report);
-      return;
-    }
-
-    case 'string':
-    case 'number':
-    case 'boolean': {
-      if (typeof value !== descriptor.kind) {
-        const expected = { string: '字符串', number: '数字', boolean: '布尔值' }[descriptor.kind];
-        report.error(path, `类型应为${expected}，实际是${typeLabel(value)}`);
-        return;
-      }
-      if (descriptor.required && descriptor.kind === 'string' && value.trim() === '') {
-        report.error(path, '必填字段不能为空字符串');
-        return;
-      }
-      if (descriptor.softValues && value !== '' && !descriptor.softValues.includes(value)) {
-        report.warn(path, `取值 ${JSON.stringify(value)} 不在推荐枚举内：${descriptor.softValues.join(' / ')}`);
-      }
-      return;
-    }
-
-    case 'array': {
-      if (!Array.isArray(value)) {
-        report.error(path, `类型应为数组，实际是${typeLabel(value)}`);
-        return;
-      }
-      if (descriptor.required && value.length === 0) {
-        report.error(path, '数组不能为空');
-        return;
-      }
-      value.forEach((item, index) => {
-        validateAgainstDescriptor(descriptor.of, item, `${path}[${index}]`, report);
-      });
-      return;
-    }
-
-    case 'object': {
-      if (!isPlainObject(value)) {
-        report.error(path, `类型应为对象，实际是${typeLabel(value)}`);
-        return;
-      }
-      for (const [key, fieldDescriptor] of Object.entries(descriptor.fields || {})) {
-        validateAgainstDescriptor(fieldDescriptor, value[key], path ? `${path}.${key}` : key, report);
-      }
-      return;
-    }
-
-    default:
-  }
-}
-
 /**
- * 按「组件示例结构」做宽松比对，与前端 validate-json-by-example.ts 同语义：
- * 结构种类必须一致，重名字段递归比类型，示例外的多余字段放行；返回第一条错误或 null。
+ * 按模板 dataStructure 做结构完整性比对：
+ * - 对象必须包含示例中的全部字段，额外字段放行；
+ * - 数组保持数组形态，示例非空时实际数组也必须非空，并逐项检查条目结构；
+ * - 标量只要求仍是标量，字符串 / 数字 / 布尔值之间不做语义或精确类型限制；
+ * - 示例为 null 时只要求字段存在，不限制值。
+ *
+ * 返回第一条错误或 null。
  */
 export function validateJsonAgainstExample(example, value, path = '') {
   const label = path || '根节点';
-  if (example === null || example === undefined) return null;
+
+  if (example === null || example === undefined) {
+    return value === undefined ? `${label}：字段缺失` : null;
+  }
 
   if (Array.isArray(example)) {
     if (!Array.isArray(value)) return `${label}：应为数组，实际是${typeLabel(value)}`;
@@ -146,23 +64,18 @@ export function validateJsonAgainstExample(example, value, path = '') {
 
   if (typeof example === 'object') {
     if (!isPlainObject(value)) return `${label}：应为对象，实际是${typeLabel(value)}`;
-    const exampleKeys = Object.keys(example);
-    if (exampleKeys.length === 0) return null;
-    const matchedKeys = exampleKeys.filter((key) => key in value);
-    if (matchedKeys.length === 0) {
-      const hint = exampleKeys.slice(0, 5).map((k) => `「${k}」`).join('、');
-      return `${label}：与组件示例结构不匹配（未包含 ${hint} 等任一字段）`;
-    }
-    for (const key of matchedKeys) {
+    for (const key of Object.keys(example)) {
       const childPath = path ? `${path}.${key}` : key;
+      if (!(key in value)) return `${childPath}：字段缺失`;
       const err = validateJsonAgainstExample(example[key], value[key], childPath);
       if (err) return err;
     }
     return null;
   }
 
-  if (typeof value !== typeof example) {
-    return `${label}：类型应为${typeLabel(example)}，实际是${typeLabel(value)}`;
+  if (value === undefined) return `${label}：字段缺失`;
+  if (value !== null && typeof value === 'object') {
+    return `${label}：应为标量，实际是${typeLabel(value)}`;
   }
   return null;
 }
@@ -196,43 +109,27 @@ function validateComponent(component, path, report, options) {
     report.error(`${path}.componentId`, `类型应为字符串，实际是${typeLabel(component.componentId)}`);
   }
 
-  const spec = COMPONENT_SPECS[type];
-  const templateComponent = options.templateComponentByType?.get(type);
-  const hasTemplateContext = Boolean(options.templateComponentByType);
-
-  if (hasTemplateContext && !templateComponent) {
+  const templateComponent = options.templateComponentByType.get(type);
+  if (!templateComponent) {
     report.error(`${path}.type`, `模板未配置该组件类型：${type}`);
-  } else if (!hasTemplateContext && !spec) {
-    const message = `未知组件类型 ${type}；已知类型：${KNOWN_COMPONENT_TYPES.join(' / ')}`;
-    if (options.allowUnknownTypes) report.warn(`${path}.type`, message);
-    else report.error(`${path}.type`, message);
     return type;
   }
 
-  if (spec) {
-    validateAgainstDescriptor(spec.content, component.content, `${path}.content`, report);
+  const example = options.componentExamples?.[type];
+  if (example === undefined) {
+    report.error(
+      `${path}.content`,
+      `模板组件 ${type} 未提供可解析的 dataStructure，无法校验 content 结构`,
+    );
+    return type;
   }
 
-  const example = options.componentExamples?.[type];
-  if (example !== undefined) {
-    const err = validateJsonAgainstExample(
-      extractComponentContentExample(example, type),
-      component.content,
-      `${path}.content`,
-    );
-    if (err && spec) {
-      // 内置规格已覆盖的组件，dataStructure 继续作为模板配置漂移的补充信号。
-      report.warn(`${path}.content`, `与模板示例结构不一致：${err}`);
-    } else if (err) {
-      // 动态组件没有内置规格，dataStructure 是唯一可执行的结构契约，必须阻断错误数据。
-      report.error(`${path}.content`, `与模板示例结构不一致：${err}`);
-    }
-  } else if (templateComponent && !spec) {
-    report.warn(
-      `${path}.content`,
-      `模板组件 ${type} 未提供可解析的 dataStructure，已放行但无法校验 content 结构`,
-    );
-  }
+  const err = validateJsonAgainstExample(
+    extractComponentContentExample(example, type),
+    component.content,
+    `${path}.content`,
+  );
+  if (err) report.error(`${path}.content`, `与模板 dataStructure 不一致：${err}`);
 
   return type;
 }
@@ -273,10 +170,9 @@ function validatePage(page, path, report, options) {
     .map((component, index) => validateComponent(component, `${path}.components[${index}]`, report, options))
     .filter(Boolean);
 
-  const pageLevel = types.filter((type) => {
-    const templateMode = options.templateComponentByType?.get(type)?.compositionMode;
-    return (templateMode || getCompositionMode(type)) === 'page';
-  });
+  const pageLevel = types.filter(
+    (type) => options.templateComponentByType.get(type)?.compositionMode === 'page',
+  );
   if (pageLevel.length > 0 && types.length > 1) {
     report.error(
       `${path}.components`,
@@ -288,16 +184,22 @@ function validatePage(page, path, report, options) {
 /**
  * 校验顶层导入 JSON。
  * options：
- * - allowUnknownTypes：未知组件类型降级为告警
- * - templateComponents：模板组件清单；一旦提供，即作为可用类型与 compositionMode 的权威来源
- * - componentExamples：{ [type]: dataStructure 示例 }，用于示例比对
+ * - templateComponents：模板组件接口结果，必须提供，是可用类型与 compositionMode 的唯一来源；
+ * - componentExamples：{ [type]: dataStructure 示例 }，是组件 content 的唯一结构契约。
  */
 export function validatePageData(doc, options = {}) {
   const report = createReport();
-  const templateComponentByType = Array.isArray(options.templateComponents)
-    ? new Map(options.templateComponents.map((item) => [item.componentType, item]))
-    : null;
+  const hasTemplateContext = Array.isArray(options.templateComponents);
+  const templateComponentByType = new Map(
+    hasTemplateContext
+      ? options.templateComponents.map((item) => [item.componentType, item])
+      : [],
+  );
   const context = { ...options, templateComponentByType };
+
+  if (!hasTemplateContext) {
+    report.error('template', '组件校验必须提供模板组件接口结果，禁止使用本地兜底规格');
+  }
 
   if (!isPlainObject(doc)) {
     report.error('', `顶层应为对象，实际是${typeLabel(doc)}`);

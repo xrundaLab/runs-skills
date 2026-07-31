@@ -5,7 +5,7 @@
  * 命令：
  *   assets:upload   手动上传指定素材，产出可复用的资产清单（--dir 会整目录全传，慎用）
  *   pages:resolve   把页面 JSON 里的本地引用替换成 public_url（缺失的顺手上传，只传被引用的）
- *   pages:validate  校验页面 JSON（内置规格 + 可选模板组件白名单与示例比对）
+ *   pages:validate  按模板组件接口与 dataStructure 校验页面 JSON
  *   pages:submit    提交课件任务（structuredJson 内联 / 上传 JSON 直接解析）
  */
 import { readFile, writeFile, readdir, stat } from 'node:fs/promises';
@@ -46,13 +46,11 @@ import {
 } from './lib/manifest.mjs';
 import { applyAssetResolutions, collectAssetRefs, findResidualLocalRefs } from './lib/resolve.mjs';
 import { formatReport, validatePageData } from './lib/validate.mjs';
-import { KNOWN_COMPONENT_TYPES, PAGE_LEVEL_TYPES } from './lib/component-spec.mjs';
-
 const COMMANDS = new Set([
   'config', 'ping', 'templates:list', 'assets:upload', 'pages:resolve', 'pages:validate', 'pages:submit', 'help',
 ]);
 const BOOLEAN_FLAGS = new Set([
-  'allow-unknown', 'as-file', 'dry-run', 'force', 'help', 'no-upload', 'strict', 'watch', 'yes',
+  'as-file', 'dry-run', 'force', 'help', 'no-upload', 'strict', 'watch', 'yes',
 ]);
 const DEFAULT_MANIFEST = 'assets.manifest.json';
 const DEFAULT_CONCURRENCY = 4;
@@ -135,6 +133,7 @@ export function parseAssetsUploadArgs(args) {
 export function parseSubmitArgs(args) {
   const file = args._[1];
   if (!file) throw new Error('缺少页面 JSON 路径');
+  if (args.force) throw new Error('pages:submit 不支持 --force，模板 dataStructure 校验错误不能跳过');
   const selector = parseTemplateSelector(args, { required: true });
   return {
     file: String(file),
@@ -143,7 +142,6 @@ export function parseSubmitArgs(args) {
     asFile: Boolean(args['as-file']),
     watch: Boolean(args.watch),
     yes: Boolean(args.yes),
-    force: Boolean(args.force),
     report: args.report ? String(args.report) : undefined,
   };
 }
@@ -504,11 +502,9 @@ function printResolvedTemplate(template) {
 }
 
 async function runValidation(doc, args, { templateId } = {}) {
-  const options = { allowUnknownTypes: Boolean(args['allow-unknown']) };
-  if (templateId) {
-    const config = getRuntimeConfig(args);
-    Object.assign(options, await loadTemplateContext(templateId, doc, config));
-  }
+  if (!templateId) throw new Error('组件校验必须提供 --template-id 或 --template');
+  const config = getRuntimeConfig(args);
+  const options = await loadTemplateContext(templateId, doc, config);
 
   const report = validatePageData(doc, options);
   const residual = findResidualLocalRefs(doc);
@@ -521,10 +517,13 @@ async function runValidation(doc, args, { templateId } = {}) {
 async function handlePagesValidate(args) {
   const file = args._[1];
   if (!file) throw new Error('缺少页面 JSON 路径');
+  if (args['allow-unknown']) {
+    throw new Error('pages:validate 不支持 --allow-unknown，组件必须来自模板接口');
+  }
   const doc = await readJsonFile(resolvePath(String(file)));
-  const selector = parseTemplateSelector(args);
+  const selector = parseTemplateSelector(args, { required: true });
   const template = await resolveTemplateSelection(selector, getRuntimeConfig(args));
-  const report = await runValidation(doc, args, { templateId: template?.templateId });
+  const report = await runValidation(doc, args, { templateId: template.templateId });
 
   printResolvedTemplate(template);
   console.log(JSON.stringify(summarizePageData(doc), null, 2));
@@ -592,8 +591,8 @@ async function handlePagesSubmit(args) {
   printResolvedTemplate(template);
   console.log(JSON.stringify(summarizePageData(doc), null, 2));
 
-  if (report.errors.length > 0 && !options.force) {
-    console.log(`校验未通过（${report.errors.length} 个错误），已终止提交。确认无误可加 --force 跳过。`);
+  if (report.errors.length > 0) {
+    console.log(`校验未通过（${report.errors.length} 个错误），已终止提交。`);
     process.exitCode = 1;
     return;
   }
@@ -787,9 +786,8 @@ function printHelp() {
     --folder-id <id>                 即时上传时的业务文件夹
 
   pages:validate <page.json>         校验页面 JSON
-    --template-id <id>               按业务模板 ID 叠加组件白名单与 dataStructure 示例比对
-    --template <name>                按模板名称查询并解析业务模板 ID
-    --allow-unknown                  未知组件类型降级为告警
+    --template-id <id>               业务模板 ID，必填；与 --template 二选一
+    --template <name>                模板名称，必填；自动查询并解析 ID
     --strict                         告警也视为失败
 
   pages:submit <page.json>           提交课件任务（默认只预览）
@@ -800,7 +798,6 @@ function printHelp() {
     --batch-no <no>                  指定批次号
     --watch                          轮询任务状态到终态
     --report <路径>                  写出 .csv / .json 报告
-    --force                          校验有错误时仍然提交
 
   templates:list                    查询当前用户可用的模板及其业务模板 ID
     --keyword <name>                 按模板名称模糊过滤并排序（会遍历模板列表）
@@ -821,10 +818,6 @@ function printHelp() {
   XRUNS_COURSEWARE_USERNAME/PASSWORD 无 token 时用账号密码登录换取
 
 对应命令行参数：--base-url / --web-url / --token / --username / --password
-
-离线内置组件类型（${KNOWN_COMPONENT_TYPES.length} 个；指定模板时以模板组件接口为准）：
-  page 级（独占整页）：${PAGE_LEVEL_TYPES.join(' / ')}
-  block 级（可组合）：${KNOWN_COMPONENT_TYPES.filter((t) => !PAGE_LEVEL_TYPES.includes(t)).join(' / ')}
 `);
 }
 
