@@ -1,0 +1,20 @@
+{
+  "title": "RunS R36 Formal Question Component Types",
+  "type": "object",
+  "required": ["type", "componentId", "content"],
+  "properties": {
+    "type": {
+      "type": "string",
+      "enum": [
+        "galaxy_select_question",
+        "matching_question",
+        "categorization_question",
+        "ordering_question"
+      ]
+    },
+    "componentId": {"type": "string", "minLength": 1},
+    "content": {"type": "object"}
+  },
+  "additionalProperties": true,
+  "$comment": "Validate exact component fields, answer arrays, and forbidden background fields with the bundled S3 validator."
+}
