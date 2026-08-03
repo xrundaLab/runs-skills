@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>知识页统一固定底栏与题前过渡样式预览</title>
+    <style>
+      :root {
+        --runs-muted: rgba(39, 39, 52, 0.58);
+        --runs-ink: #252431;
+        --runs-purple: #9260fe;
+        --safe-bottom: env(safe-area-inset-bottom, 0px);
+        --page-bottom-rgb: 213, 245, 254;
+        --page-bottom-bg: rgb(var(--page-bottom-rgb));
+        --footer-h: calc(80px + var(--safe-bottom));
+      }
+
+      * { box-sizing: border-box; }
+
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        overflow: hidden;
+        color: var(--runs-ink);
+        font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+        background: var(--page-bottom-bg);
+      }
+
+      .knowledge-page {
+        position: relative;
+        width: 100%;
+        height: 100dvh;
+        overflow: hidden;
+        margin: 0 auto;
+        background: linear-gradient(180deg, #d7c4ff 0%, #dce4ff 42%, var(--page-bottom-bg) 66.667%, var(--page-bottom-bg) 100%);
+      }
+
+      .knowledge-scroll {
+        width: 100%;
+        height: 100%;
+        overflow-x: hidden;
+        overflow-y: auto;
+        padding: 8px 0 calc(var(--footer-h) + 24px);
+        -webkit-overflow-scrolling: touch;
+      }
+
+      .knowledge-content {
+        box-sizing: border-box;
+        width: min(100%, 680px);
+        margin: 0 auto;
+        padding: 0 clamp(20px, 6vw, 35px);
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 31px;
+        line-height: 1.22;
+        letter-spacing: -0.03em;
+        text-align: center;
+      }
+
+      .knowledge-card {
+        margin-top: 24px;
+        padding: 20px;
+        border-radius: 22px;
+        background: rgba(255, 255, 255, 0.82);
+        box-shadow: 0 12px 30px rgba(111, 105, 177, 0.06);
+      }
+
+      .knowledge-card p {
+        margin: 0;
+        font-size: 16px;
+        line-height: 1.75;
+      }
+
+      .knowledge-card p + p { margin-top: 16px; }
+
+      /* 与知识页控制资产 11.5 完全相同的固定弱化样式 */
+      .knowledge-transition {
+        display: block;
+        margin: 16px 0 0;
+        padding: 6px 0;
+        color: var(--runs-muted, rgba(39, 39, 52, 0.58));
+        font-size: 14px;
+        font-weight: 400;
+        line-height: 1.65;
+        letter-spacing: 0.01em;
+        text-align: left;
+        background: transparent;
+        border: 0;
+        border-radius: 0;
+        box-shadow: none;
+      }
+
+      .knowledge-transition::before,
+      .knowledge-transition::after {
+        content: none;
+      }
+
+      .knowledge-footer {
+        position: absolute;
+        z-index: 5;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        display: flex;
+        justify-content: center;
+        padding: 10px 0 calc(10px + var(--safe-bottom));
+        background: var(--page-bottom-bg);
+      }
+
+      .knowledge-primary-button {
+        position: static;
+        display: block;
+        width: min(260px, calc(100vw - 64px));
+        margin: 0;
+        min-height: 60px;
+        border: 2px solid transparent;
+        border-radius: 40px;
+        color: #fff;
+        background:
+          linear-gradient(180deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0)) padding-box,
+          linear-gradient(180deg, #9260fe, #9260fe) padding-box,
+          linear-gradient(180deg, #f2eef8, #8f5df3) border-box;
+        font: inherit;
+        font-size: 16px;
+        font-weight: 800;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="knowledge-page">
+      <div class="knowledge-scroll">
+        <article class="knowledge-content">
+          <h1>核查要把说法逐项对照材料</h1>
+          <section class="knowledge-card" aria-label="知识正文示例">
+            <p>核查时，不是只看回答听起来是否顺，而是把其中每一条具体说法，逐项回到通知、材料或原始信息中核对。</p>
+            <p>例如时间、地点、是否需要报名、要带什么物品，都是可以分别核查的信息。</p>
+          </section>
+          <p class="knowledge-transition">现在用回答B里的三句话练一次。</p>
+        </article>
+      </div>
+      <footer class="knowledge-footer">
+        <button class="knowledge-primary-button" type="button">继续学习</button>
+      </footer>
+    </main>
+    <script>
+      function syncFooterReserve() {
+        const footer = document.querySelector(".knowledge-footer");
+        if (!footer) return;
+        document.documentElement.style.setProperty(
+          "--footer-h",
+          `${Math.ceil(footer.getBoundingClientRect().height)}px`
+        );
+      }
+
+      window.addEventListener("load", syncFooterReserve);
+      window.addEventListener("resize", syncFooterReserve);
+      window.addEventListener("orientationchange", syncFooterReserve);
+      if ("ResizeObserver" in window) {
+        new ResizeObserver(syncFooterReserve).observe(
+          document.querySelector(".knowledge-footer")
+        );
+      }
+    </script>
+  </body>
+</html>

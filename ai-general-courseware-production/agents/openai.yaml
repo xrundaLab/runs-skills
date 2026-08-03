@@ -1,0 +1,4 @@
+interface:
+  display_name: "AI 通识课网页课件生成"
+  short_description: "从教师版教案受控生成或审计 RunS 六阶段网页课件 JSON"
+  default_prompt: "Use $ai-general-courseware-production to preflight a local or pinned-GitHub lesson manifest and run only the authorized S1-S6 stages."

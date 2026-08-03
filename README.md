@@ -42,3 +42,14 @@
 4. 技能会按固定流程执行：**确定模板 → 编排页面 JSON → 解析占位符并按需上传 → 校验 → 提交**，每步产物落盘，任一步失败不进入下一步。
 
 详细规则、命令、组件 schema 见 [runs-page-data/SKILL.md](./runs-page-data/SKILL.md)。
+
+## ai-general-courseware-production
+
+**AI 通识课网页课件生成**：从教师版 `final.md` 与六项课程信息，受控执行或审计 RunS R36 的 `S1 → S2 → S3 → S4 → S5 → S6`。支持仅执行已解锁的单个阶段，也支持完整串行流程；输入可来自本地或用户授权且固定 commit SHA 的 GitHub 仓库。
+
+- 独立包：`ai-general-courseware-production/`
+- 输入格式：[references/input-manifest.md](./ai-general-courseware-production/references/input-manifest.md)
+- 生产合同：[references/s1-s6-contract.md](./ai-general-courseware-production/references/s1-s6-contract.md)
+- 随包提供 S2—S6 校验器、S6 唯一装配器、OneShot 与无课程数据的 Demo。
+
+该 skill 只生成本地、可审计产物；S6 的最高状态为 `IMPORT_READY_STATIC`，不自动导入、创建、渲染、测试或发布。
