@@ -1,0 +1,711 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>课程小结页固定模板</title>
+  <script src="https://res.xrunda.com/runs/plugin/creator/creator-review-sdk.js"></script>
+  <style>
+    /* FIXED_LAYOUT_CONTRACT: 顶部/两侧/底部留白、底栏和主按钮均为固定代码；每课只替换 COURSE_SUMMARY_VARIABLES。 */
+    :root {
+      --purple: #9260fe;
+      --purple-soft: rgba(146, 96, 254, 0.12);
+      --ink: #252431;
+      --muted: rgba(39, 39, 52, 0.58);
+      --surface: rgba(255, 255, 255, 0.58);
+      --surface-strong: rgba(255, 255, 255, 0.78);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --page-bottom-rgb: 232, 219, 255;
+      --page-bottom-bg: rgb(var(--page-bottom-rgb));
+      --footer-h: calc(80px + var(--safe-bottom));
+      --content-max: 360px;
+      --button-height: 60px;
+      --button-radius: 40px;
+      font-family: -apple-system, "SF Pro Text", "PingFang SC", "Noto Sans SC", "Microsoft YaHei", sans-serif;
+      color: var(--ink);
+    }
+
+    * {
+      box-sizing: border-box;
+      min-width: 0;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: var(--page-bottom-bg);
+    }
+
+    body {
+      letter-spacing: 0.01em;
+    }
+
+    .summary-page {
+      position: relative;
+      width: 100%;
+      max-width: 538px;
+      height: 100dvh;
+      min-height: 100%;
+      margin: 0 auto;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 50% 8%, rgba(255, 255, 255, 0.28) 0 9%, transparent 30%),
+        linear-gradient(180deg, #d9f4ff 0%, #dddfff 47%, var(--page-bottom-bg) 66.667%, var(--page-bottom-bg) 100%);
+    }
+
+    .summary-scroll {
+      width: 100%;
+      height: 100%;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: 28px clamp(24px, 6vw, 35px)
+        calc(var(--footer-h) + 24px);
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .top-safe-area {
+      display: none;
+      width: 100%;
+      height: 0;
+    }
+
+    .completion-card {
+      position: relative;
+      width: 100%;
+      max-width: var(--content-max);
+      min-height: 0;
+      margin: 93px auto 0;
+      padding: 49px 20px 8px;
+      border-radius: 20px;
+      text-align: center;
+    }
+
+    .trophy-wrap {
+      position: absolute;
+      z-index: 3;
+      top: -93px;
+      left: 50%;
+      width: 106px;
+      height: 142px;
+      transform: translateX(-50%);
+      pointer-events: none;
+    }
+
+    .trophy-wrap img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .completion-card h1 {
+      margin: 0;
+      color: var(--ink);
+      font-size: 18px;
+      line-height: 1.35;
+      font-weight: 800;
+    }
+
+    .summary-card,
+    .next-card {
+      width: 100%;
+      max-width: var(--content-max);
+      margin-right: auto;
+      margin-top: 16px;
+      margin-left: auto;
+      border: 1px solid rgba(255, 255, 255, 0.72);
+      border-radius: 22px;
+      background: var(--surface);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.82),
+        0 12px 30px rgba(111, 105, 177, 0.06);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+
+    .summary-card {
+      padding: 18px;
+    }
+
+    .summary-card h2 {
+      margin: 0 0 12px;
+      color: var(--purple);
+      font-size: clamp(17px, 3.8vw, 20px);
+      line-height: 1.45;
+      font-weight: 800;
+      text-align: center;
+      text-wrap: balance;
+    }
+
+    .next-card h2 {
+      margin: 0 0 10px;
+      color: var(--purple);
+      font-size: clamp(16px, 3.4vw, 18px);
+      line-height: 1.45;
+      font-weight: 400;
+      text-align: center;
+      text-wrap: balance;
+    }
+
+    .summary-content {
+      display: grid;
+      gap: 12px;
+    }
+
+    .summary-paragraph,
+    .summary-quote,
+    .summary-notice {
+      margin: 0;
+      color: #34313f;
+      font-size: clamp(15px, 3vw, 17px);
+      line-height: 1.72;
+      font-weight: 400;
+      overflow-wrap: anywhere;
+      text-wrap: pretty;
+    }
+
+    .summary-paragraph {
+      padding: 0 2px;
+    }
+
+    .summary-list {
+      display: grid;
+      gap: 10px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .summary-item {
+      display: grid;
+      grid-template-columns: 34px minmax(0, 1fr);
+      gap: 11px;
+      align-items: start;
+      padding: 13px 14px;
+      border-radius: 18px;
+      background: var(--surface-strong);
+      color: #34313f;
+      font-size: clamp(15px, 3vw, 17px);
+      line-height: 1.58;
+      font-weight: 400;
+      overflow-wrap: anywhere;
+      text-wrap: pretty;
+    }
+
+    .summary-index {
+      display: grid;
+      place-items: center;
+      width: 34px;
+      height: 34px;
+      border-radius: 11px;
+      color: var(--purple);
+      background: var(--purple-soft);
+      font-size: 12px;
+      line-height: 1;
+      font-weight: 900;
+    }
+
+    .summary-quote {
+      position: relative;
+      padding: 16px 17px 16px 43px;
+      border-radius: 20px;
+      background:
+        linear-gradient(145deg, rgba(255, 255, 255, 0.82), rgba(244, 239, 255, 0.82));
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
+    }
+
+    .summary-quote::before {
+      position: absolute;
+      top: 10px;
+      left: 15px;
+      color: rgba(146, 96, 254, 0.36);
+      content: "“";
+      font-family: Georgia, "Songti SC", serif;
+      font-size: 38px;
+      line-height: 1;
+      font-weight: 700;
+    }
+
+    .summary-notice {
+      padding: 14px 16px;
+      border: 1px solid rgba(255, 190, 80, 0.24);
+      border-radius: 18px;
+      color: #5f4a24;
+      background: rgba(255, 248, 220, 0.82);
+      font-weight: 600;
+    }
+
+    .summary-code {
+      margin: 0;
+      padding: 16px 18px;
+      border: 1px solid rgba(255, 255, 255, 0.44);
+      border-radius: 20px;
+      color: rgba(255, 255, 255, 0.96);
+      background:
+        radial-gradient(circle at 92% 8%, rgba(190, 166, 255, 0.28), transparent 36%),
+        linear-gradient(145deg, rgba(82, 66, 122, 0.96), rgba(111, 82, 176, 0.92));
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.18),
+        0 10px 24px rgba(72, 55, 116, 0.12);
+      overflow-x: hidden;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+      text-wrap: wrap;
+    }
+
+    .summary-code code {
+      font-family: ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, "PingFang SC", "Noto Sans Mono CJK SC", monospace;
+      font-size: clamp(14px, 3vw, 16px);
+      line-height: 1.78;
+      font-weight: 650;
+    }
+
+    .next-card {
+      padding: 17px 20px 19px;
+    }
+
+    .next-card p {
+      margin: 0;
+      color: rgba(37, 36, 49, 0.74);
+      font-size: 14px;
+      line-height: 1.65;
+      font-weight: 400;
+      text-align: center;
+      overflow-wrap: anywhere;
+      text-wrap: pretty;
+    }
+
+    .summary-footer {
+      position: absolute;
+      z-index: 5;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      right: 0;
+      bottom: 0;
+      left: 0;
+      padding: 10px 0 calc(10px + var(--safe-bottom));
+      background: var(--page-bottom-bg);
+    }
+
+    .complete-button {
+      width: min(260px, calc(100vw - 64px));
+      min-height: var(--button-height);
+      border: 2px solid transparent;
+      border-radius: var(--button-radius);
+      color: #fff;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0)) padding-box,
+        linear-gradient(180deg, #9260fe, #9260fe) padding-box,
+        linear-gradient(180deg, #f2eef8, #8f5df3) border-box;
+      font: inherit;
+      font-size: 16px;
+      line-height: 1;
+      font-weight: 800;
+      cursor: pointer;
+      transition: transform 150ms ease-out, filter 150ms ease-out;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .complete-button:active {
+      transform: translateY(2px);
+      filter: brightness(0.98);
+    }
+
+    .summary-error {
+      width: calc(100% - 64px);
+      margin: 120px auto 0;
+      padding: 24px;
+      border-radius: 28px;
+      background: rgba(255, 255, 255, 0.68);
+      color: #792536;
+      text-align: center;
+      font-size: 15px;
+      line-height: 1.6;
+    }
+
+    @media (max-width: 420px) {
+      .summary-scroll {
+        padding-right: 24px;
+        padding-left: 24px;
+      }
+
+      .completion-card {
+        margin-top: 93px;
+      }
+
+      .summary-card {
+        padding: 15px;
+      }
+
+      .summary-content {
+        gap: 10px;
+      }
+
+      .summary-item {
+        grid-template-columns: 32px minmax(0, 1fr);
+        padding: 12px;
+      }
+
+      .summary-index {
+        width: 32px;
+        height: 32px;
+      }
+
+      .summary-quote {
+        padding: 14px 14px 14px 39px;
+      }
+
+      .summary-code {
+        padding: 14px 15px;
+      }
+    }
+
+    @media (orientation: landscape) and (max-height: 720px) {
+      .completion-card {
+        margin-top: 58px;
+        padding-top: 38px;
+        padding-bottom: 12px;
+      }
+
+      .trophy-wrap {
+        top: -58px;
+        width: 72px;
+        height: 96px;
+      }
+
+      .completion-card h1 {
+        font-size: 16px;
+      }
+
+      .summary-card,
+      .next-card {
+        margin-top: 12px;
+      }
+
+      .summary-card {
+        padding: 14px;
+      }
+
+      .summary-item {
+        padding-top: 16px;
+        padding-bottom: 10px;
+      }
+
+      .summary-paragraph,
+      .summary-quote,
+      .summary-notice,
+      .summary-code code {
+        font-size: 15px;
+        line-height: 1.62;
+      }
+
+      .summary-footer {
+        padding-top: 10px;
+        padding-bottom: calc(10px + var(--safe-bottom));
+      }
+    }
+
+    @media (max-height: 660px) and (orientation: portrait) {
+      .completion-card {
+        margin-top: 78px;
+        padding-top: 40px;
+        padding-bottom: 12px;
+      }
+
+      .trophy-wrap {
+        top: -78px;
+        width: 88px;
+        height: 118px;
+      }
+
+      .summary-card,
+      .next-card {
+        margin-top: 12px;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      * {
+        transition: none !important;
+        scroll-behavior: auto !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="summary-page">
+    <div class="summary-scroll">
+      <div class="top-safe-area" aria-hidden="true"></div>
+
+      <section class="completion-card" aria-labelledby="completionTitle">
+        <div class="trophy-wrap" aria-hidden="true">
+          <img
+            src="https://res.xrunda.com/xruns/static/image/course_summary_trophy.png"
+            alt=""
+          >
+        </div>
+        <h1 id="completionTitle">恭喜你完成本节课程！</h1>
+      </section>
+
+      <section class="summary-card" aria-label="本课小结">
+        <h2 id="summaryTitle">五项信息组成完整的问题说明</h2>
+        <div class="summary-content" id="summaryContent" data-summary-static="true"><p class="summary-paragraph">现在，把刚才的信息合在一起：</p><blockquote class="summary-quote">第一次参加社区桌游体验的人，不清楚不同游戏需要的人数和时长，到了现场常要重新挑选。我们希望他们出发前能根据公开说明选到合适的游戏。处理时只使用公开信息，不收集姓名等个人资料。这样可以减少等待，把更多时间留给游戏体验。</blockquote><p class="summary-paragraph">这段问题说明里有五项信息：</p><ol class="summary-list"><li class="summary-item"><span class="summary-index">01</span><span>对象：第一次参加的人。</span></li><li class="summary-item"><span class="summary-index">02</span><span>困难：不知道人数和时长，到场后重新等待。</span></li><li class="summary-item"><span class="summary-index">03</span><span>期望变化：出发前选到合适的游戏。</span></li><li class="summary-item"><span class="summary-index">04</span><span>边界：只用公开说明，不收集个人信息。</span></li><li class="summary-item"><span class="summary-index">05</span><span>处理价值：减少等待，增加游戏时间。</span></li></ol><aside class="summary-notice">注意，这里还没有决定一定要使用AI。</aside><p class="summary-paragraph">先把问题说清楚，后面才能判断该用什么方法，也才能判断AI是否适合参与。</p></div>
+      </section>
+
+      <section class="next-card" id="nextCard" aria-labelledby="nextTitle" hidden>
+        <h2 id="nextTitle">下一课预告</h2>
+        <p id="nextLessonPreview"></p>
+      </section>
+    </div>
+
+    <footer class="summary-footer">
+      <button class="complete-button" id="completeButton" type="button">完成学习</button>
+    </footer>
+  </main>
+
+  <script>
+    /* ============================================================
+       每课只允许替换本变量区中的完成头、原文内容与 pageAction。
+       contentBlocks 必须按教案原顺序逐字录入，不得概括、删句、合并或去重。
+       变量名、结构、HTML、CSS、渲染逻辑均不得修改。
+       ============================================================ */
+    const COURSE_SUMMARY_VARIABLES = Object.freeze({
+      completionTitle: "恭喜你完成本节课程！",
+      summaryTitle: "五项信息组成完整的问题说明",
+      contentBlocks: Object.freeze([
+        Object.freeze({
+          type: "paragraph",
+          text: "现在，把刚才的信息合在一起："
+        }),
+        Object.freeze({
+          type: "blockquote",
+          text: "第一次参加社区桌游体验的人，不清楚不同游戏需要的人数和时长，到了现场常要重新挑选。我们希望他们出发前能根据公开说明选到合适的游戏。处理时只使用公开信息，不收集姓名等个人资料。这样可以减少等待，把更多时间留给游戏体验。"
+        }),
+        Object.freeze({
+          type: "paragraph",
+          text: "这段问题说明里有五项信息："
+        }),
+        Object.freeze({
+          type: "orderedList",
+          items: Object.freeze([
+            "对象：第一次参加的人。",
+            "困难：不知道人数和时长，到场后重新等待。",
+            "期望变化：出发前选到合适的游戏。",
+            "边界：只用公开说明，不收集个人信息。",
+            "处理价值：减少等待，增加游戏时间。"
+          ])
+        }),
+        Object.freeze({
+          type: "notice",
+          text: "注意，这里还没有决定一定要使用AI。"
+        }),
+        Object.freeze({
+          type: "paragraph",
+          text: "先把问题说清楚，后面才能判断该用什么方法，也才能判断AI是否适合参与。"
+        })
+      ]),
+      nextLessonPreview: "下一课会使用一份新的完整问题说明，学习怎样用Prompt把任务交代清楚。",
+      pageAction: "complete"
+    });
+    /* ======================= 变量区结束 ======================= */
+
+    function validateSummaryVariables(data) {
+      const missing = [];
+      const invalid = [];
+      const allowedTypes = new Set(["paragraph", "orderedList", "blockquote", "notice", "codeBlock"]);
+
+      if (typeof data.completionTitle !== "string" || !data.completionTitle.trim()) missing.push("completionTitle");
+      if (typeof data.summaryTitle !== "string" || !data.summaryTitle.trim()) missing.push("summaryTitle");
+      if (!Array.isArray(data.contentBlocks) || data.contentBlocks.length < 1) missing.push("contentBlocks");
+      if (typeof data.nextLessonPreview !== "string") missing.push("nextLessonPreview");
+      if (missing.length) throw new Error(`SUMMARY_FIELD_MISSING: ${missing.join(", ")}`);
+
+      data.contentBlocks.forEach((block, blockIndex) => {
+        if (!block || typeof block !== "object" || !allowedTypes.has(block.type)) {
+          invalid.push(`contentBlocks[${blockIndex}].type`);
+          return;
+        }
+
+        if (block.type === "orderedList") {
+          if (!Array.isArray(block.items) || block.items.length < 1) {
+            invalid.push(`contentBlocks[${blockIndex}].items`);
+            return;
+          }
+          if (block.sourceNumbered !== undefined && typeof block.sourceNumbered !== "boolean") {
+            invalid.push(`contentBlocks[${blockIndex}].sourceNumbered`);
+          }
+          block.items.forEach((item, itemIndex) => {
+            if (typeof item !== "string" || !item.trim()) {
+              invalid.push(`contentBlocks[${blockIndex}].items[${itemIndex}]`);
+            }
+          });
+          return;
+        }
+
+        if (block.type === "codeBlock" && block.language !== undefined && typeof block.language !== "string") {
+          invalid.push(`contentBlocks[${blockIndex}].language`);
+        }
+
+        if (typeof block.text !== "string" || !block.text.trim()) {
+          invalid.push(`contentBlocks[${blockIndex}].text`);
+        }
+      });
+
+      if (!new Set(["next", "complete"]).has(data.pageAction)) invalid.push("pageAction");
+      if (invalid.length) throw new Error(`SUMMARY_FIELD_INVALID: ${invalid.join(", ")}`);
+    }
+
+    function safeNextPage() {
+      if (
+        window.CreatorReviewSDK &&
+        (!window.CreatorReviewSDK.isAvailable || window.CreatorReviewSDK.isAvailable()) &&
+        typeof window.CreatorReviewSDK.nextPage === "function"
+      ) {
+        window.CreatorReviewSDK.nextPage();
+        return;
+      }
+      if (window.parent) window.parent.postMessage({ type: "nextpage" }, "*");
+    }
+
+    function safeComplete() {
+      if (
+        window.CreatorReviewSDK &&
+        (!window.CreatorReviewSDK.isAvailable || window.CreatorReviewSDK.isAvailable()) &&
+        typeof window.CreatorReviewSDK.complete === "function"
+      ) {
+        window.CreatorReviewSDK.complete();
+        return;
+      }
+      if (window.parent) window.parent.postMessage({ type: "complete" }, "*");
+    }
+
+    function createTextBlock(tagName, className, text, blockType) {
+      const element = document.createElement(tagName);
+      element.className = className;
+      element.dataset.blockType = blockType;
+      element.textContent = text;
+      return element;
+    }
+
+    function createOrderedListBlock(block) {
+      const list = document.createElement("ol");
+      list.className = "summary-list";
+      list.dataset.blockType = "orderedList";
+      list.dataset.numberingMode = block.sourceNumbered ? "source-plus-generated" : "generated";
+
+      block.items.forEach((item, index) => {
+        const listItem = document.createElement("li");
+        listItem.className = "summary-item";
+
+        const number = document.createElement("span");
+        number.className = "summary-index";
+        number.setAttribute("aria-hidden", "true");
+        number.textContent = String(index + 1).padStart(2, "0");
+        listItem.appendChild(number);
+
+        const text = document.createElement("span");
+        text.textContent = item;
+
+        listItem.appendChild(text);
+        list.appendChild(listItem);
+      });
+
+      return list;
+    }
+
+    function createCodeBlock(block) {
+      const pre = document.createElement("pre");
+      pre.className = "summary-code";
+      pre.dataset.blockType = "codeBlock";
+      if (block.language) pre.dataset.language = block.language;
+
+      const code = document.createElement("code");
+      code.textContent = block.text;
+      pre.appendChild(code);
+      return pre;
+    }
+
+    function renderContentBlocks(container, blocks) {
+      const fragment = document.createDocumentFragment();
+
+      blocks.forEach(block => {
+        if (block.type === "orderedList") {
+          fragment.appendChild(createOrderedListBlock(block));
+          return;
+        }
+
+        if (block.type === "codeBlock") {
+          fragment.appendChild(createCodeBlock(block));
+          return;
+        }
+
+        const blockConfig = {
+          paragraph: ["p", "summary-paragraph"],
+          blockquote: ["blockquote", "summary-quote"],
+          notice: ["aside", "summary-notice"]
+        }[block.type];
+
+        fragment.appendChild(createTextBlock(blockConfig[0], blockConfig[1], block.text, block.type));
+      });
+
+      container.replaceChildren(fragment);
+    }
+
+    function configurePageAction(button, pageAction) {
+      if (pageAction === "next") {
+        button.textContent = "继续学习";
+        button.addEventListener("click", safeNextPage);
+        return;
+      }
+
+      button.textContent = "完成学习";
+      button.addEventListener("click", safeComplete);
+    }
+
+    function renderSummaryPage() {
+      const data = COURSE_SUMMARY_VARIABLES;
+      validateSummaryVariables(data);
+
+      document.getElementById("completionTitle").textContent = data.completionTitle;
+      document.getElementById("summaryTitle").textContent = data.summaryTitle;
+      renderContentBlocks(document.getElementById("summaryContent"), data.contentBlocks);
+
+      const nextCard = document.getElementById("nextCard");
+      if (data.nextLessonPreview.trim()) {
+        document.getElementById("nextLessonPreview").textContent = data.nextLessonPreview;
+        nextCard.hidden = false;
+      }
+
+      const button = document.getElementById("completeButton");
+      configurePageAction(button, data.pageAction);
+    }
+
+    function syncLayoutMetrics() {
+      const footer = document.querySelector(".summary-footer");
+      const height = Math.ceil(footer.getBoundingClientRect().height || 80);
+      document.documentElement.style.setProperty("--footer-h", `${height}px`);
+    }
+
+    try {
+      renderSummaryPage();
+      syncLayoutMetrics();
+      if ("ResizeObserver" in window) {
+        new ResizeObserver(syncLayoutMetrics).observe(document.querySelector(".summary-footer"));
+      }
+      window.addEventListener("resize", syncLayoutMetrics, { passive: true });
+      window.addEventListener("orientationchange", () => setTimeout(syncLayoutMetrics, 120), { passive: true });
+    } catch (error) {
+      document.documentElement.dataset.summaryError = "SUMMARY_FIELD_MISSING";
+      document.body.innerHTML = '<main class="summary-error" role="alert">课程小结内容暂不可用</main>';
+      throw error;
+    }
+  </script>
+</body>
+</html>

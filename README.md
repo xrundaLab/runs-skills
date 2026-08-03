@@ -42,3 +42,11 @@
 4. 技能会按固定流程执行：**确定模板 → 编排页面 JSON → 解析占位符并按需上传 → 校验 → 提交**，每步产物落盘，任一步失败不进入下一步。
 
 详细规则、命令、组件 schema 见 [runs-page-data/SKILL.md](./runs-page-data/SKILL.md)。
+
+## ai-general-courseware-production
+
+**AI 通识课网页课件生成**：把教师版教案按 RunS V3.5 的 S1-S6 受控生产合同，生成或审计网页课件整课 JSON。支持指定单个阶段，也支持串行执行完整链路。
+
+- 入口：[SKILL.md](./ai-general-courseware-production/SKILL.md)
+- 包含输入清单、S1-S6 合同、schema、静态校验器、装配器、页面 OneShot 与 Demo。
+- 支持本地输入或固定 GitHub commit 输入；不会自动执行 RunS 导入、create、渲染、浏览器验收或发布。
