@@ -517,6 +517,57 @@ def validate_template_preflight(
 
     if page_type == "课程小结" and isinstance(content, dict) and isinstance(layout, dict):
         content_blocks = content.get("contentBlocks")
+        effective = page.get("effective_content")
+        effective_blocks = (
+            effective.get("blocks") if isinstance(effective, dict) else None
+        )
+        summary_sequences = (effective_blocks, content_blocks, sections)
+        headings: list[dict[str, Any] | None] = []
+        for sequence in summary_sequences:
+            heading = (
+                sequence[0]
+                if isinstance(sequence, list)
+                and sequence
+                and isinstance(sequence[0], dict)
+                and sequence[0].get("type") == "heading"
+                else None
+            )
+            headings.append(heading)
+        if any(
+            heading is None
+            or not isinstance(heading.get("text"), str)
+            or not heading["text"].strip()
+            for heading in headings
+        ):
+            add_issue(
+                issues,
+                "COURSE_SUMMARY_TITLE_MISSING",
+                "课程小结必须在 effective_content.blocks、content.contentBlocks 与 sections 的首块保留同一个非空 heading，供 S6 逐字投影 summaryTitle。",
+                page_no,
+            )
+        elif not (headings[0] == headings[1] == headings[2]):
+            add_issue(
+                issues,
+                "COURSE_SUMMARY_TITLE_PROJECTION_INVALID",
+                "课程小结 heading 在三个 S5 结构投影中必须逐字一致。",
+                page_no,
+            )
+        else:
+            title = headings[0]["text"]
+            duplicate = any(
+                isinstance(block, dict)
+                and block.get("type") != "heading"
+                and block.get("text") == title
+                for sequence in summary_sequences
+                for block in (sequence[1:] if isinstance(sequence, list) else [])
+            )
+            if duplicate:
+                add_issue(
+                    issues,
+                    "COURSE_SUMMARY_TITLE_DUPLICATED",
+                    "课程小结 heading 只能作为 summaryTitle 真源，不得再次作为学生正文块重复输出。",
+                    page_no,
+                )
         styled_lists = [
             block
             for block in content_blocks or []
@@ -866,7 +917,7 @@ def main() -> int:
         json.dumps(
             {
                 "status": "BLOCKED" if blocked else "PASS",
-                "contract": "RunS_V3.5.0-S1-S6-R32-20260731",
+                "contract": "RunS_V3.5.0-S1-S6-R36-20260731",
                 "totals": totals,
                 "reports": reports,
             },
