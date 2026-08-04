@@ -73,6 +73,39 @@ and SHA-256 before invoking the next stage. A missing receipt, non-`PASS`
 status, path mismatch, or hash mismatch blocks execution without creating the
 next-stage artifact.
 
+The registered entry point is:
+
+```bash
+python3 scripts/orchestrator/run_stage_gate.py --help
+```
+
+S2 records the frozen working plan; S3-S6 each require `--prior-receipt`.
+S4 and S5 run the registered generator before the corresponding validator. S6
+runs the registered assembler before the static checker. Generated artifacts
+are first written to a temporary sibling file and moved into the final path only
+after every command passes. A blocker therefore leaves a receipt but no new
+stage artifact.
+
+```bash
+# S2: validate and receipt the frozen working plan
+python3 scripts/orchestrator/run_stage_gate.py --stage S2 --lesson-id <lesson_id> \
+  --receipt-dir <receipts> --working-plan <S2/page_plan_working_full.md>
+
+# S3: validate the approved question artifact against the S2 receipt
+python3 scripts/orchestrator/run_stage_gate.py --stage S3 --lesson-id <lesson_id> \
+  --receipt-dir <receipts> --prior-receipt <receipts/s2_gate_receipt.json> \
+  --working-plan <S2/page_plan_working_full.md> \
+  --question-processed <S3/question_processed_full.md>
+
+# S6: assemble and statically check only after the S5 receipt passes
+python3 scripts/orchestrator/run_stage_gate.py --stage S6 --lesson-id <lesson_id> \
+  --receipt-dir <receipts> --prior-receipt <receipts/s5_gate_receipt.json> \
+  --effective-content <S5/effective_content_full.json> \
+  --output <S6/whole_course.json>
+```
+
+Use the S4 and S5 invocations in `s1-s6-contract.md` between these commands.
+
 S6 may report `IMPORT_READY_STATIC` only after assembly and static checking.
 That status remains narrower than import, create, rendering, acceptance, or
 release authority.

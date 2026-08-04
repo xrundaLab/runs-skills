@@ -28,16 +28,19 @@ Read [references/s1-s6-contract.md](references/s1-s6-contract.md) before generat
 | S2 | Frozen S1 preprocessed Markdown | working plan, student structural check |
 | S3 | Frozen S2 working plan | question-processed plan |
 | S4 | Frozen S2 working plan and approved S3 plan | final page plan |
-| S5 | Frozen S4 final page plan | `effective_content_full.json` |
+| S5 | Frozen S4 final page plan and a constrained candidate draft | `effective_content_full.json` |
 | S6 | Passed S5 effective-content JSON | whole-course JSON and static result |
 
-Run only the requested and unlocked stage. At any `BLOCKED`, stop that lesson; for a batch, stop the entire batch and wait. Do not repair, skip, or advance another lesson without a new instruction.
+Run only the requested and unlocked stage. For S2-S6 serial execution, use the bundled Gate runner so the previous `PASS` receipt, artifact path, and SHA-256 are verified before the next command starts. At any `BLOCKED`, stop that lesson; for a batch, stop the entire batch and wait. Do not repair, skip, or advance another lesson without a new instruction.
 
 ## Use bundled deterministic tools
 
 From this skill directory, use only these registered tools:
 
 ```bash
+# Official serial Gate entry; repeat per authorized stage and pass the prior receipt.
+python3 scripts/orchestrator/run_stage_gate.py --help
+
 # S2
 python3 scripts/validators/validate_v35_page_plan_question_boundaries.py \
   --working-plan-contract <S2/page_plan_working_full.md>
@@ -47,11 +50,19 @@ python3 scripts/validators/validate_question_component_json.py \
   --stage3-contract <S3/question_processed_full.md>
 
 # S4
+python3 scripts/generators/build_final_page_plan.py \
+  --working-plan <S2/page_plan_working_full.md> \
+  --question-processed <S3/question_processed_full.md> \
+  --output <S4/page_plan_full.md>
 python3 scripts/validators/validate_v35_page_plan_question_boundaries.py \
   --effective-plan-contract --working-plan <S2/page_plan_working_full.md> \
   --question-processed <S3/question_processed_full.md> <S4/page_plan_full.md>
 
 # S5
+python3 scripts/generators/build_effective_content.py \
+  --lesson-id <lesson_id> --page-plan <S4/page_plan_full.md> \
+  --draft <S5/effective_content_candidate.json> \
+  --output <S5/effective_content_full.json>
 python3 scripts/validators/validate_v35_effective_content.py \
   --page-plan <S4/page_plan_full.md> <S5/effective_content_full.json>
 
@@ -64,6 +75,8 @@ python3 scripts/validators/check_whole_course_static.py \
   --effective-content <S5/effective_content_full.json> \
   --whole-course <S6/whole_course.json>
 ```
+
+Standalone generators and validators are audit/debug tools. They do not create a stage receipt and do not authorize a downstream stage. The official sequence is one `run_stage_gate.py` call per stage, using the prior stage's receipt for S3-S6; see [references/generation-gate-design.md](references/generation-gate-design.md).
 
 Use only the bundled OneShots and Demos. Do not hand-build whole-course JSON, replace a bundled template with a local historical file, or downgrade non-interactive prompts to bare HTML.
 

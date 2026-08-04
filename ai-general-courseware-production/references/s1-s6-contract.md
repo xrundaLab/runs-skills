@@ -234,6 +234,8 @@ python3 scripts/validators/validate_question_component_json.py --stage3-contract
 
 只读取冻结的 S2 `page_plan_working_full.md` 和已批准的 S3 `question_processed_full.md`；只输出 `page_plan_full.md`。输入保留在各自阶段目录，不得复制到 S4 目录或从同目录猜测输入；S4 Gate 必须显式传入这两个绝对路径。不得回读更早输入、重判页面边界或改写工作版的页号、类型、胶囊、来源块、内容块类型、布局意图、过渡句元数据及非互动原文。S4 仍不拥有删留权：研发注释不进入学生页面，但 S2 已承载的学生正文、状态句和其他原文必须逐字保留；何者不进入最终有效内容只在 S5 处理。页面交接清单是这些字段的唯一上游。
 
+S4 必须由 `scripts/generators/build_final_page_plan.py` 确定性合并：先逐字复制 S2 的页面元数据、过渡句元数据和非互动正文，再仅将 S3 已批准的互动题 JSON 写入对应互动页。不允许用生成模型自由重写 S4。S2 已将题目标题划入互动页时，上一知识页的 `none / 无` 必须原样保留，不得再推断为过渡句。
+
 每页必须使用下列结构，`P01` 起连续编号：
 
 ```markdown
@@ -258,7 +260,17 @@ python3 scripts/validators/validate_question_component_json.py --stage3-contract
 
 ### S4 Gate
 
-运行：
+串行生产使用官方 Gate 入口，它会先核对 S3 `PASS` 回执与输出哈希，再生成和校验 S4：
+
+```bash
+python3 scripts/orchestrator/run_stage_gate.py --stage S4 --lesson-id <lesson_id> \
+  --receipt-dir <receipts> --prior-receipt <receipts/s3_gate_receipt.json> \
+  --working-plan <S2/page_plan_working_full.md> \
+  --question-processed <S3/question_processed_full.md> \
+  --output <S4/page_plan_full.md>
+```
+
+独立审计时可运行：
 
 ```bash
 python3 scripts/validators/validate_v35_page_plan_question_boundaries.py --effective-plan-contract \
@@ -271,7 +283,7 @@ python3 scripts/validators/validate_v35_page_plan_question_boundaries.py --effec
 
 ## S5 有效内容 JSON
 
-只读取冻结的 S4 `page_plan_full.md`，确定性输出唯一 `effective_content_full.json`；输入保留在 S4 目录，不得复制到 S5 目录或从同目录猜测输入，S5 Gate 必须显式传入该绝对路径。不得回读工作版、题目处理版、教师版或学生版。顶层必须含 `lesson_id`、`sop_version`、逐字指向该唯一上游的 `source_page_plan` 与非空 `pages[]`。
+只以冻结的 S4 `page_plan_full.md` 为内容真源，由 `scripts/generators/build_effective_content.py` 生成唯一 `effective_content_full.json`。S5 可接收一份候选 draft 提供 `design_brief` 等非确定性设计字段，但页序、基础字段、原文、互动 JSON、学生投影和课程小结结构块必须从 S4 重建，draft 对这些受保护字段没有覆盖权。输入保留在各自阶段目录，不得复制到 S5 目录或从同目录猜测输入。不得回读工作版、题目处理版、教师版或学生版。顶层必须含 `lesson_id`、`sop_version`、逐字指向该唯一上游的 `source_page_plan` 与非空 `pages[]`。
 
 每页固定含六项基础字段：`page_no`、`page_type`、`capsule`、`page_action`、`source_block_ids`、`effective_content`。非互动页必须额外保留 `source.rawMarkdown`，且逐字等于上游有效内容；互动页的 `effective_content` 必须是完整题目 JSON 的有序对象投影，并使 `component_type` 等于其 `type`；所有页面禁止独立 `background`。
 
@@ -281,14 +293,24 @@ R32 对知识讲解/案例分析追加确定性结构投影：必须仅从同页
 
 - P01 的 `effective_content` 按固定顺序含六项课程信息，`content` 按固定顺序映射为 `packageName`、`unitName`、`lessonNumber`、`courseName`、`courseIntroduction`、`knowledgePoints`。
 - 课后任务 `sections[].type` 只允许 `paragraph`、`task`、`facts`、`step`、`prompt`、`decision`、`safety`、`fallback`。
-- 课程小结源内容含有序列表或连续编号条目时，`content.contentBlocks` 必须使用 `orderedList` 并保留完整 `items[]`；允许源编号与视觉编号并存。
+- 课程小结必须有非空 heading，且 `effective_content.blocks`、`content.contentBlocks` 与 `sections` 中的首个可见 heading 必须逐字一致，可直接投影为 S6 `summaryTitle`。该 heading 仅用于标题投影，不得在学生正文重复。源内容含有序列表或连续编号条目时，`content.contentBlocks` 必须使用 `orderedList` 并保留完整 `items[]`；允许源编号与视觉编号并存。`source.rawMarkdown` 必须完整保留原文；精确状态句“本课没有课后练习。”只能从学生投影中剔除，同段后续的下一课预告必须逐字保留。
 - 知识讲解与案例分析页必须有非渲染 `design_brief`：`nonRenderable: true`、教学动作、内容形态、阅读流、语义分组、密度、节奏角色、层级焦点、布局自由度、视觉系统和学生可见文案策略。语义分组以除 heading/冻结过渡句外的阅读块为 1-based `blockIndexes`，无重叠覆盖全部可见内容块；三块及以上时至少按真实阅读关系提供两个语义组，禁止固定 `g1` 整页兜底。`contentShape` 仅可为 `claim_to_evidence_to_judgment`、`concept_to_example_to_boundary`、`problem_to_method_to_result`、`example_to_comparison_to_boundary`、`parallel_comparison`、`process_or_sequence`、`continuous_explanation`；`density` 仅 `light|medium|dense`；`rhythmRole` 仅 `statement|structured|contrast|narrative|dense_reference`。
 - 对恰有两条独立短原文、且不含列表或互动内容的知识讲解页，`design_brief.shortPageComposition` 必须为 `two_layer_reading`：两条原文各自保留为一个语义组，按原顺序分别作为主阅读层和弱结果层。两层之间仅允许无文字的连续留白节奏，不得添加连接文案、可见连接线、编号、方法/步骤/结论，也不得为了填满页面把原文拆改、重复或补写。
 - `page_action` 与页位一致；如 `content.pageAction` 存在，非末页为 `next`，末页为 `complete`。
 
 ### S5 Gate
 
-运行：
+串行生产使用官方 Gate 入口，它会先核对 S4 `PASS` 回执与输出哈希，再生成和校验 S5：
+
+```bash
+python3 scripts/orchestrator/run_stage_gate.py --stage S5 --lesson-id <lesson_id> \
+  --receipt-dir <receipts> --prior-receipt <receipts/s4_gate_receipt.json> \
+  --page-plan <S4/page_plan_full.md> \
+  --draft <S5/effective_content_candidate.json> \
+  --output <S5/effective_content_full.json>
+```
+
+独立审计时可运行：
 
 ```bash
 python3 scripts/validators/validate_v35_effective_content.py \
@@ -296,7 +318,7 @@ python3 scripts/validators/validate_v35_effective_content.py \
   effective_content_full.json
 ```
 
-以下任一情况为 `BLOCKED`：上游缺失或不唯一；页数、顺序、六项基础字段或无损内容漂移；P01 映射、互动 JSON、模板前置数据、设计简报、课后任务 sections、课程小结有序列表或页面动作不合规；出现下游字段。`PASS` 只允许进入 S6 静态装配。
+以下任一情况为 `BLOCKED`：上游缺失或不唯一；页数、顺序、六项基础字段或无损内容漂移；P01 映射、互动 JSON、模板前置数据、设计简报、课后任务 sections、课程小结 heading / 有序列表或页面动作不合规；课程小结标题缺失、不一致或在正文重复；出现下游字段。`PASS` 只允许进入 S6 静态装配。
 
 ## S6 整课 JSON 装配
 
