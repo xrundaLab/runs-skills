@@ -51,7 +51,6 @@ metadata: {"requires":{"bins":["node"]},"env":["XRUNS_COURSEWARE_BASE_URL","XRUN
 | 手动上传指定的几个文件（显式列文件名） | `pagedata.mjs assets:upload a.png b.mp3` |
 | 校验页面 JSON 结构 | `pagedata.mjs pages:validate` |
 | 提交课件任务并追踪 | `pagedata.mjs pages:submit` |
-| 已有文档（pdf/docx/…）走做课任务 | 改用 `scripts/runs-courseware/cli.mjs tasks:create` |
 | 查组件 content 结构 | [references/component-schemas.md](./references/component-schemas.md) |
 | 查素材流水线细节 | [references/asset-pipeline.md](./references/asset-pipeline.md) |
 | 抄一份页面 JSON 模板 | [references/example-page-data.json](./references/example-page-data.json) |
@@ -197,12 +196,6 @@ node .agents/skills/runs-page-data/scripts/pagedata.mjs pages:submit ./page.reso
 |------|------|--------|------|
 | 内联结构化 JSON | 默认 | `{ templateId, coursewareId, structuredJson, batchNo }` | 单份页面数据，链路最短 |
 | 上传文件 + 直接解析 | `--as-file` | `{ templateId, coursewareId, fsFileId, direct: true, batchNo }` | 需要留存 JSON 文件、与智课端批量导入入口同一条链路 |
-
-批量导入多份 JSON 时也可以直接复用现成 CLI：
-
-```bash
-node scripts/runs-courseware/cli.mjs tasks:create --template-id <id> --direct ./out/*.json --watch
-```
 
 ---
 

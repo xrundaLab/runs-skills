@@ -1,8 +1,8 @@
 /**
  * RunS 网关客户端：鉴权、OSS 直传、文件落库、课件任务。
  *
- * 与 scripts/runs-courseware/cli.mjs 保持同一套接入约定（BASE_URL / clientid /
- * Bearer token / 三步上传），但本文件自带实现，不依赖该 CLI，便于 skill 整体拷贝复用。
+ * 使用 RunS 网关接入约定（BASE_URL / clientid / Bearer token / 三步上传）。
+ * 本文件自带实现，便于 skill 整体拷贝复用。
  */
 import { readFile } from 'node:fs/promises';
 import { basename, extname } from 'node:path';
