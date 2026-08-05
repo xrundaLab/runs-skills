@@ -1,0 +1,41 @@
+{
+  "lesson_id": "lesson001",
+  "sop_version": "RunS_V3.5.0-S1-S6-R36-20260731",
+  "source_page_plan": "__PAGE_PLAN__",
+  "pages": [
+    {
+      "page_no": "P01",
+      "page_type": "课程小结",
+      "capsule": "课程小结",
+      "page_action": "complete",
+      "source_block_ids": ["S1U1-L001-B01"],
+      "effective_content": {
+        "blocks": [
+          {
+            "type": "paragraph",
+            "text": "这一课需要记住一个判断原则。",
+            "markdown": "这一课需要记住一个判断原则。"
+          }
+        ]
+      },
+      "content": {
+        "contentBlocks": [
+          {
+            "type": "paragraph",
+            "text": "这一课需要记住一个判断原则。",
+            "markdown": "这一课需要记住一个判断原则。"
+          }
+        ]
+      },
+      "sections": [
+        {
+          "type": "paragraph",
+          "text": "这一课需要记住一个判断原则。",
+          "markdown": "这一课需要记住一个判断原则。"
+        }
+      ],
+      "display_hints": {"layout": "reading"},
+      "source": {"rawMarkdown": "这一课需要记住一个判断原则。"}
+    }
+  ]
+}

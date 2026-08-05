@@ -73,6 +73,95 @@ DESIGN_BRIEF_RHYTHM_ROLES = {
     "dense_reference",
 }
 SHORT_PAGE_COMPOSITIONS = {"two_layer_reading"}
+DESIGN_LAYOUT_ARCHETYPES = {
+    "two_layer_open_reading",
+    "evidence_comparison_then_resolution",
+    "aligned_evidence_comparison",
+    "guided_process_with_role_distribution",
+    "left_aligned_process",
+    "role_distribution_with_judgment",
+    "open_explanation_with_light_anchor",
+    "open_explanation",
+    "inline_evidence_then_resolution",
+}
+DESIGN_GEOMETRIES = {
+    "open_reading_band",
+    "open_body_flow",
+    "aligned_comparison",
+    "left_aligned_process",
+    "role_distribution_cluster",
+    "inline_role_distribution",
+    "soft_conclusion_anchor",
+    "inline_evidence_comparison",
+}
+DESIGN_SURFACE_ROLES = {
+    "open_background",
+    "split_soft_tints",
+    "outlined_light_surface",
+    "mixed_light_tints",
+    "light_accent_tint",
+    "open_with_inline_highlights",
+}
+DESIGN_VISUAL_WEIGHTS = {"supporting", "normal", "primary"}
+EXPECTED_SURFACE_POLICY = {
+    "lightDominant": True,
+    "allowLargeDarkSurface": False,
+    "nonCodeDarkSurfaceAreaPercentMax": 0,
+    "minimumOpenRegions": 1,
+    "maximumTopLevelVisualRegions": 4,
+    "nestedItemStyle": "flat_subregion",
+    "nestedItemsUseIndependentShadow": False,
+    "punctuatedClausesUseInlineFlow": True,
+    "maximumDecorativeGroups": 2,
+    "forbid": [
+        "largeNearBlackContentPanel",
+        "allContentInsideCards",
+        "uniformRoundedCardStack",
+    ],
+}
+EXPECTED_COLOR_ROLES = {
+    "primaryEmphasis": "runs_purple_inline",
+    "conflictEvidence": "warm_amber_inline",
+    "supportingInformation": "cool_blue_tint",
+    "conclusionSurface": "light_purple_tint",
+    "bodyText": "dark_neutral",
+    "inlineHighlightOnly": True,
+}
+EXPECTED_SPACE_BALANCE = {
+    "readingAreaTarget": "60_to_75_percent",
+    "maximumUnusedLowerAreaPercent": 12,
+    "forbidTopHeavyComposition": True,
+}
+EXPECTED_ALIGNMENT_POLICY = {
+    "priority": [
+        "shared_left_edge",
+        "shared_top_edge",
+        "consistent_width",
+        "semantic_asymmetry",
+    ],
+    "sameSemanticLevelSharedLeftEdge": True,
+    "comparisonPeersTopAligned": True,
+    "comparisonPeersEqualWidth": True,
+    "sequenceItemsSharedLeftEdge": True,
+    "asymmetryOnlyForExplicitPrimarySupporting": True,
+    "forbid": ["randomIndent", "randomWidth", "staggerForVariety"],
+}
+EXPECTED_COMPARISON_LAYOUT_POLICY = {
+    "sideBySideAllowed": True,
+    "sideBySideMaxCharsPerPeer": 80,
+    "sideBySideMaxCombinedChars": 150,
+    "withinLimitLayout": "aligned_equal_width_columns",
+    "overLimitLayout": "vertical_full_width_stack",
+    "verticalStackSharedLeftEdge": True,
+}
+EXPECTED_HIGHLIGHT_POLICY = {
+    "maximumSegmentsPerPage": 3,
+    "sameSemanticCategoryUsesSameStyle": True,
+    "shortHighlightNoWrapMaxChars": 12,
+    "shortHighlightMoveWholeToNextLine": True,
+    "forbidOrphanTailCharsMax": 2,
+    "forbid": ["multicolorSameCategory", "oneOrTwoCharacterHighlightedTail"],
+}
 ORDERED_PARAGRAPH_RE = re.compile(
     r"^(?:第[一二三四五六七八九十百]+[，、：:]|[一二三四五六七八九十]+[、.]|\d+[、.])"
 )
@@ -320,6 +409,34 @@ def dynamic_visible_block_count(page: dict[str, Any]) -> int:
     )
 
 
+def dynamic_visible_blocks(page: dict[str, Any]) -> list[dict[str, Any]]:
+    effective = page.get("effective_content")
+    if isinstance(effective, dict) and isinstance(effective.get("blocks"), list):
+        blocks = effective["blocks"]
+    else:
+        content = page.get("content")
+        blocks = content.get("blocks") if isinstance(content, dict) else []
+    layout = page.get("display_hints") or page.get("layout_plan")
+    transition_text = layout.get("transitionText") if isinstance(layout, dict) else None
+    return [
+        block
+        for block in blocks
+        if isinstance(block, dict)
+        and block.get("type") != "heading"
+        and not (
+            isinstance(transition_text, str)
+            and block.get("text") == transition_text
+        )
+    ]
+
+
+def dynamic_block_text(block: dict[str, Any]) -> str:
+    if isinstance(block.get("text"), str):
+        return block["text"]
+    items = block.get("items")
+    return "".join(item for item in items if isinstance(item, str)) if isinstance(items, list) else ""
+
+
 def validate_dynamic_design_brief(
     page: dict[str, Any],
     issues: list[dict[str, str]],
@@ -445,6 +562,198 @@ def validate_dynamic_design_brief(
             page_no,
         )
 
+    visible_blocks = dynamic_visible_blocks(page)
+    executable_invalid = brief.get("layoutArchetype") not in DESIGN_LAYOUT_ARCHETYPES
+
+    presentations = brief.get("groupPresentation")
+    if (
+        not isinstance(presentations, list)
+        or [row.get("groupId") for row in presentations if isinstance(row, dict)] != group_ids
+        or any(
+            not isinstance(row, dict)
+            or row.get("geometry") not in DESIGN_GEOMETRIES
+            or row.get("surfaceRole") not in DESIGN_SURFACE_ROLES
+            or row.get("visualWeight") not in DESIGN_VISUAL_WEIGHTS
+            for row in presentations or []
+        )
+    ):
+        executable_invalid = True
+
+    projection = brief.get("sourceProjectionPlan")
+    projection_linguistic_invalid = False
+    punctuated_clause_split = False
+    if (
+        not isinstance(projection, list)
+        or [row.get("blockIndex") for row in projection if isinstance(row, dict)]
+        != list(range(1, len(visible_blocks) + 1))
+    ):
+        executable_invalid = True
+    else:
+        for row, block in zip(projection, visible_blocks):
+            if not isinstance(row, dict):
+                executable_invalid = True
+                continue
+            mode = row.get("mode")
+            source_text = dynamic_block_text(block)
+            if mode == "single_region":
+                if not isinstance(row.get("region"), str) or not row["region"].strip():
+                    executable_invalid = True
+            elif mode == "role_distribution_flow":
+                punctuated_clause_split = True
+                executable_invalid = True
+            elif mode in {
+                "inline_conflict_evidence",
+                "sentence_sequence",
+            }:
+                fragments = row.get("fragments")
+                allowed_regions = {
+                    "inline_conflict_evidence": {
+                        "inline_evidence_a",
+                        "inline_shared_context",
+                        "inline_evidence_b",
+                    },
+                    "sentence_sequence": {
+                        f"step_{index}" for index in range(1, 20)
+                    },
+                }[mode]
+                if (
+                    row.get("concatenatedTextMustEqualSource") is not True
+                    or not isinstance(fragments, list)
+                    or not fragments
+                    or any(
+                        not isinstance(fragment, dict)
+                        or not isinstance(fragment.get("text"), str)
+                        or not fragment["text"]
+                        or fragment.get("region") not in allowed_regions
+                        for fragment in fragments or []
+                    )
+                    or "".join(fragment["text"] for fragment in fragments) != source_text
+                ):
+                    executable_invalid = True
+                elif mode == "inline_conflict_evidence":
+                    if (
+                        row.get("renderMode") != "continuous_inline_flow"
+                        or len(fragments) != 3
+                        or [fragment["region"] for fragment in fragments]
+                        != [
+                            "inline_evidence_a",
+                            "inline_shared_context",
+                            "inline_evidence_b",
+                        ]
+                        or not any(token in fragments[0]["text"] for token in ("写着", "显示", "文字"))
+                        or not any(token in fragments[2]["text"] for token in ("说", "语音", "声音"))
+                        or any(
+                            re.fullmatch(r"[，。！？；：,.!?;:]+", fragment["text"].strip())
+                            for fragment in fragments
+                        )
+                    ):
+                        projection_linguistic_invalid = True
+                elif mode == "sentence_sequence":
+                    if (
+                        row.get("renderMode") != "single_section_flat_steps"
+                        or len(fragments) < 2
+                        or [fragment["region"] for fragment in fragments]
+                        != [f"step_{index}" for index in range(1, len(fragments) + 1)]
+                        or any(not re.search(r"[。！？!?]$", fragment["text"]) for fragment in fragments)
+                    ):
+                        projection_linguistic_invalid = True
+            elif mode == "role_distribution_inline":
+                targets = row.get("highlightTargets")
+                if (
+                    row.get("renderMode") != "continuous_inline_highlights"
+                    or row.get("preserveSourceAsSingleTextFlow") is not True
+                    or not isinstance(targets, list)
+                    or len(targets) < 2
+                ):
+                    projection_linguistic_invalid = True
+                else:
+                    cursor = 0
+                    for target in targets:
+                        exact = target.get("exactText") if isinstance(target, dict) else None
+                        if (
+                            not isinstance(exact, str)
+                            or not exact
+                            or re.search(r"[，。！？；：、,.!?;:]$", exact)
+                            or (position := source_text.find(exact, cursor)) < cursor
+                        ):
+                            projection_linguistic_invalid = True
+                            break
+                        cursor = position + len(exact)
+            else:
+                executable_invalid = True
+
+    if punctuated_clause_split:
+        add_issue(
+            issues,
+            "V35_DYNAMIC_PUNCTUATED_CLAUSE_BLOCK_SPLIT",
+            "同一来源句中以逗号或分号连接的并列分句必须保持连续文本流，只允许原位下划线、字重或浅底色强调。",
+            page_no,
+        )
+
+    if projection_linguistic_invalid:
+        add_issue(
+            issues,
+            "V35_DYNAMIC_PROJECTION_LINGUISTIC_UNIT_INVALID",
+            "sourceProjectionPlan 必须以完整句子或自然分句为单位；禁止孤立标点、引导词与引用分离，块内冲突必须保持连续行内阅读。",
+            page_no,
+        )
+        executable_invalid = True
+
+    emphasis = brief.get("emphasisTargets")
+    relation_highlight_count = sum(
+        len(row.get("highlightTargets", []))
+        for row in projection or []
+        if isinstance(row, dict) and isinstance(row.get("highlightTargets"), list)
+    )
+    if (
+        not isinstance(emphasis, list)
+        or relation_highlight_count + len(emphasis) > 3
+    ):
+        executable_invalid = True
+    else:
+        seen_targets: set[tuple[int, str]] = set()
+        for target in emphasis:
+            if not isinstance(target, dict):
+                executable_invalid = True
+                continue
+            block_index = target.get("blockIndex")
+            exact_text = target.get("exactText")
+            marker = (block_index, exact_text) if isinstance(block_index, int) and isinstance(exact_text, str) else None
+            if (
+                marker is None
+                or marker in seen_targets
+                or block_index < 1
+                or block_index > len(visible_blocks)
+                or not exact_text
+                or exact_text not in dynamic_block_text(visible_blocks[block_index - 1])
+                or not isinstance(target.get("colorRole"), str)
+                or not target["colorRole"].strip()
+            ):
+                executable_invalid = True
+            elif marker is not None:
+                seen_targets.add(marker)
+
+    if (
+        brief.get("surfacePolicy") != EXPECTED_SURFACE_POLICY
+        or brief.get("colorRoles") != EXPECTED_COLOR_ROLES
+        or brief.get("spaceBalance") != EXPECTED_SPACE_BALANCE
+        or brief.get("alignmentPolicy") != EXPECTED_ALIGNMENT_POLICY
+        or brief.get("comparisonLayoutPolicy") != EXPECTED_COMPARISON_LAYOUT_POLICY
+        or brief.get("highlightPolicy") != EXPECTED_HIGHLIGHT_POLICY
+        or "浅色主导" not in str(brief.get("visualSystem") or "")
+        or "禁止大面积近黑背景" not in str(brief.get("visualSystem") or "")
+        or "sourceProjectionPlan" not in str(brief.get("visibleCopyPolicy") or "")
+    ):
+        executable_invalid = True
+
+    if executable_invalid:
+        add_issue(
+            issues,
+            "V35_DYNAMIC_EXECUTABLE_DESIGN_MISSING",
+            "design_brief 必须冻结可执行构图、逐块单次投影、原句强调、浅色表面策略与空间平衡；非代码内容禁止大面积近黑背景。",
+            page_no,
+        )
+
 
 def validate_template_preflight(
     page: dict[str, Any],
@@ -517,6 +826,57 @@ def validate_template_preflight(
 
     if page_type == "课程小结" and isinstance(content, dict) and isinstance(layout, dict):
         content_blocks = content.get("contentBlocks")
+        effective = page.get("effective_content")
+        effective_blocks = (
+            effective.get("blocks") if isinstance(effective, dict) else None
+        )
+        summary_sequences = (effective_blocks, content_blocks, sections)
+        headings: list[dict[str, Any] | None] = []
+        for sequence in summary_sequences:
+            heading = (
+                sequence[0]
+                if isinstance(sequence, list)
+                and sequence
+                and isinstance(sequence[0], dict)
+                and sequence[0].get("type") == "heading"
+                else None
+            )
+            headings.append(heading)
+        if any(
+            heading is None
+            or not isinstance(heading.get("text"), str)
+            or not heading["text"].strip()
+            for heading in headings
+        ):
+            add_issue(
+                issues,
+                "COURSE_SUMMARY_TITLE_MISSING",
+                "课程小结必须在 effective_content.blocks、content.contentBlocks 与 sections 的首块保留同一个非空 heading，供 S6 逐字投影 summaryTitle。",
+                page_no,
+            )
+        elif not (headings[0] == headings[1] == headings[2]):
+            add_issue(
+                issues,
+                "COURSE_SUMMARY_TITLE_PROJECTION_INVALID",
+                "课程小结 heading 在三个 S5 结构投影中必须逐字一致。",
+                page_no,
+            )
+        else:
+            title = headings[0]["text"]
+            duplicate = any(
+                isinstance(block, dict)
+                and block.get("type") != "heading"
+                and block.get("text") == title
+                for sequence in summary_sequences
+                for block in (sequence[1:] if isinstance(sequence, list) else [])
+            )
+            if duplicate:
+                add_issue(
+                    issues,
+                    "COURSE_SUMMARY_TITLE_DUPLICATED",
+                    "课程小结 heading 只能作为 summaryTitle 真源，不得再次作为学生正文块重复输出。",
+                    page_no,
+                )
         styled_lists = [
             block
             for block in content_blocks or []
@@ -866,7 +1226,7 @@ def main() -> int:
         json.dumps(
             {
                 "status": "BLOCKED" if blocked else "PASS",
-                "contract": "RunS_V3.5.0-S1-S6-R32-20260731",
+                "contract": "RunS_V3.5.0-S1-S6-R36-20260731",
                 "totals": totals,
                 "reports": reports,
             },

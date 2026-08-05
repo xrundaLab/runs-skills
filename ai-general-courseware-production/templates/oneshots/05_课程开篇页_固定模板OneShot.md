@@ -1,7 +1,7 @@
 # 课程开篇页固定模板 OneShot（V3.5）
 
 状态：`CURRENT_PRODUCTION_ASSET`  
-合同版本：`RunS-CourseIntro-FixedTemplate-OneShot-v1.8`  
+合同版本：`RunS-CourseIntro-FixedTemplate-OneShot-v1.9`
 适用范围：Kimi / GLM 一次性、无外部上下文生成课程开篇页完整 HTML。  
 固定 Demo SHA-256：`ba53ef84a86f7286839c8027460714906c1048849fd1d9c1403fe4bc555dfb89`  
 变量区外 SHA-256：`070cf9823d34755856019e88d0cd24c64d1c17e6f0535776a08b1a4945cca8e3`
@@ -81,7 +81,7 @@
     :root {
       --purple: #9260fe;
       --ink: #242331;
-      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --safe-bottom: 0px;
       --page-bottom-rgb: 213, 245, 254;
       --page-bottom-bg: rgb(var(--page-bottom-rgb));
       --footer-h: calc(80px + var(--safe-bottom));
@@ -108,7 +108,7 @@
       position: relative;
       width: 100%;
       max-width: 538px;
-      height: 100dvh;
+      height: 100%;
       margin: 0 auto;
       overflow: hidden;
       border-radius: 0;
@@ -133,7 +133,8 @@
     }
 
     .intro-inner {
-      width: min(calc(100% - 48px), var(--content-max));
+      width: calc(100% - 48px);
+      max-width: var(--content-max);
       margin: 0 auto;
       display: grid;
       gap: 16px;
@@ -155,7 +156,7 @@
       font-size: 12px;
       line-height: 21px;
       font-weight: 600;
-      overflow-wrap: anywhere;
+      overflow-wrap: break-word;
     }
 
     .intro-header p {
@@ -163,7 +164,7 @@
       color: rgba(36, 35, 49, 0.72);
       font-size: 12px;
       line-height: 21px;
-      overflow-wrap: anywhere;
+      overflow-wrap: break-word;
     }
 
     .intro-focus-card {
@@ -199,8 +200,6 @@
       border-radius: var(--card-radius);
       background: rgba(255, 255, 255, 0.72);
       box-shadow: 0 12px 28px rgba(81, 57, 137, 0.06);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
     }
 
     .title-panel {
@@ -221,8 +220,7 @@
       line-height: 1.3;
       font-weight: 800;
       letter-spacing: 0.2px;
-      text-wrap: balance;
-      overflow-wrap: anywhere;
+      overflow-wrap: break-word;
     }
 
     .content-card {
@@ -232,8 +230,6 @@
       border-radius: var(--card-radius);
       background: rgba(255, 255, 255, 0.72);
       box-shadow: 0 12px 28px rgba(81, 57, 137, 0.06);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
     }
 
     .content-card h3 {
@@ -251,8 +247,6 @@
       background:
         linear-gradient(180deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0)),
         rgba(146, 96, 254, 0.2);
-      backdrop-filter: blur(2px);
-      -webkit-backdrop-filter: blur(2px);
     }
 
     .core-question-icon {
@@ -280,7 +274,7 @@
       text-align: center;
       font-size: 14px;
       line-height: 23px;
-      overflow-wrap: anywhere;
+      overflow-wrap: break-word;
     }
 
     .unlock-card {
@@ -306,7 +300,7 @@
       background: rgba(255, 255, 255, 0.78);
       font-size: 14px;
       line-height: 21px;
-      overflow-wrap: anywhere;
+      overflow-wrap: break-word;
     }
 
     .knowledge-index {
@@ -335,7 +329,8 @@
     }
 
     #primaryButton {
-      width: min(260px, calc(100vw - 64px));
+      width: calc(100% - 64px);
+      max-width: 260px;
       min-height: var(--button-height);
       border: 2px solid transparent;
       border-radius: 40px;
@@ -356,7 +351,8 @@
     }
 
     .intro-error {
-      width: min(100% - 36px, 480px);
+      width: calc(100% - 36px);
+      max-width: 480px;
       margin: 80px auto;
       padding: 20px;
       border-radius: 20px;
@@ -368,7 +364,8 @@
 
     @media (max-width: 359px) {
       .intro-inner {
-        width: min(calc(100% - 40px), var(--content-max));
+        width: calc(100% - 40px);
+        max-width: var(--content-max);
       }
     }
 
@@ -465,7 +462,7 @@
     /* ======================= 变量区结束 ======================= */
 
     function escapeHtml(value) {
-      return String(value ?? "").replace(/[&<>"']/g, character => ({
+      return String(value == null ? "" : value).replace(/[&<>"']/g, character => ({
         "&": "&amp;",
         "<": "&lt;",
         ">": "&gt;",

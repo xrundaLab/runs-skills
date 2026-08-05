@@ -1,7 +1,7 @@
 # 场景引入页固定模板 OneShot（V3.5）
 
 状态：`CURRENT_PRODUCTION_ASSET`  
-合同版本：`RunS-SceneIntro-FixedTemplate-OneShot-v1.5`  
+合同版本：`RunS-SceneIntro-FixedTemplate-OneShot-v1.6`
 适用范围：Kimi / GLM 一次性、无外部上下文生成场景引入页完整 HTML。  
 固定 Demo SHA-256：`0b746794a30a826b376ce6992b9fd896d3ead1a76d93b4d93540ee6eff13973a`  
 变量区外 SHA-256：`edd32ece1d155f5b727a5c8e0c7f1cd91228d5e9bded49b2ebf0d72364c0d94c`
@@ -81,7 +81,7 @@
       --ink: #292735;
       --muted: rgba(41, 39, 53, 0.62);
       --paper: #fffdf8;
-      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --safe-bottom: 0px;
       --page-bottom-rgb: 212, 247, 255;
       --page-bottom-bg: rgb(var(--page-bottom-rgb));
       --footer-h: calc(80px + var(--safe-bottom));
@@ -111,7 +111,7 @@
       position: relative;
       width: 100%;
       max-width: 538px;
-      height: 100dvh;
+      height: 100%;
       min-height: 100%;
       margin: 0 auto;
       overflow: hidden;
@@ -157,7 +157,7 @@
       height: 100%;
       overflow-y: auto;
       overflow-x: hidden;
-      padding: 28px clamp(20px, 6vw, 35px)
+      padding: 28px 24px
         calc(var(--footer-h) + 24px);
       overscroll-behavior: contain;
       -webkit-overflow-scrolling: touch;
@@ -188,7 +188,6 @@
     .scene-kicker {
       display: inline-flex;
       align-items: center;
-      gap: 7px;
       margin: 0;
       color: var(--purple-deep);
       font-size: 13px;
@@ -205,13 +204,15 @@
       content: "";
     }
 
+    .scene-kicker::before { margin-right: 7px; }
+    .scene-kicker::after { margin-left: 7px; }
+
     .scene-header h1 {
       margin: 6px 0 0;
       color: var(--ink);
-      font-size: clamp(24px, 5.4vw, 31px);
+      font-size: 31px;
       line-height: 1.28;
       font-weight: 850;
-      text-wrap: balance;
     }
 
     .screenplay-wrap {
@@ -297,7 +298,6 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 12px;
       margin-bottom: 17px;
       padding-bottom: 11px;
       border-bottom: 1px dashed rgba(118, 80, 216, 0.22);
@@ -312,6 +312,7 @@
     }
 
     .script-heading span {
+      margin-left: 12px;
       color: rgba(41, 39, 53, 0.42);
       font-family: ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace;
       font-size: 10px;
@@ -328,11 +329,10 @@
     .scene-paragraph {
       margin: 0;
       color: #363340;
-      font-size: clamp(16px, 3.25vw, 18px);
+      font-size: 18px;
       line-height: 1.78;
       font-weight: 400;
-      overflow-wrap: anywhere;
-      text-wrap: pretty;
+      overflow-wrap: break-word;
     }
 
     .scene-paragraph:first-child {
@@ -383,11 +383,10 @@
     .director-cue p {
       margin: 0;
       color: #44375d;
-      font-size: clamp(16px, 3.2vw, 18px);
+      font-size: 18px;
       line-height: 1.72;
       font-weight: 680;
-      overflow-wrap: anywhere;
-      text-wrap: pretty;
+      overflow-wrap: break-word;
     }
 
     .scene-footer {
@@ -404,7 +403,8 @@
     }
 
     #primaryButton {
-      width: min(260px, calc(100vw - 64px));
+      width: calc(100% - 64px);
+      max-width: 260px;
       min-height: 60px;
       border: 2px solid transparent;
       border-radius: 40px;
@@ -429,7 +429,8 @@
     }
 
     .scene-error {
-      width: min(100% - 36px, 480px);
+      width: calc(100% - 36px);
+      max-width: 480px;
       margin: 96px auto 0;
       padding: 22px;
       border-radius: 24px;
@@ -673,7 +674,8 @@
         fragment.appendChild(paragraph);
       });
 
-      content.replaceChildren(fragment);
+      content.textContent = "";
+      content.appendChild(fragment);
       document.getElementById("lessonLead").textContent = data.lessonLead;
 
       const button = document.getElementById("primaryButton");

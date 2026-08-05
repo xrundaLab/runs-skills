@@ -234,6 +234,8 @@ python3 scripts/validators/validate_question_component_json.py --stage3-contract
 
 只读取冻结的 S2 `page_plan_working_full.md` 和已批准的 S3 `question_processed_full.md`；只输出 `page_plan_full.md`。输入保留在各自阶段目录，不得复制到 S4 目录或从同目录猜测输入；S4 Gate 必须显式传入这两个绝对路径。不得回读更早输入、重判页面边界或改写工作版的页号、类型、胶囊、来源块、内容块类型、布局意图、过渡句元数据及非互动原文。S4 仍不拥有删留权：研发注释不进入学生页面，但 S2 已承载的学生正文、状态句和其他原文必须逐字保留；何者不进入最终有效内容只在 S5 处理。页面交接清单是这些字段的唯一上游。
 
+S4 必须由 `scripts/generators/build_final_page_plan.py` 确定性合并：先逐字复制 S2 的页面元数据、过渡句元数据和非互动正文，再仅将 S3 已批准的互动题 JSON 写入对应互动页。不允许用生成模型自由重写 S4。S2 已将题目标题划入互动页时，上一知识页的 `none / 无` 必须原样保留，不得再推断为过渡句。
+
 每页必须使用下列结构，`P01` 起连续编号：
 
 ```markdown
@@ -258,7 +260,17 @@ python3 scripts/validators/validate_question_component_json.py --stage3-contract
 
 ### S4 Gate
 
-运行：
+串行生产使用官方 Gate 入口，它会先核对 S3 `PASS` 回执与输出哈希，再生成和校验 S4：
+
+```bash
+python3 scripts/orchestrator/run_stage_gate.py --stage S4 --lesson-id <lesson_id> \
+  --receipt-dir <receipts> --prior-receipt <receipts/s3_gate_receipt.json> \
+  --working-plan <S2/page_plan_working_full.md> \
+  --question-processed <S3/question_processed_full.md> \
+  --output <S4/page_plan_full.md>
+```
+
+独立审计时可运行：
 
 ```bash
 python3 scripts/validators/validate_v35_page_plan_question_boundaries.py --effective-plan-contract \
@@ -271,7 +283,7 @@ python3 scripts/validators/validate_v35_page_plan_question_boundaries.py --effec
 
 ## S5 有效内容 JSON
 
-只读取冻结的 S4 `page_plan_full.md`，确定性输出唯一 `effective_content_full.json`；输入保留在 S4 目录，不得复制到 S5 目录或从同目录猜测输入，S5 Gate 必须显式传入该绝对路径。不得回读工作版、题目处理版、教师版或学生版。顶层必须含 `lesson_id`、`sop_version`、逐字指向该唯一上游的 `source_page_plan` 与非空 `pages[]`。
+只以冻结的 S4 `page_plan_full.md` 为内容真源，由 `scripts/generators/build_effective_content.py` 生成唯一 `effective_content_full.json`。S5 可接收一份候选 draft 提供 `design_brief` 等非确定性设计字段，但页序、基础字段、原文、互动 JSON、学生投影和课程小结结构块必须从 S4 重建，draft 对这些受保护字段没有覆盖权。输入保留在各自阶段目录，不得复制到 S5 目录或从同目录猜测输入。不得回读工作版、题目处理版、教师版或学生版。顶层必须含 `lesson_id`、`sop_version`、逐字指向该唯一上游的 `source_page_plan` 与非空 `pages[]`。
 
 每页固定含六项基础字段：`page_no`、`page_type`、`capsule`、`page_action`、`source_block_ids`、`effective_content`。非互动页必须额外保留 `source.rawMarkdown`，且逐字等于上游有效内容；互动页的 `effective_content` 必须是完整题目 JSON 的有序对象投影，并使 `component_type` 等于其 `type`；所有页面禁止独立 `background`。
 
@@ -281,14 +293,25 @@ R32 对知识讲解/案例分析追加确定性结构投影：必须仅从同页
 
 - P01 的 `effective_content` 按固定顺序含六项课程信息，`content` 按固定顺序映射为 `packageName`、`unitName`、`lessonNumber`、`courseName`、`courseIntroduction`、`knowledgePoints`。
 - 课后任务 `sections[].type` 只允许 `paragraph`、`task`、`facts`、`step`、`prompt`、`decision`、`safety`、`fallback`。
-- 课程小结源内容含有序列表或连续编号条目时，`content.contentBlocks` 必须使用 `orderedList` 并保留完整 `items[]`；允许源编号与视觉编号并存。
-- 知识讲解与案例分析页必须有非渲染 `design_brief`：`nonRenderable: true`、教学动作、内容形态、阅读流、语义分组、密度、节奏角色、层级焦点、布局自由度、视觉系统和学生可见文案策略。语义分组以除 heading/冻结过渡句外的阅读块为 1-based `blockIndexes`，无重叠覆盖全部可见内容块；三块及以上时至少按真实阅读关系提供两个语义组，禁止固定 `g1` 整页兜底。`contentShape` 仅可为 `claim_to_evidence_to_judgment`、`concept_to_example_to_boundary`、`problem_to_method_to_result`、`example_to_comparison_to_boundary`、`parallel_comparison`、`process_or_sequence`、`continuous_explanation`；`density` 仅 `light|medium|dense`；`rhythmRole` 仅 `statement|structured|contrast|narrative|dense_reference`。
+- 课程小结必须有非空 heading，且 `effective_content.blocks`、`content.contentBlocks` 与 `sections` 中的首个可见 heading 必须逐字一致，可直接投影为 S6 `summaryTitle`。该 heading 仅用于标题投影，不得在学生正文重复。源内容含有序列表或连续编号条目时，`content.contentBlocks` 必须使用 `orderedList` 并保留完整 `items[]`；允许源编号与视觉编号并存。`source.rawMarkdown` 必须完整保留原文；精确状态句“本课没有课后练习。”只能从学生投影中剔除，同段后续的下一课预告必须逐字保留。
+- 知识讲解与案例分析页必须有非渲染 `design_brief`，并冻结 `layoutArchetype`、`groupPresentation`、`sourceProjectionPlan`、`emphasisTargets`、`surfacePolicy`、`colorRoles`、`spaceBalance` 与 `alignmentPolicy`。`alignmentPolicy` 规定左对齐、顶部对齐优先：同级内容共享左边界，同级对比项顶边对齐且等宽，步骤项共享同一左边界；只有明确 primary/supporting 主次关系才允许非对称，禁止随机缩进、随机宽度和为了变化而错位。S5 仍须从冻结原文识别真实对比、步骤、列表、媒介分工与判断关系；连续分句保持连续句流，重点仅在原位置强调。`surfacePolicy` 浅色主导，装饰允许为零；`spaceBalance` 限制无意义底部留白。
+- `comparisonLayoutPolicy` 规定横向等宽对比仅适用于每项不超过 80 个中文字符且合计不超过 150 个字符；超限必须切为同一左边界的上下全宽卡片。`highlightPolicy` 规定全页高亮最多 3 个逐字来源片段、同一语义类别使用同一样式、12 字以内的短高亮整体换行，禁止出现单独换行的 1—2 字高亮尾巴。
 - 对恰有两条独立短原文、且不含列表或互动内容的知识讲解页，`design_brief.shortPageComposition` 必须为 `two_layer_reading`：两条原文各自保留为一个语义组，按原顺序分别作为主阅读层和弱结果层。两层之间仅允许无文字的连续留白节奏，不得添加连接文案、可见连接线、编号、方法/步骤/结论，也不得为了填满页面把原文拆改、重复或补写。
 - `page_action` 与页位一致；如 `content.pageAction` 存在，非末页为 `next`，末页为 `complete`。
 
 ### S5 Gate
 
-运行：
+串行生产使用官方 Gate 入口，它会先核对 S4 `PASS` 回执与输出哈希，再生成和校验 S5：
+
+```bash
+python3 scripts/orchestrator/run_stage_gate.py --stage S5 --lesson-id <lesson_id> \
+  --receipt-dir <receipts> --prior-receipt <receipts/s4_gate_receipt.json> \
+  --page-plan <S4/page_plan_full.md> \
+  --draft <S5/effective_content_candidate.json> \
+  --output <S5/effective_content_full.json>
+```
+
+独立审计时可运行：
 
 ```bash
 python3 scripts/validators/validate_v35_effective_content.py \
@@ -296,7 +319,7 @@ python3 scripts/validators/validate_v35_effective_content.py \
   effective_content_full.json
 ```
 
-以下任一情况为 `BLOCKED`：上游缺失或不唯一；页数、顺序、六项基础字段或无损内容漂移；P01 映射、互动 JSON、模板前置数据、设计简报、课后任务 sections、课程小结有序列表或页面动作不合规；出现下游字段。`PASS` 只允许进入 S6 静态装配。
+以下任一情况为 `BLOCKED`：上游缺失或不唯一；页数、顺序、六项基础字段或无损内容漂移；P01 映射、互动 JSON、模板前置数据、设计简报、课后任务 sections、课程小结 heading / 有序列表或页面动作不合规；课程小结标题缺失、不一致或在正文重复；出现下游字段。`PASS` 只允许进入 S6 静态装配。
 
 ## S6 整课 JSON 装配
 
@@ -314,9 +337,19 @@ python3 scripts/validators/validate_v35_effective_content.py \
 | 课后任务 | `post_class_task` | `html` | 课后任务固定模板 OneShot。 |
 | 课程小结 | `course_summary` | `html` | 课程小结固定模板 OneShot；有序内容保留样式化列表。 |
 
-非互动页 `pages[].prompt` 必须保存“唯一提示词实例版本 + 简短生成要求 + 内嵌完整 HTML”的完整 OneShot 实际模型输入；同一整课内实例版本不得重复。裸 HTML、模板路径、变量对象或增量指令均不得写入 `prompt`。模型输出的纯 HTML 属于后续运行证据，不能反写覆盖 `prompt`。动态知识/案例页的 OneShot 还必须携带由唯一装配器产生的非渲染 `visualRecipePlan` 与 `footerContract`，不得由模型自行缺省。
+非互动页 `pages[].prompt` 必须保存“内容寻址的提示词实例版本 + 简短生成要求 + 内嵌完整 HTML”的完整 OneShot 实际模型输入。版本号格式固定为 `<OneShot合同>-asset-<资产SHA前12位>-prompt-<归一化完整提示词SHA前12位>-<lesson_id>-<page_no>-R36-20260731`；`page_data.prompt_instance_sha256` 保存完整 64 位实例哈希。计算实例哈希时只把首行版本值归一化为 `__PROMPT_VERSION__`，其余已替换的页面上下文、变量、`PAGE_DATA`、`DESIGN_BRIEF`、HTML、CSS 与 JavaScript 全部参与计算。同一 OneShot 只要实际模型输入变化，版本号必须变化；仅检查整课内不重复不足以放行。首行、`page_data.prompt_version`、登记合同、资产哈希和重算实例哈希必须完全一致。裸 HTML、模板路径、变量对象或增量指令均不得写入 `prompt`。模型输出的纯 HTML 属于后续运行证据，不能反写覆盖 `prompt`。动态知识/案例页的 OneShot 还必须携带由唯一装配器产生的非渲染 `visualRecipePlan` 与 `footerContract`，不得由模型自行缺省。
 
-所有页面须从 S5 无损映射页号、胶囊、来源块、有效内容摘要哈希与页面动作；末页 `sdk_action: complete` 且 `is_last_page: true`，此前为 `nextpage` 与 `false`。每个非互动 OneShot 的“适用页面”必须由装配上下文重绑为当前课次、页号、页序/总页数和页面类型，禁止遗留示例课次或页号。知识/案例页由唯一装配器读取同页 `effective_content.blocks` 与 `design_brief`，将完整 blocks 原样写入动态 `PAGE_DATA.contentBlocks`，并在 `page_data` 原样登记该 `design_brief`；不得压扁为 `markdown` 单块、简化为 `type/text`、退化为裸 HTML、通用替代提示词或跳过动态页。R36 必须在同一 `PAGE_DATA` 里确定性注入 `visualRecipePlan`（引入/观察信息带、列表/选项紧凑项组、分析/结论强调卡；至少两种被选配方不得同款白卡化或只靠位置移动）和 `footerContract`（动作非空即在滚动容器外无条件保留可见 CTA）。若知识页有 `ordered_list`，还必须注入 `orderedListOrdinalContract`：只遍历该列表 `items[]`，显示局部 `itemIndex + 1`，每个列表从 1 连续编号；禁止 `contentBlockIndex`、`globalCounter` 与 Markdown 序号/生成序号双重叠加。若有 `unordered_list`，还必须注入 `unorderedListPresentationContract`：保留已有文字标签，禁止数字徽标和自动编号。静态检查器必须逐页比较 `PAGE_DATA.contentBlocks` 与 S5 结构块，并核验配方可见差异、CTA 与列表合同。知识/案例页遵守唯一内部滚动容器、固定底栏、连续底色与过渡句弱化样式合同；所有学生内容卡禁止纯装饰性左侧彩色竖线、贴边色条、轨道、连接点、箭头和伪元素彩轨。三块及以上且 `density: medium` 的知识讲解页使用真实分组的分布式构图，使主体约覆盖可用阅读区 60%—75%，不得将全部内容堆在上半屏，也不得用新增文案、空白占位或单一卡片强拉高凑高度；短页 `two_layer_reading` 不硬凑内容。课程开篇只注入 `packageName`、`unitName`、`lessonNumber`、`courseName`、`courseIntroduction`、`knowledgePoints` 六个 v1.8 camelCase 字段。课程小结 v1.10 必须将 S5 冻结 heading 逐字投影为 `summaryTitle` 并从正文移除；`next` 只允许中性完成头“本课重点回顾”，仅 `complete` 可使用“恭喜你完成本节课程！”，去除 heading 后仅一个内容块时用不改写原文的单块小结构图分支。课后任务只按冻结的八类 `sections[]` 静态投影为 v1.8 富卡片 DOM；单个原始 Markdown 任务块、缺失 sections 或 facts 的空内容不得由 S6 猜测修复。固定模板的变量区、冻结版本和变量映射由资产清单登记的对应 OneShot 与 Demo 约束。
+所有页面须从 S5 无损映射页号、胶囊、来源块、有效内容摘要哈希与页面动作；末页 `sdk_action: complete` 且 `is_last_page: true`，此前为 `nextpage` 与 `false`。知识/案例页由唯一装配器将同页完整 blocks 和 `design_brief` 原样写入动态 `PAGE_DATA`。R36 必须确定性注入 `visualRecipePlan`、无数量配额的 `semanticCompositionContract` 和固定底栏 `footerContract`：构图由真实语义关系决定，列表保持列表，对比和步骤体现关系，连续说明不得为了丰富而拆块；禁止同款白卡堆叠和只靠位置制造差异。静态检查器逐页比较 `PAGE_DATA.contentBlocks` 与 S5 结构块，并核验语义构图、CTA 与列表合同。知识/案例页遵守唯一内部滚动容器、固定底栏、连续底色与过渡句弱化样式合同；所有学生内容卡禁止纯装饰性左侧彩色竖线、轨道、连接点和箭头。中篇知识页只用真实分组平衡主要阅读区，短页不硬凑内容。课程开篇、课程小结与课后任务继续按当前登记的 v1.9、v1.11 与 v1.9 冻结模板合同投影，不由 S6 猜测修复。
+
+知识页 `visualRecipePlan` 还必须把 S5 已识别的真实关系投影为可执行配方：并列对象使用 `comparison_split` / `.content-module--comparison`，原文已有先后关系使用 `process_steps` / `.content-module--process-steps`，真实列表保持列表结构；逗号或分号连接的媒介/角色分工使用 `role_distribution_inline` / `.content-module--role-inline`，在同一连续句流中做行内强调。这些配方只表达真实关系，不得拆改原文或新增学生可见标签；仅登记配方名后继续输出同款段落卡，或为了丰富而把连续说明拆成多个表面，均视为合同未落实。
+
+所有知识/案例动态页必须注入并执行 `sourceTextProjectionContract`：每个冻结来源块的学生可见文字恰出现一次。允许为了真实关系构图把同一来源块连续切成多个 DOM 片段，但拼接后的 `textContent` 必须逐字等于来源块原文；禁止同时输出完整来源块与其派生短句、卡片、标签或徽章。还必须注入 `semanticCompositionContract`，不规定配方数量或几何数量，只要求语义关系决定构图、列表保持列表、连续说明保持连续，并禁止同款卡堆叠和为了丰富而拆分句流。
+
+所有知识/案例动态页还必须注入 `visualHierarchyContract`；当页面含至少 3 个真实阅读块且不是 `two_layer_reading` 短页时必须执行 `semanticHierarchyFirst: true`，优先顺序固定为来源保真、语义关系、阅读清晰、排版优雅、装饰。该突出的重点才在原句原位置最多强调 3 个逐字来源片段，优先使用字重、下划线或柔和底色；该体现的对比、步骤、列表才使用相应关系构图。装饰元素可为 0，最多 2 组，仅在改善构图时使用，必须无文字、`aria-hidden` 且禁止自动生成 Emoji。不得为了满足丰富度增加表面、卡片、标签或高对比区域；禁止统一圆角纵向卡栈、虚构徽章文案、上重下空和大面积无意义底部留白。`density: medium` 页面主体阅读区覆盖目标不得低于 60%。
+
+S6 还必须把 S5 上述七项可执行设计字段逐字复制到 `visualRecipePlan.designExecutionContract`，并以 `source: S5.design_brief` 标明唯一来源。S6 只能映射已有组、来源片段、强调目标和浅色表面，不能重新识别或替换页面设计；缺字段、不一致、将完整来源段落复制到多个区域、非代码大面积近黑背景或把原句重点抽取成第二份文字，均为 `V35_DYNAMIC_S5_DESIGN_EXECUTION_CONTRACT_MISSING`。得到模型返回的 HTML 后，必须使用 `scripts/validators/validate_dynamic_html.py` 核验 Chrome 68 兼容性、学生可见文字的逐字原序单次投影、孤立标点和顶层视觉区不超过四个。该 DOM Gate 只验收明确提供的生成结果，不发起 RunS 生成、导入、渲染或发布。
+
+所有 OneShot、固定 Demo 与外部授权后得到的页面 HTML，以未转译的 Android System WebView Chrome 68 为最低兼容基线。禁止可选链、空值合并、逻辑赋值、class fields/static blocks、数字分隔符及登记的不兼容 DOM API；禁止动态视口单位、CSS `min()` / `max()` / `clamp()`、Flex `gap`、逻辑间距属性、`env()`、`backdrop-filter`、`text-wrap` 与现代颜色函数。必须使用 `height:100%`、物理方向间距、`width` 加 `max-width`、Observer 能力检测和外部资源失败时仍可见的静态首屏。兼容 Gate 检查实际 HTML/CSS/JS，只有提示词声明而模板代码不兼容时仍为 BLOCKED。
 
 ### S6 只读回归基线
 

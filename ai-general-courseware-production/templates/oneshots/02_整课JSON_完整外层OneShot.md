@@ -28,9 +28,9 @@
 4. 任何页面都不得用裸 HTML、模板路径、`参考 Demo`、单独变量对象、局部 CSS、简短生成指令或增量补丁代替完整 OneShot。每个非互动 OneShot 的“适用页面”必须从当前装配上下文写入 `lesson_id`、`Pxx`、页序/总页数和页面类型，禁止保留示例课次、页号、页数或相邻题页。固定模板的模型输出核对变量区外 SHA-256；动态页输出核对内容无损、页面边界、共享运行底座、SDK 和短页 / 长页双态。
 5. 先通过 `S3G`、跨产物 diff 和适用 Gate，才能冻结为 `final_import` 并进入 P4；不得直接 create。
 
-### 1.1 课程小结 v1.10 确定性变量投影
+### 1.1 课程小结 v1.11 确定性变量投影
 
-`COURSE_SUMMARY_V110_VARIABLE_PROJECTION`：阶段 6 装配课程小结时，必须把冻结有效内容确定性投影为 `COURSE_SUMMARY_VARIABLES`，不得把历史 `blocks` 对象原样注入 v1.10 模板。
+`COURSE_SUMMARY_V111_VARIABLE_PROJECTION`：阶段 6 装配课程小结时，必须把冻结有效内容确定性投影为 `COURSE_SUMMARY_VARIABLES`，不得把历史 `blocks` 对象原样注入 v1.11 模板。
 
 1. 输出对象必须且只能按本合同使用 `completionTitle`、`summaryTitle`、`contentBlocks`、`nextLessonPreview`、`pageAction` 五个业务字段；`pageAction` 只取当前冻结页面动作，外层 `nextpage / complete` 分别映射为内部 `next / complete`。`next` 对应中性完成头“本课重点回顾”，仅 `complete` 对应“恭喜你完成本节课程！”。
 2. `summaryTitle` 必须取有效内容中的第一个 `heading` 块的逐字 `text` 并从正文移除；缺少冻结 heading 即 `BLOCKED`，不得退化为同页“课程小结”等通用页面类型标题。
@@ -38,7 +38,7 @@
 4. `nextLessonPreview` 只可取冻结有效内容中的显式下一课预告；没有时写空字符串，不得由阶段 6 补写。`contentBlocks` 不得为空，旧字段 `blocks` 不得出现在最终变量区。
 5. 静态 `#completionTitle`、`#summaryTitle`、`#summaryContent[data-summary-static="true"]` 与 `#completeButton` 必须由上述同一对象预编译；模型返回的纯 HTML是输出证据，不得覆盖 `pages[].prompt`。
 
-去除 heading 后仅一个内容块时，OneShot 必须启用无新增文案的单块小结构图分支：仅调整既有标题/卡片比例/垂直居中，不拆改原文，不伪造列表或步骤。检查器遇到旧 `blocks`、缺少任一 v1.10 必填字段，单块分支缺失，或页面动作不一致时，必须阻断；不得以最终截图正常替代该装配检查。
+去除 heading 后仅一个内容块时，OneShot 必须启用无新增文案的单块小结构图分支：仅调整既有标题/卡片比例/垂直居中，不拆改原文，不伪造列表或步骤。检查器遇到旧 `blocks`、缺少任一 v1.11 必填字段，单块分支缺失，或页面动作不一致时，必须阻断；不得以最终截图正常替代该装配检查。
 
 课程不要求机械包含七类页面：案例分析只在互动题必要背景超过 50 个学生可见字符时生成，并紧邻对应互动题之前；课后任务只在有真实任务时生成，课程小结只在有显式小结块时生成。下面同时列出课后任务与课程小结，只是为了给出完整装配示例；无对应来源时删除整页并重编号、重算最后页动作。
 
@@ -70,7 +70,7 @@
         "route": "fixed_template",
         "template": "COURSE_INTRO_VARIABLES",
         "template_sha256": "{{当前课程开篇 Demo SHA-256}}",
-        "prompt_contract": "RunS-CourseIntro-FixedTemplate-OneShot-v1.8",
+        "prompt_contract": "RunS-CourseIntro-FixedTemplate-OneShot-v1.9",
         "prompt_version": "{{本次实际使用且唯一的课程开篇页提示词版本号}}",
         "template_outside_variable_region_unchanged": true
       }
@@ -90,7 +90,7 @@
         "route": "fixed_template",
         "template": "SCENE_INTRO_VARIABLES",
         "template_sha256": "{{当前场景引入 Demo SHA-256}}",
-        "prompt_contract": "RunS-SceneIntro-FixedTemplate-OneShot-v1.5",
+        "prompt_contract": "RunS-SceneIntro-FixedTemplate-OneShot-v1.6",
         "prompt_version": "{{本次实际使用且唯一的场景引入页提示词版本号}}",
         "template_outside_variable_region_unchanged": true,
         "sceneParagraphs": [
@@ -202,11 +202,11 @@
       "runtime_type": "html_page",
       "sdk_action": "nextpage",
       "is_last_page": false,
-      "prompt": "<03_课后任务页_Compact直接生成OneShot.md v1.8 的完整实际模型输入；第一行必须是整课唯一提示词版本号，并完整内嵌按 TASK_STATIC_DOM_V18_PROJECTION 预编译的富卡片学生 DOM 与 HTML/CSS/JavaScript>",
+      "prompt": "<03_课后任务页_Compact直接生成OneShot.md v1.9 的完整实际模型输入；第一行必须是整课唯一提示词版本号，并完整内嵌按 TASK_STATIC_DOM_V19_PROJECTION 预编译的富卡片学生 DOM 与 HTML/CSS/JavaScript>",
       "components": [],
       "page_data": {
         "route": "compact_direct_oneshot",
-        "oneshot_contract": "RunS-PostClassTask-Compact-Direct-OneShot-Contract-v1.8-20260727",
+        "oneshot_contract": "RunS-PostClassTask-Compact-Direct-OneShot-Contract-v1.9-20260805",
         "prompt_version": "{{本次实际使用且唯一的课后任务页提示词版本号}}",
         "model_family": "{{Kimi 或 GLM}}",
         "output_html_complete": true,
@@ -229,7 +229,7 @@
         "route": "fixed_template",
         "template": "COURSE_SUMMARY_VARIABLES",
         "template_sha256": "{{当前课程小结 Demo SHA-256}}",
-        "prompt_contract": "RunS-CourseSummary-FixedTemplate-OneShot-v1.10",
+        "prompt_contract": "RunS-CourseSummary-FixedTemplate-OneShot-v1.11",
         "prompt_version": "{{本次实际使用且在整课内唯一的课程小结页提示词版本号}}",
         "template_outside_variable_region_unchanged": true,
         "prohibited_text_absent": true,
@@ -283,11 +283,11 @@
 
 - 根对象、每页对象字段、`pages[]` 顺序与 P2 页面规划一致。
 - 所有题目只位于对应 `pages[].components[]`，且组件内容与预处理题目 JSON 逐项 diff 一致；题干同时含背景材料和明确作答任务。
-- 全部非互动页的 `prompt` 第一行均为实际提示词版本号，且整课内两两不同；互动题组件页继续保持 `prompt: ""`，不登记提示词版本号。重复时使用 `V35_STAGE6_PROMPT_VERSION_DUPLICATE` 阻断。
+- 全部非互动页的 `prompt` 第一行必须是内容寻址的实际提示词版本号：`<OneShot合同>-asset-<资产SHA前12位>-prompt-<归一化完整提示词SHA前12位>-<lesson_id>-<page_no>-R36-20260731`。`page_data.prompt_instance_sha256` 保存完整实例 SHA-256；计算时只把首行版本值归一化为 `__PROMPT_VERSION__`，其余完整模型输入全部参与哈希。同一 OneShot 的实际提示词只要变化就必须得到不同版本；首行、`page_data.prompt_version`、合同、资产哈希和重算实例哈希必须一致。整课内重复使用 `V35_STAGE6_PROMPT_VERSION_DUPLICATE` 阻断，任一绑定不一致使用 `V35_STAGE6_PROMPT_VERSION_ASSET_MISMATCH` 阻断。互动题组件页继续保持 `prompt: ""`，不登记提示词版本号。
 - 课程开篇、场景引入、知识讲解、案例分析和课程小结的骨架占位均已替换为对应完整 OneShot 实际模型输入；未替换前本文件仍是外层结构示例，不得提交模型、冻结为 `final_import` 或 create。
 - 课程开篇的 `pages[].prompt` 必须符合 `05_课程开篇页_固定模板OneShot.md`；场景引入必须符合 `06_场景引入页_固定模板OneShot.md`。两者都要求唯一模型中立版本号、无外部上下文、完整 Demo 与真实变量一次性内嵌；模型返回的纯完整 HTML 作为实际生成页面结果另层校验与留证。
 - 课程小结的 `pages[].prompt` 必须符合 `04_课程小结页_固定模板OneShot.md`：保存唯一模型中立版本号、无外部上下文声明、完整 Demo、真实变量与纯 HTML 输出约束组成的完整实际模型输入，不保存裸 HTML。
-- 课后任务页的 `pages[].prompt` 符合 Compact v1.8 直接生成合同：第一行是整课唯一版本号、无外部上下文依赖、完整内嵌 HTML / CSS / JavaScript 与由冻结内容按 `TASK_STATIC_DOM_V18_PROJECTION` 预编译出的富卡片学生 DOM；运行时不得使用 `PAGE_DATA`、`document.createElement`、循环或字符串拼接构造学生正文。不得把 `task`、`facts`、`step`、`prompt`、`decision`、`safety` 或 `fallback` 压平为 `.task-intro` 或裸 `<pre>`；模型返回的纯完整 HTML 是实际生成页面结果，不回写覆盖提示词。
+- 课后任务页的 `pages[].prompt` 符合 Compact v1.9 直接生成合同：第一行是整课唯一版本号、无外部上下文依赖、完整内嵌 HTML / CSS / JavaScript 与由冻结内容按 `TASK_STATIC_DOM_V19_PROJECTION` 预编译出的富卡片学生 DOM；运行时不得使用 `PAGE_DATA`、`document.createElement`、循环或字符串拼接构造学生正文。不得把 `task`、`facts`、`step`、`prompt`、`decision`、`safety` 或 `fallback` 压平为 `.task-intro` 或裸 `<pre>`；模型返回的纯完整 HTML 是实际生成页面结果，不回写覆盖提示词。
 - 知识页模型输入符合 `07`：上游 `source_text` / `semantic_units` 与 P2 有效内容逐字、按顺序一致，但实际模型输入只携带确定性映射后的单份 `PAGE_DATA.visibleContentBlocks`；学生可见首元素为页面标题或来源明确的合法过渡句。案例分析页模型输入符合 `08`：只在必要背景超过 50 个学生可见字符时生成，紧邻对应互动题，学生 DOM 不含明确问句、作答指令、选项、答案、解析或 `linkedQuestionPageId`。
-- 两类动态页均执行 `UNIFIED_PERSISTENT_BOTTOM_ACTION_BAR`：页面外层锁定 `100dvh` 且不滚动，footer 在 iframe 内 `position:absolute; left/right/bottom:0`，按钮自身 `position:static`；正文只有一个内部纵向滚动容器，底部预留按 footer 实测高度动态同步并额外保留 `24px`。页面主渐变必须连续覆盖到视口底部；footer 主体为 `80px + safe-area`、按钮上下各 `10px`，但背景透明，不得单独绘制整宽实色层或 `::before` / `::after` 羽化层。动态内容区使用 `box-sizing:border-box; width:min(100%,680px)`，移动端保留安全边距，宽预览不得锁死 `360px`；`DESIGN_BRIEF` 的构图自由不变。短页与长页在任意滚动位置都持续显示唯一课程按钮，最后内容不得被遮挡。动态内容区不执行变量区外哈希。
+- 两类动态页均执行 `UNIFIED_PERSISTENT_BOTTOM_ACTION_BAR`：以 Android System WebView Chrome 68 为基线，页面外层使用 `height:100%` 且不滚动，footer 在 iframe 内 `position:absolute; left/right/bottom:0`，按钮自身 `position:static`；正文只有一个内部纵向滚动容器，底部预留按 footer 实测高度动态同步并额外保留 `24px`。页面主渐变必须连续覆盖到视口底部；footer 主体为 `80px`、按钮上下各 `10px`，背景透明，不得单独绘制整宽实色层或 `::before` / `::after` 羽化层。动态内容区使用 `box-sizing:border-box; width:100%; max-width:680px`，移动端保留物理方向安全边距，宽预览不得锁死 `360px`；不得使用动态视口单位、`min()` / `max()` / `clamp()`、Flex `gap`、逻辑属性或未检测的现代 DOM API。`DESIGN_BRIEF` 的构图自由不变。短页与长页在任意滚动位置都持续显示唯一课程按钮，最后内容不得被遮挡。动态内容区不执行变量区外哈希。
 - `workflow.create_ready`、`create_allowed` 只有在 P3 Gate 和 P4 冻结均通过后才允许转为 `true`；这份 one-shot 骨架本身永远不能直接作为 create 输入。
