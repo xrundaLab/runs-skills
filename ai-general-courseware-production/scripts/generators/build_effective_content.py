@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build protected S5 projections from frozen S4 and a constrained draft."""
+"""Build every protected S5 projection directly from frozen S4."""
 
 from __future__ import annotations
 
@@ -15,7 +15,14 @@ from typing import Any
 CONTRACT = "RunS_V3.5.0-S1-S6-R36-20260731"
 SCRIPT_ROOT = Path(__file__).resolve().parents[1]
 VALIDATORS = SCRIPT_ROOT / "validators"
+sys.path.insert(0, str(SCRIPT_ROOT))
 sys.path.insert(0, str(VALIDATORS))
+
+from page_type_contract import (  # noqa: E402
+    POST_CLASS_CANONICAL_PAGE_TYPE,
+    canonical_capsule,
+    canonical_page_type,
+)
 
 from validate_v35_page_plan_question_boundaries import (  # noqa: E402
     JSON_FENCE_RE,
@@ -57,21 +64,201 @@ def project_summary_blocks(raw_markdown: str) -> list[dict[str, Any]]:
     return projected
 
 
-def validate_dynamic_draft_seed(plan: dict[str, str], draft_page: dict[str, Any]) -> None:
-    """Fail before generation when an S5 dynamic-page design decision is absent."""
-    if plan["page_type"] not in {"知识讲解", "案例分析"}:
-        return
-    brief = draft_page.get("design_brief")
-    required_strings = ("teachingAction", "contentShape", "rhythmRole", "layoutFreedom")
+def project_post_class_task(raw_markdown: str) -> tuple[str, list[dict[str, Any]]]:
+    """Compile a task page from frozen S4 source in exact block order.
+
+    The task template consumes ``content.taskTitle`` and ``sections``.  Both are
+    source-derived execution data, not authoring choices.  Every source block
+    after the title becomes exactly one ordered section so S6 never has to
+    reconstruct or globally regroup the task body.
+    """
+    blocks = parse_dynamic_source_blocks(raw_markdown)
     if (
-        not isinstance(brief, dict)
-        or brief.get("nonRenderable") is not True
-        or any(not isinstance(brief.get(key), str) or not brief[key].strip() for key in required_strings)
-        or not isinstance(brief.get("readingFlow"), list)
-        or not brief["readingFlow"]
-        or not all(isinstance(item, str) and item.strip() for item in brief["readingFlow"])
+        not blocks
+        or blocks[0].get("type") != "heading"
+        or not isinstance(blocks[0].get("text"), str)
+        or not blocks[0]["text"].strip()
     ):
-        blocked("S5_DRAFT_DYNAMIC_DESIGN_BRIEF_INCOMPLETE")
+        blocked("POST_CLASS_TASK_TITLE_MISSING")
+
+    title = blocks[0]["text"].strip()
+    projected: list[dict[str, Any]] = []
+    first_body = True
+    fact_prefix = re.compile(r"^\*\*(.+?)[：:]\*\*\s*(.+)$", re.S)
+    step_prefix = re.compile(r"^(?:第?\s*\d+\s*[步格]|步骤\s*\d+|先|然后|接着|最后)")
+    fallback_prefix = re.compile(r"^(?:如果|若|暂时|无法|没有合适)")
+    body_blocks = blocks[1:]
+
+    def is_checklist_prompt(value: str) -> bool:
+        lines = [line.strip() for line in value.splitlines() if line.strip()]
+        field_lines = sum(
+            1
+            for line in lines
+            if re.match(r"^[^：:\n]{1,12}[：:]", line)
+        )
+        return len(lines) >= 3 and field_lines >= 2
+
+    def next_code_text(index: int) -> str:
+        if index + 1 >= len(body_blocks):
+            return ""
+        next_block = body_blocks[index + 1]
+        if next_block.get("type") != "code_block":
+            return ""
+        return str(next_block.get("text") or "")
+
+    review_tokens = ("检查", "核对", "确认", "听一遍", "复核", "填写", "责任卡")
+    for block_index, block in enumerate(body_blocks):
+        source_markdown = str(block.get("markdown") or "")
+        block_type = block.get("type")
+        if block_type == "code_block":
+            text = str(block.get("text") or "")
+            previous = projected[-1] if projected else {}
+            previous_text = str(previous.get("text") or "")
+            if previous.get("role") == "condition":
+                role = "correctivePrompt"
+                label = "修正提示词"
+            elif is_checklist_prompt(text):
+                role = "checklist"
+                label = "责任卡" if "责任卡" in previous_text else "检查清单"
+            else:
+                role = "prompt"
+                label = "提示词"
+            projected.append(
+                {
+                    "type": "prompt",
+                    "role": role,
+                    "label": label,
+                    "text": text,
+                    "sourceMarkdown": source_markdown,
+                }
+            )
+            first_body = False
+            continue
+        if block_type in {"ordered_list", "unordered_list"}:
+            projected.append(
+                {
+                    "type": "facts",
+                    "role": "preflight",
+                    "label": "任务要点",
+                    "items": list(block.get("items") or []),
+                    "sourceMarkdown": source_markdown,
+                }
+            )
+            first_body = False
+            continue
+
+        text = str(block.get("text") or source_markdown)
+        following_code = next_code_text(block_index)
+        fact_match = fact_prefix.fullmatch(text)
+        if fact_match:
+            projected.append(
+                {
+                    "type": "facts",
+                    "role": "preflight",
+                    "label": fact_match.group(1).strip(),
+                    "text": fact_match.group(2).strip(),
+                    "sourceMarkdown": source_markdown,
+                }
+            )
+        elif first_body:
+            projected.append(
+                {
+                    "type": "task",
+                    "role": "lead",
+                    "label": "任务",
+                    "text": text,
+                    "sourceMarkdown": source_markdown,
+                }
+            )
+        elif step_prefix.search(text):
+            projected.append(
+                {
+                    "type": "step",
+                    "role": "action",
+                    "text": text,
+                    "sourceMarkdown": source_markdown,
+                }
+            )
+        elif fallback_prefix.search(text) and following_code:
+            projected.append(
+                {
+                    "type": "fallback",
+                    "role": "condition",
+                    "text": text,
+                    "sourceMarkdown": source_markdown,
+                }
+            )
+        elif "检查" in text and any(token in text for token in ("决定", "确认", "是否")):
+            projected.append(
+                {
+                    "type": "decision",
+                    "role": "decision",
+                    "text": text,
+                    "sourceMarkdown": source_markdown,
+                }
+            )
+        elif any(
+            token in text
+            for token in ("安全", "隐私", "不得", "不要上传", "不上传", "不模仿")
+        ):
+            projected.append(
+                {
+                    "type": "safety",
+                    "role": "safetyFallback",
+                    "text": text,
+                    "sourceMarkdown": source_markdown,
+                }
+            )
+        elif following_code and any(token in text for token in review_tokens):
+            projected.append(
+                {
+                    "type": "paragraph",
+                    "role": "review",
+                    "text": text,
+                    "sourceMarkdown": source_markdown,
+                }
+            )
+        elif following_code:
+            projected.append(
+                {
+                    "type": "paragraph",
+                    "role": "action",
+                    "text": text,
+                    "sourceMarkdown": source_markdown,
+                }
+            )
+        elif fallback_prefix.search(text):
+            projected.append(
+                {
+                    "type": "fallback",
+                    "role": "fallback",
+                    "text": text,
+                    "sourceMarkdown": source_markdown,
+                }
+            )
+        elif any(token in text for token in review_tokens):
+            projected.append(
+                {
+                    "type": "paragraph",
+                    "role": "review",
+                    "text": text,
+                    "sourceMarkdown": source_markdown,
+                }
+            )
+        else:
+            projected.append(
+                {
+                    "type": "paragraph",
+                    "role": "note",
+                    "text": text,
+                    "sourceMarkdown": source_markdown,
+                }
+            )
+        first_body = False
+
+    if not projected:
+        blocked("POST_CLASS_TASK_BODY_MISSING")
+    return title, projected
 
 
 def summary_content_blocks(blocks: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -84,10 +271,10 @@ def summary_content_blocks(blocks: list[dict[str, Any]]) -> list[dict[str, Any]]
         ):
             numbered: list[str] = []
             while index < len(blocks):
-                candidate = blocks[index]
-                text = candidate.get("text") if isinstance(candidate, dict) else None
+                numbered_block = blocks[index]
+                text = numbered_block.get("text") if isinstance(numbered_block, dict) else None
                 if (
-                    candidate.get("type") != "paragraph"
+                    numbered_block.get("type") != "paragraph"
                     or not isinstance(text, str)
                     or not ORDERED_PARAGRAPH_RE.match(text)
                 ):
@@ -417,42 +604,60 @@ def _emphasis_targets(
                         "colorRole": color_role,
                     }
                 )
-    preferred = (
-        ("每一种媒介都承担有用的任务", "primary_judgment"),
-        ("仍要由人判断", "human_judgment"),
-        ("先改最妨碍目标的一处", "resolution"),
-        ("方案A", "comparison_a"),
-        ("方案B", "comparison_b"),
-        ("受众", "planning_key"),
-        ("目标", "planning_key"),
-    )
+    # Select only source-derived semantic markers.  Course-specific phrases
+    # must never become a hidden cross-course design template.
     existing = {row["exactText"] for row in targets}
-    for exact_text, color_role in preferred:
+    for block_index, block in enumerate(reading_blocks, start=1):
         if len(targets) >= maximum:
             break
-        if exact_text in existing:
-            continue
-        for block_index, block in enumerate(reading_blocks, start=1):
-            if exact_text in _reading_text(block):
-                targets.append(
-                    {
-                        "blockIndex": block_index,
-                        "exactText": exact_text,
-                        "colorRole": color_role,
-                    }
-                )
-                existing.add(exact_text)
+        text = _reading_text(block)
+        role = _semantic_role(text, block_index)
+        if role == "judgment":
+            match = JUDGMENT_RE.search(text)
+            candidates = [(match.group(0), "judgment")] if match else []
+        elif role == "comparison":
+            candidates = [
+                (match.group(0), "comparison")
+                for match in COMPARISON_RE.finditer(text)
+            ]
+        else:
+            candidates = []
+        for exact_text, color_role in candidates:
+            if len(targets) >= maximum:
                 break
+            if not exact_text or exact_text in existing:
+                continue
+            targets.append(
+                {
+                    "blockIndex": block_index,
+                    "exactText": exact_text,
+                    "colorRole": color_role,
+                }
+            )
+            existing.add(exact_text)
     return targets[:maximum]
+
+
+def _is_two_layer_reading(reading_blocks: list[dict[str, Any]]) -> bool:
+    """Detect the bounded two-short-block composition without a draft seed."""
+    if len(reading_blocks) != 2:
+        return False
+    if any(block.get("type") in {"ordered_list", "unordered_list", "code_block"} for block in reading_blocks):
+        return False
+    lengths = [len(_reading_text(block).strip()) for block in reading_blocks]
+    return all(0 < length <= 120 for length in lengths) and sum(lengths) <= 200
 
 
 def normalize_dynamic_design_brief(
     blocks: list[dict[str, Any]],
-    candidate: dict[str, Any] | None,
 ) -> dict[str, Any]:
-    """Replace generic draft grouping with deterministic content relationships."""
-    brief = copy.deepcopy(candidate) if isinstance(candidate, dict) else {}
+    """Derive executable design relationships only from frozen source blocks."""
+    brief: dict[str, Any] = {}
     reading_blocks = [block for block in blocks if block.get("type") != "heading"]
+    brief["nonRenderable"] = True
+    brief["teachingAction"] = (
+        "按冻结原文的真实顺序组织阅读，并突出其中已有的概念、关系或判断。"
+    )
     reading_chars = sum(len(_reading_text(block)) for block in reading_blocks)
     if len(reading_blocks) >= 6 or reading_chars >= 520:
         density = "dense"
@@ -485,10 +690,24 @@ def normalize_dynamic_design_brief(
             }[role],
         })
 
-    short_page = brief.get("shortPageComposition") == "two_layer_reading"
-    existing_groups = brief.get("semanticGroups")
-    has_relationship = any(role in {"comparison", "process", "example", "judgment"} for role in roles)
-    if groups and not short_page:
+    short_page = _is_two_layer_reading(reading_blocks)
+    if short_page:
+        brief["shortPageComposition"] = "two_layer_reading"
+        brief["semanticGroups"] = [
+            {
+                "id": "primary_reading" if index == 1 else "supporting_result",
+                "role": "intro" if index == 1 else "context",
+                "blockIndexes": [index],
+                "purpose": "主阅读层" if index == 1 else "弱结果层",
+            }
+            for index in range(1, 3)
+        ]
+        brief["hierarchyFocus"] = ["primary_reading", "supporting_result"]
+        brief["contentShape"] = "continuous_explanation"
+        brief["rhythmRole"] = "narrative"
+        brief["readingFlow"] = ["按原序阅读主阅读层", "按原序阅读弱结果层"]
+        brief["layoutFreedom"] = "仅用无文字留白组织两条短原文；不得补写连接、步骤或结论。"
+    elif groups:
         brief["semanticGroups"] = groups
         brief["hierarchyFocus"] = [group["id"] for group in groups if group["role"] != "context"] or [groups[0]["id"]]
         if "comparison" in roles:
@@ -509,16 +728,6 @@ def normalize_dynamic_design_brief(
             "以冻结原文的结尾内容完成收束",
         ]
         brief["layoutFreedom"] = f"必须把冻结原文中的{relation}关系转化为不同阅读重量和空间组织；不得退化为等宽、等色、等间距的段落卡堆叠。"
-    elif short_page and isinstance(existing_groups, list):
-        normalized_short_groups: list[dict[str, Any]] = []
-        for index, group in enumerate(existing_groups):
-            if not isinstance(group, dict):
-                continue
-            copied = copy.deepcopy(group)
-            copied["role"] = "intro" if index == 0 else "context"
-            normalized_short_groups.append(copied)
-        brief["semanticGroups"] = normalized_short_groups
-
     active_groups = brief.get("semanticGroups") if isinstance(brief.get("semanticGroups"), list) else groups
     active_roles = [str(group.get("role") or "context") for group in active_groups if isinstance(group, dict)]
     brief["layoutArchetype"] = _layout_archetype(active_roles or roles, short_page)
@@ -552,14 +761,62 @@ def normalize_dynamic_design_brief(
     return brief
 
 
-def protected_page(plan: dict[str, str], draft: dict[str, Any]) -> dict[str, Any]:
-    page = copy.deepcopy(draft)
-    page_type = plan["page_type"]
+def split_knowledge_points(raw_value: str) -> list[str]:
+    """Project the verbatim field into ordered items without changing the source."""
+    points: list[str] = []
+    for value in re.split(r"[;；\n]+", raw_value):
+        normalized = re.sub(r"^\s*(?:[-*•]|\d+[.．、)）:：])\s*", "", value).strip()
+        if normalized:
+            points.append(normalized)
+    if not points:
+        blocked("COURSE_INTRO_KNOWLEDGE_POINTS_EMPTY")
+    return points
+
+
+def project_course_intro(raw_markdown: str) -> tuple[dict[str, str], dict[str, Any], list[dict[str, Any]]]:
+    labels = ("课包名称", "单元名称", "课程编号", "课程标题", "课程目标", "知识点")
+    values: dict[str, str] = {}
+    label_union = "|".join(map(re.escape, labels))
+    for label in labels:
+        match = re.search(
+            rf"(?:^|\n)(?:-\s*)?{re.escape(label)}：\s*(.*?)"
+            rf"(?=\n(?:-\s*)?(?:{label_union})：|\Z)",
+            raw_markdown,
+            re.S,
+        )
+        if not match:
+            blocked("COURSE_INTRO_SIX_FIELDS_MISSING")
+        values[label] = match.group(1).strip()
+    lesson_match = re.search(r"第\s*(\d+)\s*课", values["课程编号"])
+    if not lesson_match:
+        blocked("COURSE_INTRO_LESSON_NUMBER_INVALID")
+    knowledge_points = split_knowledge_points(values["知识点"])
+    content = {
+        "packageName": values["课包名称"],
+        "unitName": values["单元名称"],
+        "lessonNumber": int(lesson_match.group(1)),
+        "courseName": values["课程标题"],
+        "courseIntroduction": values["课程目标"],
+        "knowledgePoints": knowledge_points,
+    }
+    sections = []
+    for label in labels:
+        section = {"type": "course_info", "label": label, "text": values[label]}
+        if label == "知识点":
+            section["items"] = copy.deepcopy(knowledge_points)
+        sections.append(section)
+    return values, content, sections
+
+
+def protected_page(plan: dict[str, str]) -> dict[str, Any]:
+    page: dict[str, Any] = {}
+    source_page_type = plan["page_type"]
+    page_type = canonical_page_type(source_page_type)
     page.update(
         {
             "page_no": plan["page_no"],
             "page_type": page_type,
-            "capsule": plan["capsule"],
+            "capsule": canonical_capsule(source_page_type, plan["capsule"]),
             "page_action": plan["action"],
             "source_block_ids": source_block_ids(plan["source_block"]),
         }
@@ -574,75 +831,67 @@ def protected_page(plan: dict[str, str], draft: dict[str, Any]) -> dict[str, Any
             blocked("S4_INTERACTION_JSON_INVALID")
         page["effective_content"] = component
         page["component_type"] = component.get("type")
-        for field in ("source", "content", "sections", "display_hints"):
-            page.pop(field, None)
+        page["layout_plan"] = {"layout": "question"}
         return page
 
     raw_markdown = plan["body"]
     page["source"] = {"rawMarkdown": raw_markdown}
-    if page_type in {"知识讲解", "案例分析"}:
+    if page_type == "课程开篇":
+        effective, content, sections = project_course_intro(raw_markdown)
+        page["effective_content"] = effective
+        page["content"] = content
+        page["sections"] = sections
+        page["display_hints"] = {"layout": "course_intro"}
+    elif page_type in {"场景引入", "知识讲解", "案例分析"}:
         blocks = parse_dynamic_source_blocks(raw_markdown)
         page["effective_content"] = {"blocks": blocks}
         page["content"] = {"blocks": copy.deepcopy(blocks)}
         page["sections"] = copy.deepcopy(blocks)
-        page["design_brief"] = normalize_dynamic_design_brief(
-            blocks, page.get("design_brief")
-        )
+        page["display_hints"] = {"layout": "reading"}
+        if page_type in {"知识讲解", "案例分析"}:
+            page["design_brief"] = normalize_dynamic_design_brief(blocks)
     elif page_type == "课程小结":
         blocks = project_summary_blocks(raw_markdown)
         page["effective_content"] = {"blocks": copy.deepcopy(blocks)}
         page["content"] = {"contentBlocks": summary_content_blocks(blocks)}
         page["sections"] = copy.deepcopy(blocks)
         page.setdefault("display_hints", {"layout": "reading"})
+    elif page_type == POST_CLASS_CANONICAL_PAGE_TYPE:
+        title, sections = project_post_class_task(raw_markdown)
+        page["effective_content"] = {"text": POST_CLASS_CANONICAL_PAGE_TYPE}
+        page["content"] = {"taskTitle": title}
+        page["sections"] = sections
+        page.setdefault("display_hints", {"layout": "task"})
     return page
 
 
 def build(
     lesson_id: str,
     page_plan: Path,
-    draft_path: Path,
 ) -> dict[str, Any]:
     plans = parse_pages(page_plan.read_text(encoding="utf-8"))
-    try:
-        draft = json.loads(draft_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError, UnicodeError):
-        blocked("S5_DRAFT_JSON_INVALID")
-    draft_pages = draft.get("pages") if isinstance(draft, dict) else None
-    if not plans or not isinstance(draft_pages, list) or len(plans) != len(draft_pages):
-        blocked("S5_DRAFT_PAGE_COUNT_MISMATCH")
-    if draft.get("lesson_id") not in (None, lesson_id):
-        blocked("S5_DRAFT_LESSON_ID_MISMATCH")
-    for plan, draft_page in zip(plans, draft_pages):
-        if not isinstance(draft_page, dict):
-            blocked("S5_DRAFT_PAGE_INVALID")
-        if draft_page.get("page_no") not in (None, plan["page_no"]):
-            blocked("S5_DRAFT_PAGE_ORDER_DRIFT")
-        validate_dynamic_draft_seed(plan, draft_page)
+    if not plans:
+        blocked("S4_PAGE_PLAN_EMPTY")
 
-    result = copy.deepcopy(draft)
-    result["lesson_id"] = lesson_id
-    result["sop_version"] = CONTRACT
-    result["source_page_plan"] = str(page_plan.resolve())
-    result["pages"] = [
-        protected_page(plan, draft_page)
-        for plan, draft_page in zip(plans, draft_pages)
-    ]
-    return result
+    return {
+        "lesson_id": lesson_id,
+        "sop_version": CONTRACT,
+        "source_page_plan": str(page_plan.resolve()),
+        "pages": [protected_page(plan) for plan in plans],
+    }
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="从冻结 S4 与受约束 draft 确定性生成 S5 effective_content_full.json"
+        description="从冻结 S4 确定性生成完整 S5 effective_content_full.json"
     )
     parser.add_argument("--lesson-id", required=True)
     parser.add_argument("--page-plan", required=True, type=Path)
-    parser.add_argument("--draft", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)
     args = parser.parse_args()
     payload = build(
         args.lesson_id,
         args.page_plan.resolve(),
-        args.draft.resolve(),
     )
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(

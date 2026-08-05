@@ -2,7 +2,7 @@
 """Read-only checker for V3.5 Stage 6 / formal-P3 whole-course assembly.
 
 The historical filename is retained for indexed-asset compatibility.  Default
-mode preserves the historical candidate report.  ``--formal-stage6`` reports
+mode preserves the historical manifest-based audit.  ``--formal-stage6`` reports
 an assembly-only ``IMPORT_READY_STATIC`` result when there are no static
 BLOCKERs.  Neither mode edits artifacts, creates a RunS task, nor declares
 real-render or batch acceptance; QA, final_import, create, rendering, and
@@ -12,6 +12,7 @@ release remain later gates.
 from __future__ import annotations
 
 import argparse
+import html as html_lib
 import hashlib
 import json
 import os
@@ -19,6 +20,15 @@ import re
 import sys
 from pathlib import Path
 from typing import Any
+
+SCRIPT_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(SCRIPT_ROOT))
+
+from page_type_contract import (  # noqa: E402
+    POST_CLASS_CANONICAL_PAGE_TYPE,
+    canonical_capsule,
+    canonical_page_type,
+)
 
 
 EXIT_PASS = 0
@@ -30,11 +40,11 @@ OLD_FOOTER_CONTRACT = "SHORT_PAGE_BOTTOM_ALIGNED_LONG_PAGE_FLOW_END"
 ONESHOT_VERSION_PREFIX = "提示词版本号："
 PROMPT_VERSION_PLACEHOLDER = "__PROMPT_VERSION__"
 PROMPT_VERSION_SUFFIX = "R36-20260731"
-CHECKER_VERSION = "0.10.20"
+CHECKER_VERSION = "0.10.24"
 POST_CLASS_TASK_ONESHOT_CONTRACT = (
-    "RunS-PostClassTask-Compact-Direct-OneShot-Contract-v1.9-20260805"
+    "RunS-PostClassTask-Compact-Direct-OneShot-Contract-v1.11-20260805"
 )
-POST_CLASS_TASK_ASSET_SHA256 = "2811205ae6b0b037f0b8160ec4dd1d9485e90e36cfe010bcf59dba55e0b616bf"
+POST_CLASS_TASK_ASSET_SHA256 = "79d9a7fdad4701c784a9e0e6cfbbbdfaeb727211ce26b8eda7e9a5e46effba98"
 DESIGN_BRIEF_TAG_RE = re.compile(
     r"<DESIGN_BRIEF>\s*(?P<json>\{.*?\})\s*</DESIGN_BRIEF>",
     re.S,
@@ -332,12 +342,12 @@ def load_manifest(manifest_path: Path, lesson_id: str, lesson_root: Path, p3_imp
         if not isinstance(data, dict) or not data.get("path") or not data.get("sha256"):
             problems.append(issue("INPUT_OR_CONFIG_ERROR", "BLOCKER", f"manifest 缺少 {section}.path 或 {section}.sha256"))
             continue
-        candidate = Path(str(data["path"])).expanduser()
-        if not candidate.is_absolute():
-            candidate = lesson_root / candidate
+        artifact_path = Path(str(data["path"])).expanduser()
+        if not artifact_path.is_absolute():
+            artifact_path = lesson_root / artifact_path
         allowed_root = p3_import_root if section == "p3" and p3_import_root else lesson_root
-        if candidate.is_symlink() or not inside(candidate, allowed_root):
-            problems.append(issue("INPUT_OR_CONFIG_ERROR", "BLOCKER", f"{section}.path 必须位于受控根目录内且不能是符号链接", str(candidate)))
+        if artifact_path.is_symlink() or not inside(artifact_path, allowed_root):
+            problems.append(issue("INPUT_OR_CONFIG_ERROR", "BLOCKER", f"{section}.path 必须位于受控根目录内且不能是符号链接", str(artifact_path)))
     return manifest, problems
 
 
@@ -418,7 +428,7 @@ def check_p2(path: Path, issues: list[dict[str, str]]) -> dict[str, Any]:
         "知识讲解",
         "案例分析",
         "互动题目",
-        "课后任务",
+        POST_CLASS_CANONICAL_PAGE_TYPE,
         "课程小结",
     ]
     found = [page_type for page_type in page_types if page_type in text]
@@ -437,20 +447,153 @@ def nested_key_exists(value: Any, target: str) -> bool:
     return False
 
 
-def compare_stage6_to_effective_content(
-    effective_payload: dict[str, Any],
-    stage6_payload: dict[str, Any],
-) -> tuple[list[dict[str, Any]], list[dict[str, str]]]:
-    """Return deterministic per-page diffs between S2E and Stage 6."""
+def fixed_prompt_variables(prompt: str, variable: str) -> dict[str, Any] | None:
+    payload = final_html_payload(prompt)
+    match = re.search(
+        rf"const\s+{re.escape(variable)}\s*=\s*(?:Object\.freeze\(\s*)?(\{{.*?\}})\s*\)?;",
+        payload,
+        flags=re.S,
+    )
+    if not match:
+        return None
+    try:
+        value = json.loads(match.group(1))
+    except json.JSONDecodeError:
+        return None
+    return value if isinstance(value, dict) else None
+
+
+def task_section_visible_tokens(section: dict[str, Any]) -> list[str]:
+    if section.get("role") == "checklist":
+        values = []
+        for raw_line in str(section.get("text") or "").splitlines():
+            line = raw_line.strip()
+            if not line:
+                continue
+            match = re.match(r"^([^：:]{1,12})([：:])(.*)$", line)
+            if match:
+                values.append(match.group(1) + match.group(2))
+                if match.group(3):
+                    values.append(match.group(3))
+            else:
+                values.append(line)
+    elif section.get("type") == "facts" and isinstance(section.get("items"), list):
+        values = section["items"]
+    else:
+        values = [section.get("text", "")]
+    return [
+        html_lib.escape(str(value).replace("**", "").replace("__", ""), quote=True)
+        for value in values
+        if isinstance(value, str) and value
+    ]
+
+
+def task_sections_match_static_dom(
+    sections: list[dict[str, Any]], prompt: str
+) -> bool:
+    payload = final_html_payload(prompt)
+    markers = list(
+        re.finditer(r'data-source-section-index="(\d+)"', payload)
+    )
+    if [int(match.group(1)) for match in markers] != list(range(len(sections))):
+        return False
+    for index, section in enumerate(sections):
+        start = markers[index].end()
+        end = markers[index + 1].start() if index + 1 < len(markers) else len(payload)
+        segment = payload[start:end]
+        cursor = 0
+        for token in task_section_visible_tokens(section):
+            position = segment.find(token, cursor)
+            if position < 0:
+                return False
+            cursor = position + len(token)
+    return True
+
+
+def task_semantic_structure_matches_static_dom(
+    sections: list[dict[str, Any]], prompt: str
+) -> bool:
+    """Check deterministic P10 grouping without claiming visual acceptance."""
+    payload = final_html_payload(prompt)
+    roles = [str(section.get("role") or "") for section in sections]
+    action_roles = {
+        "action",
+        "prompt",
+        "review",
+        "checklist",
+        "condition",
+        "correctivePrompt",
+        "decision",
+    }
+    if any(role in action_roles for role in roles):
+        if payload.count('class="action-section"') != 1:
+            return False
+        if payload.count("<h2>操作步骤</h2>") != 1 or "开始行动" in payload:
+            return False
+    if "lead" in roles:
+        if 'data-section-role="lead"' not in payload:
+            return False
+        if 'class="glass-card task-card"' in payload:
+            return False
+    for index, role in enumerate(roles):
+        if role in {"action", "review", "condition"}:
+            marker = (
+                f'class="step-lead" data-section-role="{role}" '
+                f'data-source-section-index="{index}"'
+            )
+            if marker not in payload:
+                return False
+        if role == "checklist":
+            marker = (
+                'class="checklist-block" data-section-role="checklist" '
+                f'data-source-section-index="{index}"'
+            )
+            if marker not in payload:
+                return False
+            segment = payload.split(marker, 1)[1].split("</section>", 1)[0]
+            if 'class="prompt-label"' in segment:
+                return False
+    for left, right in (
+        ("action", "prompt"),
+        ("review", "checklist"),
+        ("condition", "correctivePrompt"),
+    ):
+        expected = sum(
+            1
+            for index in range(len(roles) - 1)
+            if roles[index : index + 2] == [left, right]
+        )
+        if payload.count(f'data-task-group-pair="{left}-{right}"') != expected:
+            return False
+    return True
+
+
+def expected_page_envelope_metadata(
+    effective_page: dict[str, Any],
+) -> dict[str, Any]:
+    source_page_type = effective_page.get("page_type")
+    page_type = canonical_page_type(source_page_type)
     page_kind_map = {
         "课程开篇": "course_intro",
         "场景引入": "scene_intro",
         "知识讲解": "knowledge_explanation",
         "案例分析": "case_analysis",
         "互动题目": "question_component_page",
-        "课后任务": "post_class_task",
+        POST_CLASS_CANONICAL_PAGE_TYPE: "post_class_task",
         "课程小结": "course_summary",
     }
+    return {
+        "page_kind": page_kind_map.get(page_type),
+        "title": page_type,
+        "tag": canonical_capsule(source_page_type, effective_page.get("capsule")),
+    }
+
+
+def compare_stage6_to_effective_content(
+    effective_payload: dict[str, Any],
+    stage6_payload: dict[str, Any],
+) -> tuple[list[dict[str, Any]], list[dict[str, str]]]:
+    """Return deterministic per-page diffs between S2E and Stage 6."""
     effective_pages = effective_payload.get("pages")
     stage6_pages = stage6_payload.get("pages")
     rows: list[dict[str, Any]] = []
@@ -481,17 +624,19 @@ def compare_stage6_to_effective_content(
         if not isinstance(stage6_page, dict):
             differences.append("阶段6页面缺失或不是对象")
         if isinstance(effective_page, dict) and isinstance(stage6_page, dict):
-            expected_kind = page_kind_map.get(effective_page.get("page_type"))
+            expected_metadata = expected_page_envelope_metadata(effective_page)
+            effective_page_type = canonical_page_type(effective_page.get("page_type"))
             expected_action = "complete" if effective_page.get("page_action") == "complete" else "nextpage"
             expected_is_last = index == len(effective_pages) - 1
             source_content = effective_page.get("effective_content")
             page_data = stage6_page.get("page_data")
             actual_components = stage6_page.get("components")
-            expected_components = [source_content] if effective_page.get("page_type") == "互动题目" else []
+            expected_components = [source_content] if effective_page_type == "互动题目" else []
             comparisons = (
                 ("page_no", effective_page.get("page_no"), stage6_page.get("page_no")),
-                ("page_kind", expected_kind, stage6_page.get("page_kind")),
-                ("tag", effective_page.get("capsule"), stage6_page.get("tag")),
+                ("page_kind", expected_metadata["page_kind"], stage6_page.get("page_kind")),
+                ("title", expected_metadata["title"], stage6_page.get("title")),
+                ("tag", expected_metadata["tag"], stage6_page.get("tag")),
                 ("sdk_action", expected_action, stage6_page.get("sdk_action")),
                 ("is_last_page", expected_is_last, stage6_page.get("is_last_page")),
                 (
@@ -512,9 +657,9 @@ def compare_stage6_to_effective_content(
                 actual_components, ensure_ascii=False, separators=(",", ":")
             ):
                 differences.append("components 未原样投影 effective_content")
-            if effective_page.get("page_type") == "互动题目" and stage6_page.get("prompt") != "":
+            if effective_page_type == "互动题目" and stage6_page.get("prompt") != "":
                 differences.append("互动页 prompt 不是空字符串")
-            if effective_page.get("page_type") in {"知识讲解", "案例分析"}:
+            if effective_page_type in {"知识讲解", "案例分析"}:
                 expected_brief = effective_page.get("design_brief")
                 actual_brief = page_data.get("design_brief") if isinstance(page_data, dict) else None
                 if expected_brief != actual_brief:
@@ -542,6 +687,41 @@ def compare_stage6_to_effective_content(
                     )
                 ):
                     differences.append("动态 PAGE_DATA.contentBlocks 未原样投影结构化 S5 blocks")
+            if effective_page_type == "课程开篇":
+                expected_intro = effective_page.get("content")
+                actual_intro = fixed_prompt_variables(
+                    stage6_page.get("prompt") if isinstance(stage6_page.get("prompt"), str) else "",
+                    "COURSE_INTRO_VARIABLES",
+                )
+                density = page_data.get("introDensityContract") if isinstance(page_data, dict) else None
+                points = expected_intro.get("knowledgePoints") if isinstance(expected_intro, dict) else None
+                prompt = stage6_page.get("prompt") if isinstance(stage6_page.get("prompt"), str) else ""
+                compact_prompt = re.sub(r"\s+", "", prompt)
+                if actual_intro != expected_intro:
+                    differences.append("课程开篇变量未原样消费 S5 content（含知识点 list cardinality）")
+                if (
+                    not isinstance(points, list)
+                    or not points
+                    or not isinstance(density, dict)
+                    or density.get("knowledgePointCount") != len(points)
+                    or density.get("oneUnlockRowPerSourceItem") is not True
+                    or density.get("visualStatus") != "STATIC_LAYOUT_CONTRACT_ONLY"
+                    or '#knowledgeListli{' not in compact_prompt
+                    or "min-height:44px" not in compact_prompt
+                    or ".knowledgePoints.map" not in compact_prompt
+                ):
+                    differences.append("课程开篇知识点列表静态密度合同缺失或与 S5 cardinality 不一致")
+            if effective_page_type == POST_CLASS_CANONICAL_PAGE_TYPE:
+                sections = effective_page.get("sections")
+                prompt = stage6_page.get("prompt") if isinstance(stage6_page.get("prompt"), str) else ""
+                if (
+                    not isinstance(sections, list)
+                    or not all(isinstance(section, dict) for section in sections)
+                    or not task_sections_match_static_dom(sections, prompt)
+                ):
+                    differences.append("拓展练习学生可见文本未按 S5 sections 原序逐块投影")
+                elif not task_semantic_structure_matches_static_dom(sections, prompt):
+                    differences.append("拓展练习未按 S5 role 原位组合为单一操作步骤时间线")
 
         status = "DIFF" if differences else "PASS"
         rows.append(
@@ -1743,9 +1923,9 @@ def check_current_prompt_context(
     """Current prompts must never retain a copied lesson/page applicability line."""
     prompt = page.get("prompt") if isinstance(page.get("prompt"), str) else ""
     first_line = next((line.strip() for line in prompt.splitlines() if line.strip()), "")
-    if "-R33-" not in first_line or page.get("page_kind") == "question_component_page":
+    if "-R36-" not in first_line or page.get("page_kind") == "question_component_page":
         return
-    label = str(page.get("tag") or page.get("title") or "")
+    label = str(page.get("title") or page.get("tag") or "")
     expected = (
         f"适用页面：{course_id}｜{page.get('page_no')}｜"
         f"第 {index + 1}/{page_count} 页｜{label}页。"
@@ -1771,14 +1951,14 @@ def check_post_class_task_compact_oneshot(
     compact = re.sub(r"\s+", "", prompt).lower()
     expected_action = "complete" if page.get("sdk_action") == "complete" else "next"
     required_markers = {
-        "runs-postclasstask-": "Compact 课后任务提示词版本",
+        "runs-postclasstask-": "Compact 拓展练习提示词版本",
         "compact-oneshot": "登记的 Compact OneShot 路线",
-        POST_CLASS_TASK_ONESHOT_CONTRACT.lower(): "当前 v1.9 正式合同",
+        POST_CLASS_TASK_ONESHOT_CONTRACT.lower(): "当前 v1.11 正式合同",
         "https://res.xrunda.com/runs/plugin/creator/creator-review-sdk.js": "正式 CreatorReview SDK",
-        'class="post-task-page"': "正式课后任务页面外层",
-        'class="task-hero"': "正式课后任务头部",
+        'class="post-task-page"': "正式拓展练习页面外层",
+        'class="task-hero"': "正式拓展练习头部",
         'class="notebook-badge"': "固定笔记本头图",
-        "https://res.xrunda.com/xruns/static/image/20270724/3.png": "登记课后任务头图",
+        "https://res.xrunda.com/xruns/static/image/20270724/3.png": "登记拓展练习头图",
         'class="task-content"': "阶段 6 预编译的静态任务正文",
         "syncfooterreserve": "footer 高度同步",
     }
@@ -1810,7 +1990,7 @@ def check_post_class_task_compact_oneshot(
             issue(
                 "POST_CLASS_TASK_COMPACT_ONESHOT_INVALID",
                 "BLOCKER",
-                f"pages[{index}] 课后任务未使用登记的 Compact OneShot 合同（{'；'.join(details)}）",
+                f"pages[{index}] 拓展练习未使用登记的 Compact OneShot 合同（{'；'.join(details)}）",
                 str(path),
             )
         )
@@ -1853,7 +2033,28 @@ def check_post_class_task_rich_static_dom(
     )
     raw_markdown = "**" in html
     leaked_placeholder = any(marker in compact for marker in (">undefined<", ">null<"))
-    if has_semantic_wrapper and has_rich_prompt and not raw_markdown and not leaked_placeholder:
+    action_section_count = compact.count('class="action-section"')
+    semantic_timeline_invalid = (
+        action_section_count > 1
+        or (action_section_count == 1 and compact.count("<h2>操作步骤</h2>") != 1)
+        or "开始行动" in html
+    )
+    checklist_prompt_mislabel = any(
+        'class="prompt-label"' in match.group(1)
+        for match in re.finditer(
+            r'<section class="checklist-block"[^>]*>(.*?)</section>',
+            html,
+            re.S,
+        )
+    )
+    if (
+        has_semantic_wrapper
+        and has_rich_prompt
+        and not raw_markdown
+        and not leaked_placeholder
+        and not semantic_timeline_invalid
+        and not checklist_prompt_mislabel
+    ):
         return
 
     details = []
@@ -1865,11 +2066,15 @@ def check_post_class_task_rich_static_dom(
         details.append("学生 DOM 泄漏 Markdown 标记")
     if leaked_placeholder:
         details.append("学生 DOM 泄漏 undefined/null 占位")
+    if semantic_timeline_invalid:
+        details.append("操作相关内容未装配为唯一的“操作步骤”时间线")
+    if checklist_prompt_mislabel:
+        details.append("责任卡/检查清单被错误装配为 Prompt")
     issues.append(
         issue(
             "POST_CLASS_TASK_RICH_STATIC_DOM_INVALID",
             "BLOCKER",
-            f"pages[{index}] 课后任务静态 DOM 不符合富卡片投影合同（{'；'.join(details)}）",
+            f"pages[{index}] 拓展练习静态 DOM 不符合富卡片投影合同（{'；'.join(details)}）",
             str(path),
         )
     )
@@ -1949,6 +2154,7 @@ def check_p3(path: Path, issues: list[dict[str, str]]) -> dict[str, Any]:
             "V3.5.0-R31",
             "V3.5.0-R32",
             "V3.5.0-R33",
+            "V3.5.0-R36",
             "V3.5.0-P3",
         )
     )
@@ -1965,9 +2171,11 @@ def check_p3(path: Path, issues: list[dict[str, str]]) -> dict[str, Any]:
                     str(path),
                 )
             )
-        if str(payload.get("version")) in {"V3.5.0-R28", "V3.5.0-R29", "V3.5.0-R30", "V3.5.0-R31", "V3.5.0-R32", "V3.5.0-R33"}:
+        if str(payload.get("version")) in {"V3.5.0-R28", "V3.5.0-R29", "V3.5.0-R30", "V3.5.0-R31", "V3.5.0-R32", "V3.5.0-R33", "V3.5.0-R36"}:
             expected_contract = (
-                "R33-20260731"
+                "R36-20260731"
+                if str(payload.get("version")) == "V3.5.0-R36"
+                else "R33-20260731"
                 if str(payload.get("version")) == "V3.5.0-R33"
                 else "R32-20260731"
                 if str(payload.get("version")) == "V3.5.0-R32"
@@ -2225,7 +2433,7 @@ def run_s6_contract(lesson_id: str, effective_path: Path, whole_path: Path) -> i
     )
     issues.extend(diff_issues)
     blocked = any(item["severity"] == "BLOCKER" for item in issues)
-    print(json.dumps({"checker": "check_four_stage_candidate", "checker_version": CHECKER_VERSION, "lesson_id": lesson_id, "status": "BLOCKED" if blocked else "IMPORT_READY_STATIC", "stages": {"S6": stage}, "page_diffs": page_diffs, "issues": issues}, ensure_ascii=False, indent=2))
+    print(json.dumps({"checker": "check_whole_course_static", "checker_version": CHECKER_VERSION, "lesson_id": lesson_id, "status": "BLOCKED" if blocked else "IMPORT_READY_STATIC", "stages": {"S6": stage}, "page_diffs": page_diffs, "issues": issues}, ensure_ascii=False, indent=2))
     return EXIT_BLOCKED if blocked else EXIT_PASS
 
 
@@ -2327,7 +2535,7 @@ def main() -> int:
                         stages["STAGE4"] = {"status": "NOT_ENTERED"}
                     else:
                         stages["RESOURCE_BRANCH"] = check_resource_branch(manifest, issues)
-                        stages["STAGE4"] = {"status": "REVIEW_REQUIRED", "next_gate": "S5.1 -> S5.5", "note": "候选检查器不代替真实任务、DOM、交互和真机截图"}
+                        stages["STAGE4"] = {"status": "REVIEW_REQUIRED", "next_gate": "S5.1 -> S5.5", "note": "静态检查器不代替真实任务、DOM、交互和真机截图"}
     blocked = any(item["severity"] == "BLOCKER" for item in issues)
     status = "BLOCKED" if blocked else ("IMPORT_READY_STATIC" if args.formal_stage6 else "REVIEW_REQUIRED")
     next_gate = (
@@ -2335,7 +2543,7 @@ def main() -> int:
         if args.formal_stage6 and not blocked
         else "修复 BLOCKER 并冻结 Golden Baseline 后，才可评估 Stage 6 正式吸收"
     )
-    report = {"checker": "check_four_stage_candidate", "checker_version": CHECKER_VERSION, "lesson_id": args.lesson_id, "formal_stage6": args.formal_stage6, "status": status, "stages": stages, "page_diffs": page_diffs, "issues": issues, "manual_review": ["六阶段后真实 DOM / computed style / 视觉 / 交互 / SDK / 真机截图", "S5.6 BATCH_GO"], "next_gate": next_gate, "input_fingerprints": {"manifest_sha256": sha256_file(manifest_path)}}
+    report = {"checker": "check_whole_course_static", "checker_version": CHECKER_VERSION, "lesson_id": args.lesson_id, "formal_stage6": args.formal_stage6, "status": status, "stages": stages, "page_diffs": page_diffs, "issues": issues, "manual_review": ["六阶段后真实 DOM / computed style / 视觉 / 交互 / SDK / 真机截图", "S5.6 BATCH_GO"], "next_gate": next_gate, "input_fingerprints": {"manifest_sha256": sha256_file(manifest_path)}}
     try:
         json_path, md_path = write_report(args.report_dir.expanduser().resolve() / args.lesson_id, report)
     except (OSError, FileExistsError) as exc:

@@ -56,9 +56,18 @@ For a `课程小结` page:
 6. If that status sentence shares a paragraph with a next-lesson preview,
    preserve the remainder verbatim and in order.
 
+## Post-class page canonical label
+
+Teacher sources may use `课后任务`, `课后练习`, or `拓展练习`; these are input
+aliases for one page category. S2 must freeze both page type and capsule as
+`拓展练习`. S5 and S6 normalize legacy upstream aliases to the same value, and
+S6 must emit `title: 拓展练习`, `tag: 拓展练习`, plus an OneShot context ending
+in `拓展练习页`. The English runtime kind remains `post_class_task`. A mixed
+semantic/display label is a blocker rather than a valid page variant.
+
 ## S5-S6 knowledge relationship projection
 
-- S5 recalculates real reading density from the frozen structured blocks; a medium page cannot remain `light` merely because the candidate draft said so.
+- S5 calculates real reading density from the frozen structured blocks; no candidate or initializer may supply or override density or design relationships.
 - Mechanical `frozen_segment` groups are replaced when the source exposes comparison, process, example or role-distribution, and judgment relationships.
 - S6 maps real relationships to executable `comparison_split`, `process_steps`, list-preserving, and `role_distribution_inline` recipes. Comma/semicolon-linked role clauses remain one continuous sentence with exact-source inline emphasis.
 - The knowledge OneShot must carry the matching DOM class contracts. Recording recipe names without a differentiated layout is blocked.
@@ -255,8 +264,9 @@ active installed Skill be replaced or a 21-lesson batch be started.
 - An action-oriented sentence incorrectly retained on the knowledge page is
   blocked by S2; after S2 routes it with the interaction page, S4 must not
   emit an interaction-boundary semantic issue.
-- A dynamic knowledge/case candidate without its minimum `design_brief` seed is
-  blocked before S5 generation.
+- P01 preserves the raw knowledge-point field and projects `;` / `；` / newline-delimited values into an ordered list whose cardinality is copied exactly into the fixed-template prompt.
+- P05 projects every frozen source block once and in order into `PAGE_DATA.contentBlocks`, while `DESIGN_BRIEF` and executable recipes are derived only from those blocks.
+- P10 projects every source block into ordered S5 `sections[]` with deterministic semantic roles. S6 student-visible text follows that order and uses one “操作步骤” timeline; only adjacent `action → prompt`、`review → checklist`、or `condition → correctivePrompt` pairs may share a card in place. A checklist uses its own light structure and never a Prompt label. The static Gate checks roles, source indices, pair markers, and the single timeline; it does not claim screenshot or visual acceptance.
 - A course-summary source paragraph contains `本课没有课后练习。` followed by
   a next-lesson preview; S5 removes only the status sentence from student
   projections and preserves the preview.

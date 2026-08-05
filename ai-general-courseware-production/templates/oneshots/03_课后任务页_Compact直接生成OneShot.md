@@ -1,13 +1,13 @@
-# 课后任务页 Compact 直接生成 OneShot（V3.5）
+# 拓展练习页 Compact 直接生成 OneShot（V3.5）
 
 状态：`CURRENT_PRODUCTION_ASSET`  
-合同版本：`RunS-PostClassTask-Compact-Direct-OneShot-Contract-v1.9-20260805`
+合同版本：`RunS-PostClassTask-Compact-Direct-OneShot-Contract-v1.11-20260805`
 适用模型：Kimi、GLM 及同类无外部文件上下文的页面生成模型。  
-适用阶段：候选阶段 6 / 正式 P3 课后任务页模型输入装配；完整 OneShot 写入整课 JSON 的 `pages[].prompt`。
+适用阶段：候选阶段 6 / 正式 P3 拓展练习页模型输入装配；完整 OneShot 写入整课 JSON 的 `pages[].prompt`。
 
 ## 1. 已验证结论
 
-课后任务页模型调用是一次性、无上下文调用。模型不会读取本地模板路径、历史提示词、SOP 文件或装配器资产，因此每一条页面提示词必须一次性包含完整要求、完整课程内容和完整可执行 HTML / CSS / JavaScript。
+拓展练习页模型调用是一次性、无上下文调用。模型不会读取本地模板路径、历史提示词、SOP 文件或装配器资产，因此每一条页面提示词必须一次性包含完整要求、完整课程内容和完整可执行 HTML / CSS / JavaScript。
 
 以下口径已经替代“只给变量对象、依赖模型读取路径或外部 Demo”的旧口径：
 
@@ -23,7 +23,7 @@
 
 | 层级 | 必须包含 | 禁止 |
 | --- | --- | --- |
-| 上游有效内容 | 原始课后任务真源、块顺序、页面动作、来源定位、审计字段 | 把研发状态或路径做成学生内容 |
+| 上游有效内容 | 原始拓展练习真源、块顺序、页面动作、来源定位、审计字段 | 把研发状态或路径做成学生内容 |
 | 提交给 Kimi / GLM 的页面提示词 | 唯一版本号、页面身份、纯 HTML 输出约束、由当前课冻结内容确定性编译的完整静态 DOM、Compact CSS 与仅含 SDK / footer 行为的 JS | 只给路径、只给 JSON、运行时 `PAGE_DATA`、引用“上一版”、嵌套 Markdown 围栏、`rawMarkdown` |
 | 模型输出 / 页面结果证据 | 可直接运行的完整 HTML | 提示词正文、Markdown 围栏、解释、版本号前缀、普通文本；不得覆盖 `pages[].prompt` |
 
@@ -34,7 +34,7 @@
 ```text
 提示词版本号：<OneShot合同>-asset-<资产SHA前12位>-prompt-<归一化完整提示词SHA前12位>-<lesson_id>-<page_no>-R36-20260731
 
-适用页面：<lessonXXX>｜<PXX>｜第 <N/N> 页｜课后任务页。
+适用页面：<lessonXXX>｜<PXX>｜第 <N/N> 页｜拓展练习页。
 
 请生成一个完整、可运行的移动端 HTML 网页。
 
@@ -48,7 +48,7 @@
 - 不得只输出 PAGE_DATA、promptLines、text、数组、JSON 或普通文字。
 - 不得把 JavaScript 数据、字段名或转义字符直接显示在页面顶层。
 - 学生正文必须已经存在于静态 HTML DOM；不得依赖 JavaScript 执行后才出现。
-- 必须保留正式完整结构：`.post-task-page`、`.task-hero`、`.notebook-badge`（只含 `https://res.xrunda.com/xruns/static/image/20270724/3.png`，`128×128px`，无底色和对号）和 `.task-content`；不得退化为只有标题与白色文本卡的简化 HTML。
+- 必须保留正式完整结构：`.post-task-page`、`.task-hero`、`.notebook-badge`（只含 `https://res.xrunda.com/xruns/static/image/20270724/3.png`，竖屏 CSS 视觉尺寸 `76×76px`，无底色和对号）和 `.task-content`；不得退化为只有标题与白色文本卡的简化 HTML。
 - 必须完整保留下方 HTML、CSS、JavaScript 和学生可见内容。
 - 不得生成教案中不存在的任务、Prompt、决定、安全提醒或其他模块。
 - 底部课程按钮必须按 pageAction 调用 CreatorReviewSDK.nextPage() 或 CreatorReviewSDK.complete()。
@@ -70,11 +70,13 @@
 
 ## 4. 上游数据与静态 DOM 编译合同
 
-阶段 5 的课后任务标题、八类有序 sections 和 `pageAction` 是阶段 6 的唯一装配输入。装配器逐块做 HTML 转义后，按原顺序确定性编译为最终 HTML：
+阶段 5 的拓展练习标题、八类有序 sections、每块确定性 `role` 和 `pageAction` 是阶段 6 的唯一装配输入。`role` 只描述源块在任务流程中的展示职责，不改写内容：`lead`、`preflight`、`action`、`prompt`、`review`、`checklist`、`condition`、`correctivePrompt`、`decision`、`safetyFallback`、`fallback`、`note`。装配器逐块做 HTML 转义后，按原顺序确定性编译为最终 HTML：
 
 - `paragraph`、`task`、`facts`、`step`、`prompt`、`decision`、`safety`、`fallback` 只在来源真实存在时生成对应静态节点；
 - 多行 Prompt 使用 `<pre class="task-prompt">` 与 `white-space:pre-wrap` 保存真实换行，不拆字、不合并、不改写；
 - 标题和每个内容块在模型调用前已经存在于 HTML，模型不得新增、删除、调序或改写；
+- `action→prompt`、`review→checklist`、`condition→correctivePrompt` 仅在来源中相邻时原位组成同一步；禁止跨块搜索、全局后置 Prompt 或改变 `sections[]` 顺序；
+- 所有操作相关块只生成一个“操作步骤”时间线；夹在首末操作角色之间的普通 `note` 保持原位成为独立步骤，不得把时间线拆成多段；`checklist` 使用浅色责任卡/检查清单结构，不得标成 Prompt 或套用深色代码卡；`lead` 直接位于标题下，不得重复生成“任务”卡；
 - 内联 JavaScript 只保留与 `pageAction` 匹配的 `safeNextPage()` 或 `safeComplete()`、footer 高度同步、`ResizeObserver` 和按钮监听，不得包含正文渲染循环；
 - 最终 OneShot 中禁止 `const PAGE_DATA =`、`PAGE_DATA.blocks.forEach`、`promptLines`、为正文调用 `document.createElement()`，也不得依赖运行时 `textContent` 才显示学生内容。
 
@@ -86,20 +88,19 @@
 - lesson017 这类没有独立 `task`、第二段 Prompt 或 `safety` 的页面不得补造对应字段或 DOM。
 - `pageAction` 来自页面规划；最后一页为 `complete`，其他页为 `next`。
 
-### 4.1 `TASK_STATIC_DOM_V18_PROJECTION`（禁止正文压平）
+### 4.1 `TASK_STATIC_DOM_V20_PROJECTION`（禁止正文压平与语义误装配）
 
 阶段 6 必须按冻结 `sections[]` 的真实块类型，确定性投影为正式 Demo 已定义的富卡片 DOM；不得把任务、事实、步骤、检查或提示一律降级为 `.task-intro`，也不得把 Prompt 直接堆放为 `.task-content > pre`。
 
 | 冻结块类型 | 仅在来源存在时输出的静态 DOM | 约束 |
 | --- | --- | --- |
-| `paragraph` | `<p class="task-intro">…</p>` | 仅承载普通正文；不得承载 `task`、`facts`、`decision`、`safety` 或 `fallback` 的原文。 |
-| `task` | `<section class="glass-card task-card">…</section>` | 使用 `card-heading` 和 `card-symbol`；逐字保留任务正文。 |
+| `paragraph` / `task` | `lead` 投影为标题下 `.task-intro.task-lead`；`action/review/condition` 投影进对应 `.step-group`；`note` 才使用普通 `.task-intro` | 首个任务说明不得再重复为独立“任务”卡；所有文本逐字保留。 |
 | `facts` | `<section class="glass-card facts-card">…<ul class="facts-grid"><li>…</li></ul></section>` | 每条来源事实独立为一个 `li`；不得显示 Markdown `**`。 |
-| `step` / `prompt` | `<section class="action-section"><article class="step-group"><section class="glass-card step-card">…<div class="prompt-block"><div class="prompt-label">…</div><pre><code>…</code></pre></div></section></article></section>` | Prompt 必须进入 `step-group / step-card / prompt-block`；视觉编号可由顺序生成，但不得补写学生文案。 |
-| `decision` | `<section class="glass-card decision-card">…</section>` | 逐字保留检查和采用判断。 |
+| `step` / `prompt` / 操作角色 | 单一 `<section class="action-section">`，标题固定“操作步骤”；相邻角色对进入同一 `<article class="step-group">` | 普通/修正 Prompt 使用深色 `prompt-block`；`checklist` 使用浅色 `checklist-block`，不得出现 `prompt-label`。视觉编号可由顺序生成，但不得补写学生文案。 |
+| `decision` | 作为操作时间线中的一步 | 逐字保留检查和采用判断。 |
 | `safety` / `fallback` | `<section class="support-stack"><div class="support-row">…</div></section>` | 只输出来源存在的提示；不得补造安全提醒或 fallback。 |
 
-硬阻断：最终学生 DOM 若缺少任一实际来源块所需的富语义容器、存在裸 `<pre>`、出现 `**…**`、`undefined` 或 `null` 占位，或完整正文只由 `.task-intro` 与裸 `<pre>` 组成，必须以 `POST_CLASS_TASK_RICH_STATIC_DOM_INVALID` 阻断。该检查只判断投影结构，不允许装配器根据最终截图豁免。
+硬阻断：最终学生 DOM 若缺少任一实际来源块所需的富语义容器、存在裸 `<pre>`、出现 `**…**`、`undefined` 或 `null` 占位，完整正文只由 `.task-intro` 与裸 `<pre>` 组成，出现多个“操作步骤”标题，将 `checklist` 标成 Prompt，或没有按相邻角色对原位组合，必须阻断。该检查只判断静态投影结构；只有明确提供生成 HTML 时才运行动态 HTML/视觉检查，不得把静态 PASS 表述为视觉验收通过。
 
 ## 5. Compact 页面代码合同
 
@@ -108,7 +109,7 @@
 - 单文件 HTML，声明 UTF-8 和移动端 viewport。
 - 显式引入 `https://res.xrunda.com/runs/plugin/creator/creator-review-sdk.js`。
 - 使用 `height:100%` 页面容器，正文独立纵向滚动，滚动区按实测 footer 高度预留底部空间；不得使用动态视口单位。
-- 使用课后任务专属温暖粉紫渐变 `#f0d8f4 → #dfdcff → #ece3ff`，保留 `.task-hero`、登记 HTTPS 头图 `3.png`（`128×128px`，无底色和对号）、玻璃卡、深色 Prompt 卡、浅黄色辅助卡和统一紫色课程按钮。
+- 使用拓展练习专属连续粉紫蓝渐变，保留 `.task-hero`、登记 HTTPS 头图 `3.png`（竖屏 CSS 视觉尺寸 `76×76px`，无底色和对号）、玻璃卡、深色 Prompt 卡、浅色责任卡、浅黄色辅助卡和统一紫色课程按钮。头图不得挤占首屏主要阅读空间。
 - 主内容两侧使用物理属性固定 `24px`，必要时仅用低版本可识别的媒体查询调整；主按钮使用 `width:calc(100% - 64px); max-width:260px`、最小高度 `60px`、圆角 `40px`、主体色 `#9260fe`。
 - 页面主渐变必须连续覆盖到视口底部，并使用 `--page-bottom-rgb: 236, 227, 255` 和派生的 `--page-bottom-bg` 作为最后一个色标；footer 只承载按钮及其上方 `10px`、下方 `10px + safe-area` 的几何空间，背景必须透明。
 - 禁止 footer 单独绘制整宽实色背景，禁止 `footer::before` / `footer::after` 形式的 `18px` 羽化层；不得出现水平硬分界、独立色带、边框、阴影或模糊。
@@ -123,7 +124,7 @@
 - 每次生成的新提示词必须使用未使用过的唯一版本号；版本号至少包含页面类型、`lessonXXX`、`PXX`、合同版本、日期和本次运行唯一标识。
 - 同一整课 JSON 中，任意两个非互动页的实际提示词版本号不得相同；同一 OneShot 即使仍用于同一页，只要完整模型输入改变，归一化提示词实例哈希和版本号就必须改变。重复时标记 `V35_STAGE6_PROMPT_VERSION_DUPLICATE`，合同/资产/实例哈希/首行任一不一致时标记 `V35_STAGE6_PROMPT_VERSION_ASSET_MISMATCH`。互动题组件页保持 `prompt: ""`，不分配页面提示词版本号。
 - 新版本号使用模型中立前缀 `RunS-PostClassTask-...`，不得把 Kimi、GLM 或误写的 Kiki 固化为通用合同名。
-- `v1.8` 是新装配唯一允许的课后任务合同；历史 `v1.7` 仅作已发布产物追溯，不得用于新的 Stage 6 装配。
+- `v1.11` 是新装配唯一允许的拓展练习合同；历史版本仅作已发布产物追溯，不得用于新的 Stage 6 装配。
 - 已经用于验证的旧版本号只作为证据保留，不得复用：
   - `RunS-Kiki-PostClassTask-Compact-OneShot-v2.0-20260723`：lesson004；其中 `Kiki` 是已确认的历史误写，不反向修改验证证据。
   - `RunS-PostClassTask-L017-Compact-OneShot-v1.0-20260723`：lesson017。
@@ -133,12 +134,12 @@
 1. 把完整一次性提示词提交给 Kimi 或 GLM。
 2. 验证模型回复首尾分别为 `<!doctype html>` 和 `</html>`，且没有 Markdown 围栏或解释文字。
 3. 验证页面内容、模块数量、顺序、SDK 动作、滚动和底栏。
-4. 当前 RunS 页面模型链路把本课完整 Compact OneShot 实际模型输入写入课后任务页 `pages[].prompt`；模型返回的完整 HTML 是实际生成页面结果，另层校验与留证，不得回写覆盖提示词。
+4. 当前 RunS 页面模型链路把本课完整 Compact OneShot 实际模型输入写入拓展练习页 `pages[].prompt`；模型返回的完整 HTML 是实际生成页面结果，另层校验与留证，不得回写覆盖提示词。
 5. 在 `page_data` 记录本次 OneShot 合同版本、实际提示词版本和内容来源；不再声称输出与旧 Demo 变量区外字节完全一致。
 
 ## 8. 阻断条件
 
-出现以下任一情况，课后任务页 P3 阻断：
+出现以下任一情况，拓展练习页 P3 阻断：
 
 - 提示词仍依赖模型读取本地路径、Demo 或历史上下文；
 - 提示词没有内嵌完整 HTML / CSS / JavaScript；
@@ -158,4 +159,4 @@
 - 2026-07-23：lesson008、lesson021 的旧 `FixedTemplate` 分支在真实页面模型中退化为 `text\n...` 普通文本；v1.1 明确将该分支、旧 SDK、`markdown` / `rawMarkdown`、代码围栏和对象直接写入 `textContent` 全部列为静态阻断。
 - 2026-07-23：lesson008 真实回归确认，运行时 `PAGE_DATA` / DOM 拼装会被页面模型改写并造成脚本语法失败；R10 正式改为阶段 6 先编译静态学生 DOM，运行时 JS 只保留 SDK、footer 同步和按钮监听。
 - 2026-07-24：lesson008 静态 DOM 完整实例已登记；lesson017 / P08 的不同内容形态迁移提交通过。首次迁移发现整条标题套用防断行会造成横向截断，已改为仅保护“社区拼图交换”，验证通过。
-- 当前结论只确认课后任务页直接生成合同；不自动证明其他页面类型已经采用同一方式。
+- 当前结论只确认拓展练习页直接生成合同；不自动证明其他页面类型已经采用同一方式。

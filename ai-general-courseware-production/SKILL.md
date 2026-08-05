@@ -7,9 +7,15 @@ description: 将 AI 通识课教师版教案按冻结输入处理为 RunS 网页
 
 Use this release bundle as a self-contained R36 contract. It supports a read-only preflight, one unlocked stage, a complete S1-S6 local run, an existing-artifact audit, and batch-manifest preparation.
 
+## Run an isolated Skill-only verification
+
+For a pure Skill self-test, black-box installation acceptance, or a course verification explicitly limited to three supplied inputs, read only this `SKILL.md`, the contract references it routes to, bundled scripts, and those specified inputs. Do not read or use any workspace SOP, `CURRENT_SOP_ENTRY.md`, SOP inventory, historical `outputs`, prior course artifacts, historical pages, or another course as input, baseline, or supplemental context. Do not infer a production request merely because the inputs mention RunS or a lesson plan.
+
+If the request also includes production governance, batch production, SOP modification, or RunS create / import / render / publish (including preparation, audit, or approval for those actions), stop the isolated mode and use the production SOP path under separately authorized scope.
+
 ## Collect and freeze inputs
 
-Read [references/input-manifest.md](references/input-manifest.md) before S1. Require one `runs_batch_manifest.yaml`, a fresh local output directory, one teacher `final.md` and six verbatim course-info fields for every lesson.
+Read [references/input-manifest.md](references/input-manifest.md) before S1. In three-input mode, accept exactly one course-information table, one teacher `final.md`, and one student `student-playback.md`; resolve the named lesson row into six verbatim course-info fields and freeze a local `runs_batch_manifest.yaml` as derived evidence, not as a fourth source input. Also require a fresh local output directory.
 
 - Use `source_mode: local` for absolute local source paths.
 - Use `source_mode: github` only with a user-authorized `repo`, immutable full commit SHA, manifest path, and repository-relative source paths.
@@ -28,10 +34,10 @@ Read [references/s1-s6-contract.md](references/s1-s6-contract.md) before generat
 | S2 | Frozen S1 preprocessed Markdown | working plan, student structural check |
 | S3 | Frozen S2 working plan | question-processed plan |
 | S4 | Frozen S2 working plan and approved S3 plan | final page plan |
-| S5 | Frozen S4 final page plan and a constrained candidate draft | `effective_content_full.json` |
+| S5 | Frozen S4 final page plan | `effective_content_full.json` |
 | S6 | Passed S5 effective-content JSON | whole-course JSON and static result |
 
-Run only the requested and unlocked stage. For S2-S6 serial execution, use the bundled Gate runner so the previous `PASS` receipt, artifact path, and SHA-256 are verified before the next command starts. At any `BLOCKED`, stop that lesson; for a batch, stop the entire batch and wait. Do not repair, skip, or advance another lesson without a new instruction.
+Run only the requested and unlocked stage. For S2-S6 serial execution, use the bundled Gate runner so the previous `PASS` receipt, artifact path, and SHA-256 are verified before the next command starts. Every call preserves `*_gate_receipt_attempt-XXX.json` and updates the latest receipt. A fixed-format error limited to the current stage may be repaired and re-run only after its `BLOCKED` attempt receipt is retained; input authority, source SHA drift, semantic, page-boundary, or student-visible-content blockers stop that lesson (and a batch) for confirmation. Never skip a Gate or advance another stage before the current stage passes.
 
 ## Use bundled deterministic tools
 
@@ -59,10 +65,8 @@ python3 scripts/validators/validate_v35_page_plan_question_boundaries.py \
   --question-processed <S3/question_processed_full.md> <S4/page_plan_full.md>
 
 # S5
-# Start a constrained candidate from references/schemas/effective_content_candidate.template.json.
 python3 scripts/generators/build_effective_content.py \
   --lesson-id <lesson_id> --page-plan <S4/page_plan_full.md> \
-  --draft <S5/effective_content_candidate.json> \
   --output <S5/effective_content_full.json>
 python3 scripts/validators/validate_v35_effective_content.py \
   --page-plan <S4/page_plan_full.md> <S5/effective_content_full.json>
@@ -84,7 +88,9 @@ python3 scripts/validators/validate_dynamic_html.py \
 
 Standalone generators and validators are audit/debug tools. They do not create a stage receipt and do not authorize a downstream stage. The official sequence is one `run_stage_gate.py` call per stage, using the prior stage's receipt for S3-S6; see [references/generation-gate-design.md](references/generation-gate-design.md).
 
-For knowledge and case pages, S5 replaces mechanical draft groups with deterministic content relationships only when the frozen text actually exposes comparison, process, list, example/role distribution, or judgment structure. S5 must freeze the executable design, including `alignmentPolicy`: left alignment and top alignment take priority; same-level content shares a left edge; peer comparisons share a top edge and width; asymmetry is allowed only for an explicit primary/supporting relationship. Same-block conflicting evidence and comma/semicolon-linked role clauses stay in one continuous linguistic flow; the latter use `role_distribution_inline` / `continuous_inline_highlights`, with exact-source emphasis applied in place. S6 copies the design into `designExecutionContract` and injects `visualHierarchyContract` plus `alignmentContract`; it must not infer a replacement layout. Source fidelity, semantic relationship, reading clarity, and typographic elegance take priority over decoration. Real comparisons, steps, and lists visibly express those relationships; decoration is optional, with no minimum quota. Random indentation, random widths, stagger-for-variety, generic card stacks, decorative clutter, and large near-black panels are invalid. The post-generation DOM Gate checks exact visible projection and punctuation-linked clause splitting; it does not authorize generation, import, rendering, or publication.
+For knowledge and case pages, S5 derives deterministic content relationships only when the frozen text actually exposes comparison, process, list, example/role distribution, or judgment structure. It never accepts a candidate or initializer. S5 must freeze the executable design, including `alignmentPolicy`: left alignment and top alignment take priority; same-level content shares a left edge; peer comparisons share a top edge and width; asymmetry is allowed only for an explicit primary/supporting relationship. Same-block conflicting evidence and comma/semicolon-linked role clauses stay in one continuous linguistic flow; the latter use `role_distribution_inline` / `continuous_inline_highlights`, with exact-source emphasis applied in place. S6 copies the design into `designExecutionContract` and injects `visualHierarchyContract` plus `alignmentContract`; it must not infer a replacement layout. Source fidelity, semantic relationship, reading clarity, and typographic elegance take priority over decoration. Real comparisons, steps, and lists visibly express those relationships; decoration is optional, with no minimum quota. Random indentation, random widths, stagger-for-variety, generic card stacks, decorative clutter, and large near-black panels are invalid. The post-generation DOM Gate checks exact visible projection and punctuation-linked clause splitting; it does not authorize generation, import, rendering, or publication.
+
+P01 keeps the verbatim `知识点` audit field and deterministically splits `;`、`；`、or newline-delimited values into an ordered non-empty `content.knowledgePoints[]`; S6 must consume that list without re-splitting or merging it. Treat teacher-source headings “课后任务”、 “课后练习”、and “拓展练习” only as input aliases; S2 is the sole semantic pagination decision point and must freeze both the page type and capsule as the canonical value `拓展练习`. S5 and S6 also normalize legacy upstream aliases to `拓展练习`, so `page_type`、`capsule`、S6 `title`、`tag`、fixed UI labels, and OneShot page context never diverge. P10 must render every S5 `sections[]` entry in its original order. S5 assigns only deterministic display roles derived from the frozen blocks; S6 may combine adjacent `action → prompt`、`review → checklist`、or `condition → correctivePrompt` pairs at that exact position, inside one “操作步骤” timeline. It must not globally collect Prompt blocks, render a checklist as Prompt, repeat the lead as an extra task card, or invent steps. The S6 Gate verifies P01 cardinality, P05 exact block/design projection, and P10 source-section order plus semantic grouping. These remain static contracts, not visual acceptance; `validate_dynamic_html.py` runs only when generated HTML is explicitly supplied.
 
 Comparison cards may remain side by side only when every peer is at most 80 Chinese characters and the combined peer copy is at most 150 characters; otherwise use a full-width vertical stack with one shared left edge. The page-wide highlight budget is at most three exact-source segments. The same semantic category uses one highlight style; a short highlight of at most 12 characters moves as a whole and must not leave a one- or two-character highlighted tail on a separate line.
 
@@ -96,7 +102,7 @@ Use only the bundled OneShots and Demos. Do not hand-build whole-course JSON, re
 
 ## Govern independent Skill versions
 
-Treat `0.2.12-r36` as the next release candidate. Before claiming any local iteration valid, run:
+Treat `0.2.20-r36` as the next release candidate. Before claiming any local iteration valid, run:
 
 ```bash
 python3 scripts/validators/validate_skill_version.py \

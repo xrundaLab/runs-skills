@@ -17,7 +17,17 @@ import argparse
 import hashlib
 import json
 import re
+import sys
 from pathlib import Path
+
+
+SCRIPT_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(SCRIPT_ROOT))
+
+from page_type_contract import (  # noqa: E402
+    POST_CLASS_CANONICAL_PAGE_TYPE,
+    POST_CLASS_INPUT_ALIASES,
+)
 
 
 MARKER_RE = re.compile(
@@ -81,7 +91,7 @@ ALLOWED_PAGE_TYPES = {
     "知识讲解",
     "案例分析",
     "互动题目",
-    "课后任务",
+    POST_CLASS_CANONICAL_PAGE_TYPE,
     "课程小结",
 }
 FINAL_REQUIRED_METADATA = {
@@ -289,7 +299,23 @@ def validate(path: Path, *, legacy_boundary_heuristic: bool = True) -> dict[str,
             }
         )
     for page in pages:
-        if page["page_type"] not in ALLOWED_PAGE_TYPES:
+        post_class_metadata_present = (
+            page["page_type"] in POST_CLASS_INPUT_ALIASES
+            or page["capsule"] in POST_CLASS_INPUT_ALIASES
+        )
+        if post_class_metadata_present and (
+            page["page_type"] != POST_CLASS_CANONICAL_PAGE_TYPE
+            or page["capsule"] != POST_CLASS_CANONICAL_PAGE_TYPE
+        ):
+            issues.append(
+                {
+                    "issue_type": "POST_CLASS_PAGE_LABEL_NOT_CANONICAL",
+                    "severity": "BLOCKER",
+                    "page_no": page["page_no"],
+                    "message": "拓展练习页的页面类型与胶囊文案必须统一为“拓展练习”；课后任务/课后练习只作为教师源输入别名。",
+                }
+            )
+        elif page["page_type"] not in ALLOWED_PAGE_TYPES:
             issues.append(
                 {
                     "issue_type": "PAGE_PLAN_UNSUPPORTED_PAGE_TYPE",

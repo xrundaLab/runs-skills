@@ -13,14 +13,24 @@ import hashlib
 import html
 import json
 import re
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
+SCRIPT_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(SCRIPT_ROOT))
+
+from page_type_contract import (  # noqa: E402
+    POST_CLASS_CANONICAL_PAGE_TYPE,
+    canonical_capsule,
+    canonical_page_type,
+)
+
 ONESHOTS = ROOT / "templates" / "oneshots"
 TASK_DEMO = ROOT / "templates" / "demos" / "post_class_task_demo.html"
 OUTER_ONESHOT = ONESHOTS / "02_整课JSON_完整外层OneShot.md"
-TASK_CONTRACT = "RunS-PostClassTask-Compact-Direct-OneShot-Contract-v1.9-20260805"
-TASK_ASSET_SHA256 = "2811205ae6b0b037f0b8160ec4dd1d9485e90e36cfe010bcf59dba55e0b616bf"
+TASK_CONTRACT = "RunS-PostClassTask-Compact-Direct-OneShot-Contract-v1.11-20260805"
+TASK_ASSET_SHA256 = "79d9a7fdad4701c784a9e0e6cfbbbdfaeb727211ce26b8eda7e9a5e46effba98"
 SOP_CONTRACT_VERSION = "RunS_V3.5.0-S1-S6-R36-20260731"
 PROMPT_VERSION_PLACEHOLDER = "__PROMPT_VERSION__"
 PROMPT_VERSION_SUFFIX = "R36-20260731"
@@ -126,8 +136,6 @@ def intro_values(page, action):
     if not isinstance(content, dict):
         raise ValueError("COURSE_INTRO_CONTENT_MISSING")
     points = content.get("knowledgePoints")
-    if isinstance(points, str):
-        points = [re.sub(r"^\s*\d+[.、]\s*", "", line).strip() for line in points.splitlines() if line.strip()]
     values = {key: content.get(key) for key in ("packageName", "unitName", "lessonNumber", "courseName", "courseIntroduction")}
     values["knowledgePoints"] = points
     missing = [key for key in ("packageName", "unitName", "courseName", "courseIntroduction") if not isinstance(values[key], str) or not values[key].strip()]
@@ -422,8 +430,11 @@ def task_sections(page):
     if not isinstance(sections, list) or not sections:
         raise ValueError("POST_CLASS_TASK_SECTIONS_MISSING")
     allowed = {"paragraph", "task", "facts", "step", "prompt", "decision", "safety", "fallback"}
+    allowed_roles = {"lead", "preflight", "action", "prompt", "review", "checklist", "condition", "correctivePrompt", "decision", "safetyFallback", "fallback", "note"}
     if any(not isinstance(x, dict) or x.get("type") not in allowed for x in sections):
         raise ValueError("POST_CLASS_TASK_SECTIONS_INVALID")
+    if any(x.get("role") not in allowed_roles for x in sections):
+        raise ValueError("POST_CLASS_TASK_SECTION_ROLES_INVALID")
     # A single raw Markdown blob is not an R18 section projection; guessing it
     # again in S6 would silently change the frozen S5 contract.
     if len(sections) == 1 and sections[0].get("type") == "task" and "```" in str(sections[0].get("text", "")):
@@ -436,42 +447,144 @@ def esc(value):
     text = str(value).replace("**", "").replace("__", "")
     return html.escape(text, quote=True)
 
+def task_section_role(block):
+    role = block.get("role")
+    if isinstance(role, str) and role:
+        return role
+    return {
+        "task": "lead",
+        "facts": "preflight",
+        "step": "action",
+        "prompt": "prompt",
+        "decision": "decision",
+        "safety": "safetyFallback",
+        "fallback": "fallback",
+        "paragraph": "note",
+    }.get(block.get("type"), "note")
+
+def checklist_html(block, index):
+    lines = [line.strip() for line in str(block.get("text") or "").splitlines() if line.strip()]
+    rows = []
+    for line in lines:
+        match = re.match(r"^([^：:]{1,12})([：:])(.*)$", line)
+        if match:
+            rows.append(
+                '<div class="checklist-row">'
+                f'<span class="checklist-key">{esc(match.group(1) + match.group(2))}</span>'
+                f'<span class="checklist-value">{esc(match.group(3))}</span></div>'
+            )
+        else:
+            rows.append(f'<div class="checklist-row checklist-row-full">{esc(line)}</div>')
+    return (
+        f'<section class="checklist-block" data-section-role="checklist" '
+        f'data-source-section-index="{index}">'
+        f'<div class="checklist-label">{esc(block.get("label") or "检查清单")}</div>'
+        + "".join(rows)
+        + "</section>"
+    )
+
 def task_html(title, sections, action):
     demo = TASK_DEMO.read_text(encoding="utf-8")
     prefix = demo.split("  <script>", 1)[0]
     prefix = prefix.replace('<h1 id="taskTitle"></h1>', f'<h1 id="taskTitle">{esc(title)}</h1>')
     prefix = prefix.replace('>完成任务</button>', f'>{"完成学习" if action == "complete" else "继续学习"}</button>')
-    chunks, support, action_chunks = [], [], []
-    for index, block in enumerate(sections):
-        typ, text = block["type"], block.get("text", "")
-        if typ == "paragraph": chunks.append(f'<p class="task-intro">{esc(text)}</p>')
-        elif typ == "task": chunks.append(f'<section class="glass-card task-card"><div class="card-heading"><span class="card-symbol">✓</span><h2>{esc(block.get("label", "任务"))}</h2></div><p>{esc(text)}</p></section>')
-        elif typ == "facts":
+    chunks = []
+    index = 0
+    action_number = 0
+    workflow_roles = {"action", "prompt", "review", "checklist", "condition", "correctivePrompt", "decision"}
+    workflow_indexes = [
+        position
+        for position, section in enumerate(sections)
+        if task_section_role(section) in workflow_roles
+    ]
+    workflow_start = min(workflow_indexes) if workflow_indexes else -1
+    workflow_end = max(workflow_indexes) if workflow_indexes else -1
+
+    def is_workflow_section(position):
+        section_role = task_section_role(sections[position])
+        return section_role in workflow_roles or (
+            section_role == "note" and workflow_start <= position <= workflow_end
+        )
+
+    while index < len(sections):
+        block = sections[index]
+        typ, value = block["type"], block.get("text", "")
+        role = task_section_role(block)
+        marker = f'data-source-section-index="{index}"'
+        role_marker = f'data-section-role="{esc(role)}"'
+        if role == "lead":
+            chunks.append(f'<p class="task-intro task-lead" {role_marker} {marker}>{esc(value)}</p>')
+            index += 1
+            continue
+        if typ == "paragraph" and role == "note" and not is_workflow_section(index):
+            chunks.append(f'<p class="task-intro" {role_marker} {marker}>{esc(value)}</p>')
+            index += 1
+            continue
+        if typ == "facts":
             items = block.get("items")
-            # S5 has two governed facts shapes: an explicit item list or one
-            # frozen fact paragraph.  Both are source-preserving; the latter
-            # is a single list item, not a reason to invent a new split.
             if not isinstance(items, list) or not items:
-                items = [text] if isinstance(text, str) and text.strip() else []
+                items = [value] if isinstance(value, str) and value.strip() else []
             if not all(isinstance(item, str) and item.strip() for item in items):
                 raise ValueError("POST_CLASS_TASK_FACTS_INVALID")
-            chunks.append(f'<section class="glass-card facts-card"><div class="card-heading"><span class="card-symbol">•</span><h2>{esc(block.get("label", "可靠信息"))}</h2></div><ul class="facts-grid">' + "".join(f"<li>{esc(item)}</li>" for item in items) + "</ul></section>")
-        elif typ == "step":
-            next_block = sections[index + 1] if index + 1 < len(sections) else None
-            prompt = next_block if isinstance(next_block, dict) and next_block.get("type") == "prompt" else None
-            inner = f'<p class="step-lead">{esc(text)}</p>'
-            if prompt: inner += f'<div class="prompt-block"><div class="prompt-label">{esc(prompt.get("label") or prompt.get("promptLabel") or "PROMPT")}</div><pre><code>{esc(prompt.get("text", ""))}</code></pre></div>'
-            action_chunks.append(f'<article class="step-group"><span class="step-index">{esc(block.get("stepNumber") or str(len(action_chunks)+1).zfill(2))}</span><section class="glass-card step-card">{inner}</section></article>')
-        elif typ == "prompt":
-            previous = sections[index - 1] if index else None
-            if not isinstance(previous, dict) or previous.get("type") != "step":
-                action_chunks.append(f'<article class="step-group"><span class="step-index">{str(len(action_chunks)+1).zfill(2)}</span><section class="glass-card step-card"><div class="prompt-block"><div class="prompt-label">{esc(block.get("label") or block.get("promptLabel") or "PROMPT")}</div><pre><code>{esc(text)}</code></pre></div></section></article>')
-        elif typ == "decision": chunks.append(f'<section class="glass-card decision-card"><div class="card-heading"><span class="card-symbol">?</span><h2>检查与决定</h2></div><p>{esc(text)}</p></section>')
-        else: support.append(f'<div class="support-row" data-support-type="{typ}"><span class="support-mark">{"!" if typ == "safety" else "↗"}</span><p class="support-copy">{esc(text)}</p></div>')
-    if action_chunks: chunks.append('<section class="action-section"><div class="action-title"><h2>开始行动</h2></div>' + "".join(action_chunks) + '</section>')
-    if support: chunks.append('<section class="support-stack">' + "".join(support) + '</section>')
+            chunks.append(f'<section class="glass-card facts-card" {role_marker}><div class="card-heading"><span class="card-symbol">✓</span><h2>{esc(block.get("label", "固定材料"))}</h2></div><ul class="facts-grid" {marker}>' + "".join(f"<li>{esc(item)}</li>" for item in items) + "</ul></section>")
+            index += 1
+            continue
+        if is_workflow_section(index):
+            action_chunks = []
+            while index < len(sections) and is_workflow_section(index):
+                current = sections[index]
+                current_role = task_section_role(current)
+                action_number += 1
+                pair_for = {
+                    "action": "prompt",
+                    "review": "checklist",
+                    "condition": "correctivePrompt",
+                }
+                paired_role = pair_for.get(current_role)
+                paired = (
+                    sections[index + 1]
+                    if paired_role
+                    and index + 1 < len(sections)
+                    and task_section_role(sections[index + 1]) == paired_role
+                    else None
+                )
+                if current_role in {"action", "review", "condition"}:
+                    inner = f'<p class="step-lead" data-section-role="{esc(current_role)}" data-source-section-index="{index}">{esc(current.get("text", ""))}</p>'
+                    if paired and paired_role == "checklist":
+                        inner += checklist_html(paired, index + 1)
+                        index += 1
+                    elif paired:
+                        inner += f'<div class="prompt-block" data-section-role="{esc(paired_role)}"><div class="prompt-label">{esc(paired.get("label") or paired.get("promptLabel") or "PROMPT")}</div><pre data-source-section-index="{index + 1}"><code>{esc(paired.get("text", ""))}</code></pre></div>'
+                        index += 1
+                    step_number = current.get("stepNumber") or str(action_number).zfill(2)
+                    pair_marker = f' data-task-group-pair="{current_role}-{paired_role}"' if paired else ""
+                elif current_role == "checklist":
+                    inner = checklist_html(current, index)
+                    step_number = str(action_number).zfill(2)
+                    pair_marker = ""
+                elif current_role == "decision":
+                    inner = f'<p class="step-lead" data-section-role="decision" data-source-section-index="{index}">{esc(current.get("text", ""))}</p>'
+                    step_number = str(action_number).zfill(2)
+                    pair_marker = ""
+                elif current_role == "note":
+                    inner = f'<p class="step-lead step-note" data-section-role="note" data-source-section-index="{index}">{esc(current.get("text", ""))}</p>'
+                    step_number = str(action_number).zfill(2)
+                    pair_marker = ""
+                else:
+                    inner = f'<div class="prompt-block" data-section-role="{esc(current_role)}"><div class="prompt-label">{esc(current.get("label") or current.get("promptLabel") or "PROMPT")}</div><pre data-source-section-index="{index}"><code>{esc(current.get("text", ""))}</code></pre></div>'
+                    step_number = str(action_number).zfill(2)
+                    pair_marker = ""
+                action_chunks.append(f'<article class="step-group"{pair_marker}><span class="step-index">{esc(step_number)}</span><section class="glass-card step-card">{inner}</section></article>')
+                index += 1
+            chunks.append('<section class="action-section"><div class="action-title"><h2>操作步骤</h2></div>' + "".join(action_chunks) + '</section>')
+            continue
+        if typ == "decision":
+            chunks.append(f'<section class="glass-card decision-card" {role_marker}><div class="card-heading"><span class="card-symbol">?</span><h2>检查与决定</h2></div><p {marker}>{esc(value)}</p></section>')
+        else:
+            chunks.append(f'<section class="support-stack" {role_marker}><div class="support-row" data-support-type="{typ}"><span class="support-mark">{"!" if typ == "safety" else "↗"}</span><p class="support-copy" {marker}>{esc(value)}</p></div></section>')
+        index += 1
     content = "".join(chunks)
-    prefix = prefix.replace('<section class="task-content" id="taskContent" aria-label="课后任务内容"></section>', f'<section class="task-content" id="taskContent" aria-label="课后任务内容">{content}</section>')
+    prefix = prefix.replace('<section class="task-content" id="taskContent" aria-label="拓展练习内容"></section>', f'<section class="task-content" id="taskContent" aria-label="拓展练习内容">{content}</section>')
     handler = "safeComplete" if action == "complete" else "safeNextPage"
     return prefix + f'''  <script>
 function safeNextPage() {{ if (window.CreatorReviewSDK && (!CreatorReviewSDK.isAvailable || CreatorReviewSDK.isAvailable()) && typeof CreatorReviewSDK.nextPage === "function") CreatorReviewSDK.nextPage(); }}
@@ -489,7 +602,7 @@ def task_prompt(page, lesson_id, action, page_index, page_count):
     document = task_html(title, sections, action)
     prompt = f'''提示词版本号：{PROMPT_VERSION_PLACEHOLDER}
 
-适用页面：{lesson_id}｜{page["page_no"]}｜第 {page_index}/{page_count} 页｜课后任务页。
+适用页面：{lesson_id}｜{page["page_no"]}｜第 {page_index}/{page_count} 页｜拓展练习页。
 
 这是一次性完整 Compact-OneShot，没有任何外部上下文。当前合同：{TASK_CONTRACT}。学生正文已按冻结 sections 预编译为静态富卡片 DOM；不得改写、删减、调序或用 JavaScript 重建正文。
 
@@ -546,10 +659,10 @@ def main():
     result = []
     try:
         for i, page in enumerate(pages):
-            typ, no = page.get("page_type"), page.get("page_no"); action = "complete" if i == len(pages) - 1 else "nextpage"
-            base = {"page_no": no, "tag": page.get("capsule"), "title": typ, "summary": "S5 frozen effective-content projection", "sdk_action": action, "is_last_page": i == len(pages)-1, "page_data": {"source_block_ids": page.get("source_block_ids"), "effective_content_sha256": digest(page.get("effective_content")), "assembly_mode": "model_oneshot_prompt_control", "expected_model_output": "pure_complete_html", "model_output_status": "NOT_GENERATED", "whole_course_oneshot": OUTER_ONESHOT.name}}
+            source_typ, no = page.get("page_type"), page.get("page_no"); typ = canonical_page_type(source_typ); action = "complete" if i == len(pages) - 1 else "nextpage"
+            base = {"page_no": no, "tag": canonical_capsule(source_typ, page.get("capsule")), "title": typ, "summary": "S5 frozen effective-content projection", "sdk_action": action, "is_last_page": i == len(pages)-1, "page_data": {"source_block_ids": page.get("source_block_ids"), "effective_content_sha256": digest(page.get("effective_content")), "assembly_mode": "model_oneshot_prompt_control", "expected_model_output": "pure_complete_html", "model_output_status": "NOT_GENERATED", "whole_course_oneshot": OUTER_ONESHOT.name}}
             if typ == "互动题目": base.update(page_kind="question_component_page", runtime_type="component", prompt="", components=[page.get("effective_content")]); result.append(base); continue
-            if typ == "课后任务":
+            if typ == POST_CLASS_CANONICAL_PAGE_TYPE:
                 prompt, version, prompt_sha = task_prompt(page, args.lesson_id, "complete" if action == "complete" else "next", i + 1, len(pages))
                 base["page_data"].update(route="compact_direct_oneshot", oneshot_contract_version=TASK_CONTRACT, oneshot_asset_sha256=TASK_ASSET_SHA256, prompt_version=version, prompt_instance_sha256=prompt_sha)
                 base.update(page_kind="post_class_task", runtime_type="html", components=[], prompt=prompt); result.append(base); continue
@@ -565,7 +678,17 @@ def main():
                 base.update(page_kind=kind, runtime_type="html", components=[], prompt=prompt); result.append(base); continue
             if typ not in FIXED: raise ValueError(f"UNSUPPORTED_PAGE_TYPE:{typ}")
             kind, filename, variable, contract, sha, template_sha, nonvar_sha = FIXED[typ]
-            if typ == "课程开篇": values = intro_values(page, action)
+            if typ == "课程开篇":
+                values = intro_values(page, action)
+                base["page_data"]["introDensityContract"] = {
+                    "required": True,
+                    "source": "S5.content.knowledgePoints",
+                    "knowledgePointCount": len(values["knowledgePoints"]),
+                    "oneUnlockRowPerSourceItem": True,
+                    "forbidMergedDelimitedString": True,
+                    "minimumUnlockRowHeightPx": 44,
+                    "visualStatus": "STATIC_LAYOUT_CONTRACT_ONLY",
+                }
             elif typ == "场景引入":
                 lines = [x for x in str(page.get("source", {}).get("rawMarkdown", "")).split("\n\n") if x and not x.startswith("#")]; values = {"sceneParagraphs": lines[:-1], "lessonLead": lines[-1] if lines else "", "pageAction": "next" if action == "nextpage" else "complete"}
             else:
