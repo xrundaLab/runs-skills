@@ -59,6 +59,7 @@ python3 scripts/validators/validate_v35_page_plan_question_boundaries.py \
   --question-processed <S3/question_processed_full.md> <S4/page_plan_full.md>
 
 # S5
+# Start a constrained candidate from references/schemas/effective_content_candidate.template.json.
 python3 scripts/generators/build_effective_content.py \
   --lesson-id <lesson_id> --page-plan <S4/page_plan_full.md> \
   --draft <S5/effective_content_candidate.json> \
@@ -95,7 +96,7 @@ Use only the bundled OneShots and Demos. Do not hand-build whole-course JSON, re
 
 ## Govern independent Skill versions
 
-Treat `0.2.10-r36` as the current release candidate. Before claiming any local iteration valid, run:
+Treat `0.2.11-r36` as the next release candidate. Before claiming any local iteration valid, run:
 
 ```bash
 python3 scripts/validators/validate_skill_version.py \
@@ -104,7 +105,7 @@ python3 scripts/validators/validate_skill_version.py \
 
 Advance the core PATCH only after all applicable tests, static Gates, and governance checks pass. Once a version appears in a commit, formal receipt, Issue, PR, or Tag, 版本不得倒退或复用. A rollback restores an immutable historical source ref into a higher new version and repeats the current validation contract.
 
-The canonical source is `xrundaLab/runs-ai-monorepo/skills/ai-general-courseware-production/`. `xrundaLab/runs-skills` is the automated latest-stable 公开分发镜像; 禁止直接向该镜像人工提交 Skill 变更或版本 Tag. Read [references/generation-gate-design.md](references/generation-gate-design.md) for registry, PR, release, Tag, and rollback rules.
+The canonical source is `xrundaLab/runs-ai-monorepo/skills/ai-general-courseware-production/`. `xrundaLab/runs-skills` is the automated latest-stable 公开分发镜像; 禁止直接向该镜像人工提交 Skill 变更或版本 Tag. Development and installed use are strictly separated: change and test only the canonical Git worktree; install only from an immutable GitHub full commit SHA into the Codex Skill directory; never edit or link the installed directory back to the worktree. A release is not complete until a clean, SHA-pinned installation is verified against the published files and completes the required black-box S1-S6 canaries. Read [references/generation-gate-design.md](references/generation-gate-design.md) for registry, PR, release, Tag, installation verification, and rollback rules.
 
 ## Authorization boundary
 

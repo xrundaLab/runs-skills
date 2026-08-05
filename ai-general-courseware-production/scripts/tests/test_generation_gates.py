@@ -17,6 +17,7 @@ FIXTURES = Path(__file__).resolve().parent / "fixtures"
 VALIDATOR = SKILL_ROOT / "scripts" / "validators" / "validate_v35_effective_content.py"
 S4_GENERATOR = SKILL_ROOT / "scripts" / "generators" / "build_final_page_plan.py"
 S5_GENERATOR = SKILL_ROOT / "scripts" / "generators" / "build_effective_content.py"
+BOUNDARY_VALIDATOR = SKILL_ROOT / "scripts" / "validators" / "validate_v35_page_plan_question_boundaries.py"
 GATE_RUNNER = SKILL_ROOT / "scripts" / "orchestrator" / "run_stage_gate.py"
 ASSEMBLER = SKILL_ROOT / "scripts" / "assembler" / "assemble_whole_course.py"
 STATIC_CHECKER = SKILL_ROOT / "scripts" / "validators" / "check_whole_course_static.py"
@@ -99,6 +100,28 @@ class GenerationGateTests(unittest.TestCase):
             self.assertNotIn("试一试：再连一次", p02)
             self.assertIn("- 胶囊文案：试一试：再连一次", p03)
 
+    def test_s2_owns_interaction_boundary_semantics_and_s4_does_not_repeat_them(self) -> None:
+        validator = self.load_module("courseware_boundary_validator", BOUNDARY_VALIDATOR)
+        working = (FIXTURES / "transition-boundary" / "page_plan_working_full.md").read_text(encoding="utf-8")
+        working = working.replace(
+            "ChatBot、LLM、GenAI 和 AIGC 处在不同位置。",
+            "ChatBot、LLM、GenAI 和 AIGC 处在不同位置。\n\n现在来选一条更容易执行的修改要求。",
+        )
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "page_plan_working_full.md"
+            path.write_text(working, encoding="utf-8")
+            s2_issue_types = {
+                issue["issue_type"]
+                for issue in validator.validate_working_plan_contract(path)["issues"]
+            }
+            s4_issue_types = {
+                issue["issue_type"]
+                for issue in validator.validate_effective_plan_contract(path)["issues"]
+            }
+
+        self.assertIn("V35_INTERACTION_STEM_SPLIT_ACROSS_PAGES", s2_issue_types)
+        self.assertNotIn("V35_INTERACTION_STEM_SPLIT_ACROSS_PAGES", s4_issue_types)
+
     def test_s5_generator_filters_only_status_sentence(self) -> None:
         fixture = FIXTURES / "summary-status-preview"
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -127,6 +150,14 @@ class GenerationGateTests(unittest.TestCase):
             self.assertIn("下一课，我们继续学习如何核查 AI 输出。", visible)
             self.assertEqual(blocks[0]["type"], "heading")
             self.assertEqual(blocks[0]["text"], "这一课记住一件事")
+
+    def test_s5_preflight_blocks_missing_dynamic_design_seed(self) -> None:
+        generator = self.load_module("courseware_s5_preflight_generator", S5_GENERATOR_MODULE)
+        with self.assertRaisesRegex(SystemExit, "S5_DRAFT_DYNAMIC_DESIGN_BRIEF_INCOMPLETE"):
+            generator.validate_dynamic_draft_seed(
+                {"page_type": "知识讲解"},
+                {"page_no": "P03", "layout_plan": {"layout": "reading"}},
+            )
 
     def test_s6_summary_projection_uses_heading_only_as_title(self) -> None:
         fixture = FIXTURES / "summary-status-preview"
@@ -1378,7 +1409,7 @@ class GenerationGateTests(unittest.TestCase):
         skill = (SKILL_ROOT / "SKILL.md").read_text(encoding="utf-8")
         for marker in (
             "validate_skill_version.py",
-            "0.2.10-r36",
+            "0.2.11-r36",
             "runs-ai-monorepo",
             "runs-skills",
             "禁止直接",

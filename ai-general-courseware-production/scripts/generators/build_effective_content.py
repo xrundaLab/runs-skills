@@ -57,6 +57,23 @@ def project_summary_blocks(raw_markdown: str) -> list[dict[str, Any]]:
     return projected
 
 
+def validate_dynamic_draft_seed(plan: dict[str, str], draft_page: dict[str, Any]) -> None:
+    """Fail before generation when an S5 dynamic-page design decision is absent."""
+    if plan["page_type"] not in {"知识讲解", "案例分析"}:
+        return
+    brief = draft_page.get("design_brief")
+    required_strings = ("teachingAction", "contentShape", "rhythmRole", "layoutFreedom")
+    if (
+        not isinstance(brief, dict)
+        or brief.get("nonRenderable") is not True
+        or any(not isinstance(brief.get(key), str) or not brief[key].strip() for key in required_strings)
+        or not isinstance(brief.get("readingFlow"), list)
+        or not brief["readingFlow"]
+        or not all(isinstance(item, str) and item.strip() for item in brief["readingFlow"])
+    ):
+        blocked("S5_DRAFT_DYNAMIC_DESIGN_BRIEF_INCOMPLETE")
+
+
 def summary_content_blocks(blocks: list[dict[str, Any]]) -> list[dict[str, Any]]:
     result: list[dict[str, Any]] = []
     index = 0
@@ -471,7 +488,7 @@ def normalize_dynamic_design_brief(
     short_page = brief.get("shortPageComposition") == "two_layer_reading"
     existing_groups = brief.get("semanticGroups")
     has_relationship = any(role in {"comparison", "process", "example", "judgment"} for role in roles)
-    if groups and has_relationship and not short_page:
+    if groups and not short_page:
         brief["semanticGroups"] = groups
         brief["hierarchyFocus"] = [group["id"] for group in groups if group["role"] != "context"] or [groups[0]["id"]]
         if "comparison" in roles:
@@ -483,6 +500,8 @@ def normalize_dynamic_design_brief(
             brief["rhythmRole"] = "structured"
             relation = "步骤、实例与判断"
         else:
+            brief["contentShape"] = "claim_to_evidence_to_judgment"
+            brief["rhythmRole"] = "statement"
             relation = "引入、实例与判断"
         brief["readingFlow"] = [
             "按冻结原文顺序进入本页主题",
@@ -598,6 +617,7 @@ def build(
             blocked("S5_DRAFT_PAGE_INVALID")
         if draft_page.get("page_no") not in (None, plan["page_no"]):
             blocked("S5_DRAFT_PAGE_ORDER_DRIFT")
+        validate_dynamic_draft_seed(plan, draft_page)
 
     result = copy.deepcopy(draft)
     result["lesson_id"] = lesson_id

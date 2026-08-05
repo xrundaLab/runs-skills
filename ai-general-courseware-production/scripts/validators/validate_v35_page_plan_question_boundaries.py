@@ -536,7 +536,10 @@ def route_page_numbers(value: str) -> list[str]:
 def validate_working_plan_contract(path: Path) -> dict[str, object]:
     text = path.read_text(encoding="utf-8")
     pages = parse_pages(text)
-    base_report = validate(path, legacy_boundary_heuristic=False)
+    # S2 owns the only semantic decision about an interaction boundary.  The
+    # audit table is evidence for that decision, not a substitute for checking
+    # the actual frozen page text.
+    base_report = validate(path, legacy_boundary_heuristic=True)
     issues = list(base_report["issues"])
 
     def add_issue(message: str, page_no: str = "") -> None:
@@ -758,7 +761,10 @@ def validate_effective_plan_contract(
     working_path: Path | None = None,
     question_path: Path | None = None,
 ) -> dict[str, object]:
-    base_report = validate(path)
+    # S4 verifies only the deterministic projection of approved S2/S3 output.
+    # Boundary semantics were decided and gated in S2; re-evaluating them here
+    # would create a second, late owner for the same paging decision.
+    base_report = validate(path, legacy_boundary_heuristic=False)
     pages = parse_pages(path.read_text(encoding="utf-8"))
     issues = list(base_report["issues"])
     interaction_json_blocks: list[str] = []
