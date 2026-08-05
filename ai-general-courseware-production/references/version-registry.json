@@ -1,0 +1,85 @@
+{
+  "schemaVersion": 1,
+  "skill": "ai-general-courseware-production",
+  "currentVersion": "0.2.9-r36",
+  "releasedVersions": [
+    "0.1.0-r36"
+  ],
+  "localReservedVersions": [
+    "0.2.1-r36",
+    "0.2.2-r36",
+    "0.2.3-r36",
+    "0.2.4-r36",
+    "0.2.5-r36",
+    "0.2.6-r36",
+    "0.2.7-r36"
+  ],
+  "reservedLegacyRanges": [
+    {
+      "from": "0.2.1-r36",
+      "to": "0.2.7-r36",
+      "status": "legacy_audit_only",
+      "reusable": false,
+      "summary": "Pre-registry local iteration numbers without independent source snapshots; permanently reserved and not advertised as exact rollback sources."
+    }
+  ],
+  "versions": [
+    {
+      "version": "0.1.0-r36",
+      "formedAt": "2026-08-03T18:05:40+08:00",
+      "status": "released",
+      "summary": "Initial canonical publication of the self-contained R36 Skill.",
+      "traceabilityLevel": "source_exact",
+      "payloadSha256": "adf6d040ac873581110dcdfa96aa338c0b4b947a4556cba4de5d9c30067d4174",
+      "sourceRef": "skill-ai-general-courseware-production-v0.1.0-r36",
+      "tag": "skill-ai-general-courseware-production-v0.1.0-r36",
+      "issue": "xrundaLab/runs-ai-monorepo#606",
+      "pullRequest": "xrundaLab/runs-ai-monorepo#608",
+      "validationEvidence": [
+        "issue:runs-ai-monorepo#606",
+        "pr:runs-ai-monorepo#608",
+        "public-install-smoke:runs-skills"
+      ],
+      "supersededByVersion": "0.2.8-r36",
+      "restoredFromVersion": null,
+      "rollbackStatus": "not_restored"
+    },
+    {
+      "version": "0.2.8-r36",
+      "formedAt": "2026-08-05T10:06:57+08:00",
+      "status": "local_valid_iteration",
+      "summary": "Generation contracts, serial stage receipts, deterministic design execution, WebView compatibility, and prompt instance identity.",
+      "traceabilityLevel": "source_exact",
+      "payloadSha256": "1122431224c84f053a76012770dbe5d695997c07e53bb0ef8f60f2945154ca29",
+      "sourceRef": "skill-ai-general-courseware-production-v0.2.8-r36",
+      "tag": "skill-ai-general-courseware-production-v0.2.8-r36",
+      "validationEvidence": [
+        "git:2af64bd64f0357220a6821227126bd7918341f96",
+        "unit:test_generation_gates=33-pass",
+        "lesson015-s6:a2eb5f6ad919f220d4c1dbb86980b28f5e336e6c76e60f2729100f7a1fdd204a"
+      ],
+      "supersededByVersion": "0.2.9-r36",
+      "restoredFromVersion": null,
+      "rollbackStatus": "not_restored"
+    },
+    {
+      "version": "0.2.9-r36",
+      "formedAt": "2026-08-05T11:17:22+08:00",
+      "status": "release_candidate",
+      "summary": "Independent monotonic version governance, deterministic payload identity, immutable source references, and public mirror consistency checks.",
+      "traceabilityLevel": "source_exact",
+      "payloadSha256": "f3ea290c53fb7796d2d9dbe36fe8cbcbac054d93965ce5d88588d6090825eebb",
+      "sourceRef": "skill-ai-general-courseware-production-v0.2.9-r36",
+      "tag": "skill-ai-general-courseware-production-v0.2.9-r36",
+      "issue": "xrundaLab/runs-ai-monorepo#628",
+      "validationEvidence": [
+        "issue:runs-ai-monorepo#628",
+        "unit:test_skill_versioning=17-pass",
+        "unit:test_generation_gates=33-pass"
+      ],
+      "supersededByVersion": null,
+      "restoredFromVersion": null,
+      "rollbackStatus": "not_restored"
+    }
+  ]
+}
