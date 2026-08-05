@@ -1374,6 +1374,19 @@ class GenerationGateTests(unittest.TestCase):
             ],
         )
 
+    def test_skill_declares_independent_version_gate(self) -> None:
+        skill = (SKILL_ROOT / "SKILL.md").read_text(encoding="utf-8")
+        for marker in (
+            "validate_skill_version.py",
+            "0.2.9-r36",
+            "runs-ai-monorepo",
+            "runs-skills",
+            "禁止直接",
+            "公开分发镜像",
+            "版本不得倒退或复用",
+        ):
+            self.assertIn(marker, skill)
+
 
 if __name__ == "__main__":
     unittest.main()

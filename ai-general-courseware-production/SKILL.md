@@ -93,6 +93,19 @@ Every non-interactive prompt version is content-addressed. Its first line and `p
 
 Use only the bundled OneShots and Demos. Do not hand-build whole-course JSON, replace a bundled template with a local historical file, or downgrade non-interactive prompts to bare HTML.
 
+## Govern independent Skill versions
+
+Treat `0.2.9-r36` as the current release candidate. Before claiming any local iteration valid, run:
+
+```bash
+python3 scripts/validators/validate_skill_version.py \
+  --skill-root . --mode local
+```
+
+Advance the core PATCH only after all applicable tests, static Gates, and governance checks pass. Once a version appears in a commit, formal receipt, Issue, PR, or Tag, 版本不得倒退或复用. A rollback restores an immutable historical source ref into a higher new version and repeats the current validation contract.
+
+The canonical source is `xrundaLab/runs-ai-monorepo/skills/ai-general-courseware-production/`. `xrundaLab/runs-skills` is the automated latest-stable 公开分发镜像; 禁止直接向该镜像人工提交 Skill 变更或版本 Tag. Read [references/generation-gate-design.md](references/generation-gate-design.md) for registry, PR, release, Tag, and rollback rules.
+
 ## Authorization boundary
 
 This skill creates only local, auditable artifacts. `IMPORT_READY_STATIC` is not import, render, interaction testing, acceptance, release, or publication. Use a separately authorized RunS client skill for any live operation.

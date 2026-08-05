@@ -172,6 +172,64 @@ S6 may report `IMPORT_READY_STATIC` only after assembly and static checking.
 That status remains narrower than import, create, rendering, acceptance, or
 release authority.
 
+## Independent Skill version Gate
+
+Use `VERSION` as the single current formal identifier in
+`MAJOR.MINOR.PATCH-rNN` form. `rNN` identifies the RunS contract track; it is
+not a resettable release counter. The core version therefore remains monotonic
+when the RunS track changes.
+
+Keep the append-only history in `references/version-registry.json`. Its schema
+records the Skill name, current and released versions, permanently reserved
+legacy numbers, and one ordered entry for every exact source snapshot. A
+`source_exact` entry contains the version, status, summary, formation time,
+lowercase payload SHA-256, namespaced source ref, validation evidence,
+supersession, and rollback fields. The `0.2.1-r36` through `0.2.7-r36` range is
+`legacy_audit_only`: it is permanently unavailable for reuse and does not claim
+an exact historical source snapshot.
+
+Compute `payloadSha256` from sorted Skill-relative path-plus-file-byte pairs.
+Exclude only `references/version-registry.json`, Python bytecode caches, and
+registered temporary validation receipts. The registry exclusion prevents a
+self-referential hash; it does not exclude `VERSION`, `SKILL.md`, prompts,
+scripts, tests, assets, or other references.
+
+Run the validator in the matching mode:
+
+```bash
+# Candidate files and registry agree.
+python3 scripts/validators/validate_skill_version.py \
+  --skill-root . --mode local
+
+# The candidate is strictly newer than the target branch.
+python3 scripts/validators/validate_skill_version.py \
+  --skill-root . --base-ref origin/main --mode pr
+
+# Every source_exact Tag resolves and reproduces its registered payload.
+python3 scripts/validators/validate_skill_version.py \
+  --skill-root . --mode release
+```
+
+The immutable source-ref format is
+`skill-ai-general-courseware-production-v<version>`. A pushed version Tag must
+never move, be overwritten, or be deleted to reuse the identifier. If an
+occupied version is wrong, allocate a higher version. To roll back, restore the
+selected `source_exact` Tag on a new branch, allocate a version higher than the
+current version, set `restoredFromVersion`, and rerun the current tests and
+Gates before a new Issue and PR.
+
+The canonical history, Tags, registry, Issues, and PRs live only in
+`xrundaLab/runs-ai-monorepo`. The automated `runs-skills` subtree is a
+latest-stable public distribution mirror, not the source of truth and not a
+guaranteed arbitrary-history installer. Do not push human-authored changes or
+version Tags directly to that mirror. After canonical merge, verify that its
+latest `VERSION` and payload SHA-256 match the canonical Skill.
+
+An iteration becomes valid only when the applicable generation tests, static
+Gate, package validation, governance check, `VERSION`, registry, and payload
+identity all agree. `IMPORT_READY_STATIC` remains a course-artifact status and
+does not authorize import, create, rendering, acceptance, or publication.
+
 ## Required regression scenarios
 
 - S2 routes `试一试：再连一次` to an interactive page while the preceding
