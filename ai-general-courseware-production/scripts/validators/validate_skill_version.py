@@ -93,6 +93,8 @@ def payload_sha256_at_ref(skill_root: Path, ref: str) -> str:
     repository, skill_relative = git_context(skill_root)
     listing = git_text(
         repository,
+        "-c",
+        "core.quotePath=false",
         "ls-tree",
         "-r",
         "--name-only",

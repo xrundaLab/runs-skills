@@ -1378,7 +1378,7 @@ class GenerationGateTests(unittest.TestCase):
         skill = (SKILL_ROOT / "SKILL.md").read_text(encoding="utf-8")
         for marker in (
             "validate_skill_version.py",
-            "0.2.9-r36",
+            "0.2.10-r36",
             "runs-ai-monorepo",
             "runs-skills",
             "禁止直接",

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "skill": "ai-general-courseware-production",
-  "currentVersion": "0.2.9-r36",
+  "currentVersion": "0.2.10-r36",
   "releasedVersions": [
     "0.1.0-r36"
   ],
@@ -65,7 +65,7 @@
     {
       "version": "0.2.9-r36",
       "formedAt": "2026-08-05T11:17:22+08:00",
-      "status": "release_candidate",
+      "status": "superseded_before_remote_release",
       "summary": "Independent monotonic version governance, deterministic payload identity, immutable source references, and public mirror consistency checks.",
       "traceabilityLevel": "source_exact",
       "payloadSha256": "9d9e032c633406b6a875e0e16808312929c3ebbd77785bde04ca939176589090",
@@ -76,7 +76,27 @@
         "issue:runs-ai-monorepo#628",
         "unit:test_skill_versioning=19-pass",
         "unit:test_generation_gates=34-pass",
-        "workflow-yaml-parse:pass"
+        "workflow-yaml-parse:pass",
+        "release-gate:SKILL_VERSION_SOURCE_REF_UNRESOLVED-unicode-path"
+      ],
+      "supersededByVersion": "0.2.10-r36",
+      "restoredFromVersion": null,
+      "rollbackStatus": "not_restored"
+    },
+    {
+      "version": "0.2.10-r36",
+      "formedAt": "2026-08-05T11:23:54+08:00",
+      "status": "release_candidate",
+      "summary": "Fix immutable source-ref payload verification for UTF-8 Skill paths without moving the occupied 0.2.9-r36 Tag.",
+      "traceabilityLevel": "source_exact",
+      "payloadSha256": "04ae5590161ede425aa489da30efc89b1cb644ecc66b193028f06584aa3e78f4",
+      "sourceRef": "skill-ai-general-courseware-production-v0.2.10-r36",
+      "tag": "skill-ai-general-courseware-production-v0.2.10-r36",
+      "issue": "xrundaLab/runs-ai-monorepo#628",
+      "validationEvidence": [
+        "regression:utf8-source-ref-path",
+        "unit:test_skill_versioning=19-pass",
+        "unit:test_generation_gates=34-pass"
       ],
       "supersededByVersion": null,
       "restoredFromVersion": null,

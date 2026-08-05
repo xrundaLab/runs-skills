@@ -253,6 +253,9 @@ class SkillVersionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             repo = Path(temp_dir)
             skill_root = initialize_repository(repo, "0.2.8-r36")
+            unicode_asset = skill_root / "templates" / "中文模板.md"
+            unicode_asset.parent.mkdir(parents=True)
+            unicode_asset.write_text("模板内容\n", encoding="utf-8")
             write_valid_skill_root(skill_root)
             for args in (
                 ("add", "."),
