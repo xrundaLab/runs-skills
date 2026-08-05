@@ -19,17 +19,29 @@ ROOT = Path(__file__).resolve().parents[2]
 ONESHOTS = ROOT / "templates" / "oneshots"
 TASK_DEMO = ROOT / "templates" / "demos" / "post_class_task_demo.html"
 OUTER_ONESHOT = ONESHOTS / "02_整课JSON_完整外层OneShot.md"
-TASK_CONTRACT = "RunS-PostClassTask-Compact-Direct-OneShot-Contract-v1.8-20260727"
+TASK_CONTRACT = "RunS-PostClassTask-Compact-Direct-OneShot-Contract-v1.9-20260805"
+TASK_ASSET_SHA256 = "2811205ae6b0b037f0b8160ec4dd1d9485e90e36cfe010bcf59dba55e0b616bf"
 SOP_CONTRACT_VERSION = "RunS_V3.5.0-S1-S6-R36-20260731"
+PROMPT_VERSION_PLACEHOLDER = "__PROMPT_VERSION__"
+PROMPT_VERSION_SUFFIX = "R36-20260731"
 
 FIXED = {
-    "课程开篇": ("course_intro", "05_课程开篇页_固定模板OneShot.md", "COURSE_INTRO_VARIABLES", "RunS-CourseIntro-FixedTemplate-OneShot-v1.8", "c7f141cceb38443b086d6e2d47b309bc67ab2ff3f97b401c62b07beee96c55c6", "ba53ef84a86f7286839c8027460714906c1048849fd1d9c1403fe4bc555dfb89", "070cf9823d34755856019e88d0cd24c64d1c17e6f0535776a08b1a4945cca8e3"),
-    "场景引入": ("scene_intro", "06_场景引入页_固定模板OneShot.md", "SCENE_INTRO_VARIABLES", "RunS-SceneIntro-FixedTemplate-OneShot-v1.5", "01283ebc5662402ed4553d65aba1c633107c63e9dd907802ba13bd4e4097f095", "0b746794a30a826b376ce6992b9fd896d3ead1a76d93b4d93540ee6eff13973a", "edd32ece1d155f5b727a5c8e0c7f1cd91228d5e9bded49b2ebf0d72364c0d94c"),
-    "课程小结": ("course_summary", "04_课程小结页_固定模板OneShot.md", "COURSE_SUMMARY_VARIABLES", "RunS-CourseSummary-FixedTemplate-OneShot-v1.10", "247a1e348a80994746ba42be467d86e85072c2106ad48e293e9ca1d6df2e55c1", "4fe01113b7712686f01406dde73b98b22ec9bc10776330166f72209d6f4cdec3", "da54febaa5b03f21a1e0c5dfefa375c2a88465ce82cc87d5ddb3ffeddd487f9a"),
+    "课程开篇": ("course_intro", "05_课程开篇页_固定模板OneShot.md", "COURSE_INTRO_VARIABLES", "RunS-CourseIntro-FixedTemplate-OneShot-v1.9", "9cf6b757e7bc635189c89d585ea65b54efbc6605c57d061726d0aac45ca6b1b8", "48b56b0fcb700da149078b7ef95b412081bb14937334a31ef24d375d79045090", "2ad388fffc2fea884354b32429cf648ffc189cd39402c5c849b190636f463012"),
+    "场景引入": ("scene_intro", "06_场景引入页_固定模板OneShot.md", "SCENE_INTRO_VARIABLES", "RunS-SceneIntro-FixedTemplate-OneShot-v1.6", "e4c2ce909288b84c2fa3ab72a273e5b0f2979c0b149a0eed233a9d6c86fa67e9", "a5134a0e4dd526eca584009e0430372015a8fe9c0200bbbcbdc7b9772dd2876d", "8315cf8d264b68a93e58a8d5f07c639f2a698dbfe626953e8033dddb7b9578fc"),
+    "课程小结": ("course_summary", "04_课程小结页_固定模板OneShot.md", "COURSE_SUMMARY_VARIABLES", "RunS-CourseSummary-FixedTemplate-OneShot-v1.11", "95f033f32583035fb846732e9092d868ede638a8aa837c9fd41bf20d1aaee142", "52310103bf4db235c39b94f1393b6a1f8436a32794b4b42aee1580d44ee51d8c", "80570336e03205383a7a296d07b00e57d15e745b7f53f90ac6660d9221efa356"),
 }
 DYNAMIC = {
-    "知识讲解": ("knowledge_explanation", "07_知识讲解页_动态生成OneShot.md", "RunS-Knowledge-Dynamic-OneShot-v1.13", "9c20c5b6dff48fbe2a13d53aaa52c0946e8815b3bf61a097cf0b299d9d6f0233"),
-    "案例分析": ("case_analysis", "08_案例分析页_动态生成OneShot.md", "RunS-CaseAnalysis-Dynamic-OneShot-v1.12", "20452514917bbc1bbe7eed1460e66177cdffec2188e16892af800c92108f7d53"),
+    "知识讲解": ("knowledge_explanation", "07_知识讲解页_动态生成OneShot.md", "RunS-Knowledge-Dynamic-OneShot-v1.19", "71ec5e5f3aefeb37c03102eb86a04f13e7177a21fb69b27006966fe0c4576fc1"),
+    "案例分析": ("case_analysis", "08_案例分析页_动态生成OneShot.md", "RunS-CaseAnalysis-Dynamic-OneShot-v1.18", "35ee30c45d3b7757b771c785039c6888584b12e3fa66fd7ed9a9c1184305f433"),
+}
+WEBVIEW_COMPATIBILITY_CONTRACT = {
+    "baseline": "Android System WebView Chrome 68",
+    "untranspiledSource": True,
+    "modernFeaturesEnhancementOnly": True,
+    "forbidJavaScriptSyntax": ["nullishCoalescing", "optionalChaining", "logicalAssignment", "classFields", "topLevelAwait"],
+    "forbidDomApis": ["replaceChildren", "toggleAttribute", "queueMicrotask", "structuredClone", "crypto.randomUUID"],
+    "forbidCssFeatures": ["minFunction", "maxFunction", "clampFunction", "dynamicViewportUnits", "aspectRatio", "insetShorthand", "flexGap", "textWrap", "backdropFilter", "logicalProperties", "modernColorFunctions"],
+    "requiredFallbacks": ["height100Percent", "physicalSpacingProperties", "widthPlusMaxWidth", "guardedObservers", "visibleStaticFirstScreen"],
 }
 
 def canonical(value):
@@ -44,8 +56,31 @@ def text_block(filename):
         raise ValueError(f"ONESHOT_CODE_BLOCK_MISSING:{filename}")
     return match.group(1)
 
-def prompt_version(kind, lesson_id, page_no):
-    return f"RunS-{kind}-{lesson_id}-{page_no}-OneShot-R36-20260731"
+def prompt_version(contract, asset_sha256, prompt_sha256, lesson_id, page_no):
+    return (
+        f"{contract}-asset-{asset_sha256[:12]}-prompt-{prompt_sha256[:12]}-"
+        f"{lesson_id}-{page_no}-{PROMPT_VERSION_SUFFIX}"
+    )
+
+def normalize_prompt_version(prompt):
+    normalized, count = re.subn(
+        r"提示词版本号：[^\n]+",
+        f"提示词版本号：{PROMPT_VERSION_PLACEHOLDER}",
+        prompt,
+        count=1,
+    )
+    if count != 1:
+        raise ValueError("PROMPT_VERSION_LINE_MISSING")
+    return normalized
+
+def finalize_prompt_version(prompt, contract, asset_sha256, lesson_id, page_no):
+    normalized = normalize_prompt_version(prompt)
+    prompt_sha256 = hashlib.sha256(normalized.encode("utf-8")).hexdigest()
+    version = prompt_version(
+        contract, asset_sha256, prompt_sha256, lesson_id, page_no
+    )
+    finalized = normalized.replace(PROMPT_VERSION_PLACEHOLDER, version, 1)
+    return finalized, version, prompt_sha256
 
 def rebind_page_context(prompt, context):
     line = (
@@ -57,14 +92,33 @@ def rebind_page_context(prompt, context):
         raise ValueError("PROMPT_PAGE_CONTEXT_NOT_FOUND")
     return prompt
 
-def prompt_from_asset(filename, variable, values, version, context):
+def prompt_from_asset(filename, variable, values, context):
     prompt = text_block(filename)
-    prompt = re.sub(r"提示词版本号：[^\n]+", f"提示词版本号：{version}", prompt, count=1)
     prompt = rebind_page_context(prompt, context)
     replacement = f"const {variable} = Object.freeze({canonical(values)});"
     prompt, count = re.subn(rf"const\s+{variable}\s*=\s*Object\.freeze\(\{{.*?\}}\);", lambda _: replacement, prompt, count=1, flags=re.S)
     if count != 1:
         raise ValueError(f"VARIABLE_REGION_NOT_FOUND:{variable}")
+    if variable == "COURSE_SUMMARY_VARIABLES":
+        page_action = values.get("pageAction")
+        if page_action not in {"next", "complete"}:
+            raise ValueError("COURSE_SUMMARY_PAGE_ACTION_INVALID")
+        static_label = "继续学习" if page_action == "next" else "完成学习"
+        prompt, button_count = re.subn(
+            r'(<button\b[^>]*\bid="completeButton"[^>]*>).*?(</button>)',
+            lambda match: f"{match.group(1)}{static_label}{match.group(2)}",
+            prompt,
+            count=1,
+            flags=re.S,
+        )
+        prompt, action_count = re.subn(
+            r"本实例冻结动作为 (?:next|complete)",
+            f"本实例冻结动作为 {page_action}",
+            prompt,
+            count=1,
+        )
+        if button_count != 1 or action_count != 1:
+            raise ValueError("COURSE_SUMMARY_STATIC_ACTION_REGION_MISSING")
     return prompt
 
 def intro_values(page, action):
@@ -113,30 +167,104 @@ def dynamic_visual_recipe_plan(blocks, design_brief, page_kind):
         for index, block in enumerate(blocks, start=1)
         if block.get("type") == "unordered_list"
     ]
+    presentations = brief.get("groupPresentation") if isinstance(brief.get("groupPresentation"), list) else []
+    presentation_recipe = {
+        "open_reading_band": "intro_observation_band",
+        "open_body_flow": "open_body_flow",
+        "aligned_comparison": "comparison_split",
+        "inline_evidence_comparison": "inline_conflict_evidence",
+        "left_aligned_process": "process_steps",
+        "role_distribution_cluster": "role_distribution_inline",
+        "inline_role_distribution": "role_distribution_inline",
+        "soft_conclusion_anchor": "analysis_conclusion_emphasis",
+    }
     recipes = []
-    if non_heading:
+    for presentation in presentations:
+        if not isinstance(presentation, dict):
+            continue
+        geometry = presentation.get("geometry")
+        recipe = presentation_recipe.get(geometry)
+        if not recipe:
+            continue
+        recipes.append({
+            "recipe": recipe,
+            "groupId": presentation.get("groupId"),
+            "source": "s5_group_presentation",
+            "geometry": geometry,
+            "visualTreatment": presentation.get("surfaceRole"),
+            "visualWeight": presentation.get("visualWeight"),
+        })
+    executable_design = bool(presentations and brief.get("sourceProjectionPlan"))
+    if not recipes and non_heading:
         recipes.append({
             "recipe": "intro_observation_band",
             "groupId": group_ids[0] if group_ids else None,
             "source": "first_real_reading_group",
+            "geometry": "wide_shallow_band",
+            "visualTreatment": "soft_tinted_band_with_css_accent",
         })
     if ordered_list_indexes or unordered_list_indexes:
         recipes.append({
             "recipe": "list_or_option_compact",
             "blockIndexes": ordered_list_indexes + unordered_list_indexes,
             "source": "frozen_list_blocks",
+            "geometry": "compact_item_cluster",
+            "visualTreatment": "structured_compact_items",
         })
-    elif brief.get("contentShape") == "process_or_sequence" and len(non_heading) >= 3:
+    blockquote_indexes = [
+        index
+        for index, block in enumerate(non_heading, start=1)
+        if block.get("type") == "blockquote"
+    ]
+    if blockquote_indexes:
         recipes.append({
-            "recipe": "sequence_compact",
-            "groupId": group_ids[1] if len(group_ids) > 1 else None,
-            "source": "frozen_process_relationship",
+            "recipe": "evidence_quote_focus",
+            "blockIndexes": blockquote_indexes,
+            "source": "frozen_blockquote_evidence",
+            "geometry": "warm_evidence_quote_surface",
+            "visualTreatment": "warm_alert_contrast",
         })
-    if len(non_heading) >= 2:
+    comparison_group = next((group.get("id") for group in groups if isinstance(group, dict) and group.get("role") == "comparison"), None)
+    process_group = next((group.get("id") for group in groups if isinstance(group, dict) and group.get("role") == "process"), None)
+    role_distribution_indexes = [
+        index
+        for index, block in enumerate(non_heading, start=1)
+        if sum(token in str(block.get("text") or "") for token in ("文字", "图片", "图像", "声音", "音频")) >= 2
+        and "负责" in str(block.get("text") or "")
+    ]
+    if comparison_group and not any(row.get("recipe") == "comparison_split" for row in recipes):
+        recipes.append({
+            "recipe": "comparison_split",
+            "groupId": comparison_group,
+            "source": "frozen_parallel_comparison",
+            "geometry": "aligned_equal_peer_pair",
+            "visualTreatment": "split_tone_contrast",
+        })
+    if (
+        process_group or (brief.get("contentShape") == "process_or_sequence" and len(non_heading) >= 3)
+    ) and not any(row.get("recipe") == "process_steps" for row in recipes):
+        recipes.append({
+            "recipe": "process_steps",
+            "groupId": process_group or (group_ids[1] if len(group_ids) > 1 else None),
+            "source": "frozen_process_relationship",
+            "geometry": "left_aligned_step_sequence",
+            "visualTreatment": "consistent_aligned_progression",
+        })
+    if role_distribution_indexes and not any(row.get("recipe") == "role_distribution_inline" for row in recipes):
+        recipes.append({
+            "recipe": "role_distribution_inline",
+            "blockIndexes": role_distribution_indexes,
+            "source": "frozen_media_role_relationship",
+            "geometry": "continuous_inline_role_flow",
+            "visualTreatment": "in_place_typographic_highlights",
+        })
+    if len(non_heading) >= 2 and not any(row.get("recipe") == "analysis_conclusion_emphasis" for row in recipes):
         recipes.append({
             "recipe": "analysis_conclusion_emphasis",
             "groupId": group_ids[-1] if group_ids else None,
             "source": "last_real_reading_group",
+            "geometry": "single_weighted_anchor",
+            "visualTreatment": "light_accent_tint",
         })
     # Deduplicate recipe names without changing source ordering.
     seen = set()
@@ -171,10 +299,85 @@ def dynamic_visual_recipe_plan(blocks, design_brief, page_kind):
             "preserveExistingLabels": True,
             "forbid": ["numericBadge", "autoOrdinal", "doubleNumbering"],
         },
-        "visibleRecipeDifferenceContract": {
-            "required": len(recipes) >= 2,
-            "minimumDistinctTreatments": 2,
-            "forbid": ["sameWhiteCardStack", "positionOnlyDifferentiation"],
+        "semanticCompositionContract": {
+            "required": True,
+            "relationshipDriven": True,
+            "preserveContinuousExplanation": True,
+            "preserveListsAsLists": True,
+            "punctuatedClausesUseInlineFlow": True,
+            "forbid": [
+                "sameWhiteCardStack",
+                "positionOnlyDifferentiation",
+                "decorationFirstComposition",
+                "surfaceCountForRichness",
+                "splitContinuousSentenceForVariety",
+            ],
+        },
+        "alignmentContract": copy.deepcopy(brief.get("alignmentPolicy")),
+        "comparisonLayoutContract": copy.deepcopy(brief.get("comparisonLayoutPolicy")),
+        "highlightContract": copy.deepcopy(brief.get("highlightPolicy")),
+        "webViewCompatibilityContract": copy.deepcopy(WEBVIEW_COMPATIBILITY_CONTRACT),
+        "sourceTextProjectionContract": {
+            "required": True,
+            "visibleOccurrencesPerBlock": 1,
+            "allowContiguousDomFragments": True,
+            "concatenatedTextMustEqualSource": True,
+            "forbidFullBlockPlusDerivedFragments": True,
+            "forbidParaphrasedLabels": True,
+        },
+        "visualHierarchyContract": {
+            "required": len(non_heading) >= 3 and brief.get("shortPageComposition") != "two_layer_reading",
+            "semanticHierarchyFirst": True,
+            "priorityOrder": [
+                "source_fidelity",
+                "semantic_relationship",
+                "reading_clarity",
+                "typographic_elegance",
+                "decoration",
+            ],
+            "minimumReadingAreaCoveragePercent": 60 if brief.get("density") == "medium" else 45,
+            "requireOpenOrNonCardRegion": True,
+            "maximumIndependentContentSurfaces": 4,
+            "sourceSubstringHighlight": {
+                "allowed": True,
+                "exactSourceOnly": True,
+                "maximumSegments": 3,
+                "forbidDuplicateText": True,
+                "preferredStyles": ["font_weight", "underline", "soft_background"],
+            },
+            "decorativeElements": {
+                "minimum": 0,
+                "maximum": 2,
+                "optional": True,
+                "cssOnly": True,
+                "ariaHidden": True,
+                "forbidText": True,
+                "forbidGeneratedEmoji": True,
+            },
+            "forbid": [
+                "allWhiteCards",
+                "allEqualRadius",
+                "allEqualWidthVerticalStack",
+                "inventedBadgeCopy",
+                "decorationFirstComposition",
+                "surfaceCountForRichness",
+                "largeUnusedLowerArea",
+                "topHeavyComposition",
+            ],
+        },
+        "designExecutionContract": {
+            "required": executable_design,
+            "source": "S5.design_brief",
+            "layoutArchetype": brief.get("layoutArchetype"),
+            "groupPresentation": copy.deepcopy(brief.get("groupPresentation")),
+            "sourceProjectionPlan": copy.deepcopy(brief.get("sourceProjectionPlan")),
+            "emphasisTargets": copy.deepcopy(brief.get("emphasisTargets")),
+            "surfacePolicy": copy.deepcopy(brief.get("surfacePolicy")),
+            "colorRoles": copy.deepcopy(brief.get("colorRoles")),
+            "spaceBalance": copy.deepcopy(brief.get("spaceBalance")),
+            "alignmentPolicy": copy.deepcopy(brief.get("alignmentPolicy")),
+            "comparisonLayoutPolicy": copy.deepcopy(brief.get("comparisonLayoutPolicy")),
+            "highlightPolicy": copy.deepcopy(brief.get("highlightPolicy")),
         },
     }
 
@@ -204,9 +407,8 @@ def dynamic_page_data(page, lesson_id, page_index, page_count, page_kind, action
         data["linkedQuestionPageId"] = None
     return data
 
-def dynamic_prompt_from_asset(filename, page_data, design_brief, version, context):
+def dynamic_prompt_from_asset(filename, page_data, design_brief, context):
     prompt = text_block(filename)
-    prompt = re.sub(r"提示词版本号：[^\n]+", f"提示词版本号：{version}", prompt, count=1)
     prompt = rebind_page_context(prompt, context)
     for tag, value in (("PAGE_DATA", page_data), ("DESIGN_BRIEF", design_brief)):
         replacement = f"<{tag}>\n{json.dumps(value, ensure_ascii=False, indent=2)}\n</{tag}>"
@@ -284,9 +486,8 @@ def task_prompt(page, lesson_id, action, page_index, page_count):
     title = content.get("taskTitle") if isinstance(content, dict) else None
     if not isinstance(title, str) or not title.strip():
         raise ValueError("POST_CLASS_TASK_TITLE_MISSING")
-    version = prompt_version("PostClassTask", lesson_id, page["page_no"])
     document = task_html(title, sections, action)
-    return f'''提示词版本号：{version}
+    prompt = f'''提示词版本号：{PROMPT_VERSION_PLACEHOLDER}
 
 适用页面：{lesson_id}｜{page["page_no"]}｜第 {page_index}/{page_count} 页｜课后任务页。
 
@@ -296,7 +497,10 @@ def task_prompt(page, lesson_id, action, page_index, page_count):
 
 请原样输出下方完整代码：
 
-{document}''', version
+{document}'''
+    return finalize_prompt_version(
+        prompt, TASK_CONTRACT, TASK_ASSET_SHA256, lesson_id, page["page_no"]
+    )
 
 def summary_values(page, action):
     content = page.get("content")
@@ -346,18 +550,19 @@ def main():
             base = {"page_no": no, "tag": page.get("capsule"), "title": typ, "summary": "S5 frozen effective-content projection", "sdk_action": action, "is_last_page": i == len(pages)-1, "page_data": {"source_block_ids": page.get("source_block_ids"), "effective_content_sha256": digest(page.get("effective_content")), "assembly_mode": "model_oneshot_prompt_control", "expected_model_output": "pure_complete_html", "model_output_status": "NOT_GENERATED", "whole_course_oneshot": OUTER_ONESHOT.name}}
             if typ == "互动题目": base.update(page_kind="question_component_page", runtime_type="component", prompt="", components=[page.get("effective_content")]); result.append(base); continue
             if typ == "课后任务":
-                prompt, version = task_prompt(page, args.lesson_id, "complete" if action == "complete" else "next", i + 1, len(pages))
-                base["page_data"].update(route="compact_direct_oneshot", oneshot_contract_version=TASK_CONTRACT, prompt_version=version)
+                prompt, version, prompt_sha = task_prompt(page, args.lesson_id, "complete" if action == "complete" else "next", i + 1, len(pages))
+                base["page_data"].update(route="compact_direct_oneshot", oneshot_contract_version=TASK_CONTRACT, oneshot_asset_sha256=TASK_ASSET_SHA256, prompt_version=version, prompt_instance_sha256=prompt_sha)
                 base.update(page_kind="post_class_task", runtime_type="html", components=[], prompt=prompt); result.append(base); continue
             if typ in DYNAMIC:
                 kind, filename, contract, sha = DYNAMIC[typ]; brief = page.get("design_brief")
                 if not isinstance(brief, dict) or brief.get("nonRenderable") is not True: raise ValueError(f"DYNAMIC_DESIGN_BRIEF_INVALID:{no}")
                 pdata = dynamic_page_data(page, args.lesson_id, i+1, len(pages), kind, "complete" if action == "complete" else "next")
                 if kind == "case_analysis" and i+1 < len(pages): pdata["linkedQuestionPageId"] = pages[i+1].get("page_no")
-                version = prompt_version(kind.replace("_", "").title(), args.lesson_id, no)
-                base["page_data"].update(route="dynamic_oneshot", oneshot_contract_version=contract, oneshot_asset_sha256=sha, design_brief=brief, visualRecipePlan=pdata["visualRecipePlan"], footerContract=pdata["footerContract"], prompt_version=version)
                 context = {"lesson_id": args.lesson_id, "page_no": no, "page_index": i + 1, "page_count": len(pages), "page_label": typ}
-                base.update(page_kind=kind, runtime_type="html", components=[], prompt=dynamic_prompt_from_asset(filename, pdata, brief, version, context)); result.append(base); continue
+                raw_prompt = dynamic_prompt_from_asset(filename, pdata, brief, context)
+                prompt, version, prompt_sha = finalize_prompt_version(raw_prompt, contract, sha, args.lesson_id, no)
+                base["page_data"].update(route="dynamic_oneshot", oneshot_contract_version=contract, oneshot_asset_sha256=sha, design_brief=brief, visualRecipePlan=pdata["visualRecipePlan"], footerContract=pdata["footerContract"], prompt_version=version, prompt_instance_sha256=prompt_sha)
+                base.update(page_kind=kind, runtime_type="html", components=[], prompt=prompt); result.append(base); continue
             if typ not in FIXED: raise ValueError(f"UNSUPPORTED_PAGE_TYPE:{typ}")
             kind, filename, variable, contract, sha, template_sha, nonvar_sha = FIXED[typ]
             if typ == "课程开篇": values = intro_values(page, action)
@@ -365,10 +570,11 @@ def main():
                 lines = [x for x in str(page.get("source", {}).get("rawMarkdown", "")).split("\n\n") if x and not x.startswith("#")]; values = {"sceneParagraphs": lines[:-1], "lessonLead": lines[-1] if lines else "", "pageAction": "next" if action == "nextpage" else "complete"}
             else:
                 values = summary_values(page, "next" if action == "nextpage" else "complete")
-            version = prompt_version(kind.replace("_", "").title(), args.lesson_id, no)
-            base["page_data"].update(route="fixed_template", template=variable, oneshot_contract_version=contract, oneshot_asset_sha256=sha, template_sha256=template_sha, non_variable_sha256=nonvar_sha, template_outside_variable_region_unchanged=True, prompt_version=version)
             context = {"lesson_id": args.lesson_id, "page_no": no, "page_index": i + 1, "page_count": len(pages), "page_label": typ}
-            base.update(page_kind=kind, runtime_type="html", components=[], prompt=prompt_from_asset(filename, variable, values, version, context)); result.append(base)
+            raw_prompt = prompt_from_asset(filename, variable, values, context)
+            prompt, version, prompt_sha = finalize_prompt_version(raw_prompt, contract, sha, args.lesson_id, no)
+            base["page_data"].update(route="fixed_template", template=variable, oneshot_contract_version=contract, oneshot_asset_sha256=sha, template_sha256=template_sha, non_variable_sha256=nonvar_sha, template_outside_variable_region_unchanged=True, prompt_version=version, prompt_instance_sha256=prompt_sha)
+            base.update(page_kind=kind, runtime_type="html", components=[], prompt=prompt); result.append(base)
     except ValueError as exc:
         raise SystemExit(f"BLOCKED:{exc}")
     intro_page = next((page for page in pages if page.get("page_type") == "课程开篇"), {})

@@ -1,7 +1,7 @@
 # 案例分析页动态生成 OneShot（V3.5）
 
 状态：`CURRENT_PRODUCTION_ASSET`（与知识讲解页共用已正式吸收的内容形状 → 教学动作 → 动态构图策略；R36 进一步冻结无序列表标签保真与多配方可见差异）  
-合同版本：`RunS-CaseAnalysis-Dynamic-OneShot-v1.12`
+合同版本：`RunS-CaseAnalysis-Dynamic-OneShot-v1.18`
 适用范围：Kimi / GLM 一次性、无外部上下文生成“超过 50 个学生可见字符的互动题必要背景”案例分析页完整 HTML。  
 页面性质：动态内容页；冻结背景边界、运行底座与验收 Gate，不冻结内容区 DOM，不执行变量区外哈希。
 
@@ -57,10 +57,13 @@
     "preserveExistingLabels": true,
     "forbid": ["numericBadge", "autoOrdinal", "doubleNumbering"]
   },
-  "visibleRecipeDifferenceContract": {
+  "semanticCompositionContract": {
     "required": true,
-    "minimumDistinctTreatments": 2,
-    "forbid": ["sameWhiteCardStack", "positionOnlyDifferentiation"]
+    "relationshipDriven": true,
+    "preserveContinuousExplanation": true,
+    "preserveListsAsLists": true,
+    "punctuatedClausesUseInlineFlow": true,
+    "forbid": ["sameWhiteCardStack", "positionOnlyDifferentiation", "decorationFirstComposition", "surfaceCountForRichness", "splitContinuousSentenceForVariety"]
   },
   "footerContract": {
     "required": true,
@@ -92,7 +95,7 @@ R6 起，案例分析页与知识讲解页共用同一套“内容形状 → 教
 4. 允许原句内部字重、颜色和底色强调；不得复制“版本 A / 版本 B”等原文短语成为第二份标签，也不得增加“推荐 / 错误 / 更好”等结论。
 5. 案例分析页与知识讲解页共享视觉系统和固定底栏，但教学动作或内容形状不同时，主构图与密度节奏必须随内容变化。
 6. 知识讲解与案例分析的学生内容卡一律禁止装饰性左侧彩色竖线、轨道、连接点或箭头；不得使用 `border-left`，也不得通过 `::before` / `::after` 在卡片左缘制造强调线、点列或箭头。强调只能来自原文真实关系所需的字重、颜色、底色、描边、阴影、间距或完整容器层级。
-7. `PAGE_DATA.visualRecipePlan` 是 R36 的非渲染构图执行表，必须逐项落实为真实 DOM class，且不得把其字段或配方名显示给学生。`intro_observation_band` 必须使用 `content-module--intro-band` 的轻量高亮信息带承接引入/观察原文；`list_or_option_compact` 必须使用 `content-module--list-compact` 的紧凑标签项组承接冻结列表/选项；`sequence_compact` 必须使用 `content-module--sequence-compact`，且只用于原文真实流程关系、不新增步骤号；`analysis_conclusion_emphasis` 必须使用 `content-module--emphasis` 的单独强调卡或柔和色块承接分析/结论原文。至少两种选中的配方必须产生真实可见差异：背景、描边、字号层级或容器比例至少有两种不同处理；禁止 `sameWhiteCardStack` 与 `positionOnlyDifferentiation`，不能只靠把同款白色圆角卡挪位置。
+7. `PAGE_DATA.visualRecipePlan` 是 R36 的非渲染构图执行表，必须逐项落实为真实 DOM class，且不得把其字段或配方名显示给学生。配方只按真实关系选用：列表保持列表，对比体现对象差异，步骤体现先后，连续说明保持连续。`semanticCompositionContract.required=true` 时由语义关系决定构图，禁止 `sameWhiteCardStack`、`positionOnlyDifferentiation` 和为了丰富而拆分连续说明。
 8. 有序列表只在该列表的 `items[]` 内按 `itemIndex + 1` 从 1 连续显示；不得使用 `contentBlockIndex`、`globalCounter` 或 `doubleNumbering`。无序列表必须逐项保留原有标签（如“画面A/B/C”）；不得将其改成 `numericBadge`、`autoOrdinal` 或 `doubleNumbering`。
 9. `PAGE_DATA.footerContract.required` 为 `true` 时，最终 HTML 必须无条件输出且只输出一个与字段匹配的 `<footer class="case-footer">`、`<button class="case-primary-button">` 与按钮原文；不得条件省略、运行时创建、`display:none`、`visibility:hidden`、`opacity:0`、裁到 `.case-scroll` 内或被正文覆盖。`pageAction` 非空时 CTA 必须在 `scrollTop=0`、中段和最大值持续可见并可点击。
 
@@ -103,14 +106,14 @@ R6 起，案例分析页与知识讲解页共用同一套“内容形状 → 教
 - Creator Review SDK 脚本与 `safeNextPage()` / `safeComplete()`。
 - 平台壳层边界：HTML 内不生成平台状态栏、进度条、`案例分析`胶囊、Pxx 或顶部占位。
 - 原文标题非空时，第一个学生可见元素为标题；标题为空时，第一个学生可见元素为首个背景内容块。
-- 页面壳必须执行 `UNIFIED_PERSISTENT_BOTTOM_ACTION_BAR`：`html`、`body` 与 `.case-page` 高度锁定为 `100% / 100dvh` 且不参与正文滚动。
+- 页面壳必须执行 `UNIFIED_PERSISTENT_BOTTOM_ACTION_BAR`：`html`、`body` 与 `.case-page` 高度均锁定为 `100%`，不得依赖动态视口单位。
 - 长短页统一使用 iframe 内绝对定位底栏；`.case-footer` computed `position:absolute` 且 `left/right/bottom=0px`，按钮自身 computed `position:static`。
 - 页面只有 `.case-scroll` 一个内部纵向滚动容器，且必须显式使用 `box-sizing:border-box`；其底部 padding 必须由底栏真实高度动态同步，并额外保留 `24px`，不得遮挡最后背景。
 - 在 `scrollTop=0`、中段和最大值时，底栏与按钮都必须保持可见、可点击且位置不漂移。
-- 内容视口顶部保留且仅保留 `8px` 呼吸空间；原文有标题时按可用宽度自然换行并可使用 `text-wrap: balance`，不得对完整中文标题使用 `white-space: nowrap`。只有需避免拆开的最小原文短语或英文词可使用 `.title-keep { white-space: nowrap; }`。
+- 内容视口顶部保留且仅保留 `8px` 呼吸空间；原文有标题时按可用宽度自然换行，使用 Chrome 68 可用的普通换行和 `overflow-wrap: break-word`。只有需避免拆开的最小原文短语或英文词可使用 `.title-keep { white-space: nowrap; }`。
 - 页面统一采用 `#d7c4ff → #dce4ff → #d5f5fe` 的纵向连续渐变：在页面 `66.667%` 前自然进入 `--page-bottom-bg`，其后保持同一纯色。footer 使用同一 `--page-bottom-bg` 实底，且不得有边框、阴影、模糊、`::before` / `::after` 羽化层或可见水平分界；footer 与页面底部必须视觉连续。footer 只保留按钮上下各 `10px`（下方另加 safe-area）的几何空间。课程主按钮使用实色 `#9260fe`，白字、`60px` 最小高度、`40px` 圆角。
 - 页面内部不得生成任何页型胶囊；原文标题非空时必须居中，并保持原文、顺序和首个学生可见元素合同不变。
-- `.case-content` 必须采用 `box-sizing: border-box; width: min(100%, 680px)`；移动端继续依靠 `clamp(20px, 6vw, 35px)` 保持安全边距，宽预览不得锁死 `360px`。内容区仍按 `DESIGN_BRIEF` 动态构图，不得把 `680px` 解释为固定卡片、固定分栏或固定 DOM。
+- `.case-content` 必须采用 `box-sizing: border-box; width: 100%; max-width: 680px`；移动端使用固定 `24px` 左右安全边距，宽屏媒体查询可增至 `35px`。内容区仍按 `DESIGN_BRIEF` 动态构图。
 - 内容区必须根据 `DESIGN_BRIEF` 使用通知卡、材料卡、引用、对照或案例文档视觉，只表达原文已有关系，不能增加文字或交互；卡片不得出现装饰性左竖线、贴边色条或伪元素彩轨。
 - 全页只有底部课程按钮调用 SDK；案例内容区不生成选择、判断、输入或点击控件。CTA 必须无条件保留在 `.case-scroll` 外的 `<footer class="case-footer">` 中；禁止条件省略按钮或以隐藏样式替代。
 - 除 SDK 脚本外，不依赖外部框架、字体、在线图片或其他网络资源。
@@ -137,7 +140,21 @@ R33 注入优先级：S6 只替换本文件第 2 节的首个 `<PAGE_DATA>` 与 
 
 知识讲解与案例分析的学生内容卡一律禁止装饰性左侧彩色竖线、轨道、连接点或箭头；不得使用 `border-left`，也不得以 `::before` / `::after` 在卡片左缘制造强调线、点列或箭头。强调只能来自原文真实关系所需的字重、颜色、底色、描边、阴影、间距或完整容器层级。
 
-R36 动态构图硬规则：必须把 `PAGE_DATA.visualRecipePlan` 逐项落为真实 DOM class：`content-module--intro-band`、`content-module--list-compact`、`content-module--sequence-compact`、`content-module--emphasis`。至少两种选中的配方必须呈现真实可见差异：背景、描边、字号层级或容器比例至少两项处理不同；禁止 `sameWhiteCardStack` 和 `positionOnlyDifferentiation`，不得只把同款白色圆角卡挪动位置。
+R36 动态构图硬规则：必须把 `PAGE_DATA.visualRecipePlan` 逐项落为真实 DOM class：`content-module--intro-band`、`content-module--open-flow`、`content-module--inline-conflict`、`content-module--list-compact`、`content-module--sequence-compact`、`content-module--emphasis`、`content-module--comparison`、`content-module--process-steps`、`content-module--role-inline`。`open_body_flow` 必须保留开放式非卡片正文；`inline_conflict_evidence` 必须使用 `continuous_inline_flow` 保持同一自然句流，只对证据子串行内标色，严禁拆成独立左右卡。`role_distribution_inline` 必须使用 `continuous_inline_highlights`：逗号或分号连接的同一句话只渲染一次，`punctuated clauses 不得拆成独立块`，只能在原位置用字重、下划线或柔和底色突出逐字来源片段。构图差异必须服务真实关系与阅读层级；禁止 `sameWhiteCardStack` 和 `positionOnlyDifferentiation`。
+
+来源文字单次投影硬规则：`sourceTextProjectionContract.required=true` 时，每个 `contentBlocks` 来源块的学生可见文字只能出现一次。关系构图若拆分同一来源块，只允许把原文连续切成 DOM 片段，片段按 DOM 顺序拼接后的 textContent 必须逐字等于该来源块原文；严禁“整块原文 + 派生子项”双重输出，严禁先显示完整段落再把其中短句复制成小卡、标签或徽章。
+
+语义构图硬规则：`semanticCompositionContract.required=true` 时由语义关系决定构图。真实对比可使用并列/分区，真实步骤可使用有序节奏，真实列表必须保持列表形态；连续说明不得为了丰富而拆块，逗号连接的同一句话也不得被拆成多个表面。禁止 `uniformRoundedCardStack`、嵌套同款圆角卡、`sameWhiteCardStack` 和仅靠位置变化的 `positionOnlyDifferentiation`。
+
+对齐硬规则：`alignmentContract` 必须执行左对齐优先、顶部对齐优先。同级内容共享左边界；同级对比项顶边对齐且等宽；步骤项共享同一左边界。只有明确主次关系才允许非对称，禁止随机缩进、随机宽度和为了变化而错位。
+
+对比与高亮硬规则：`comparisonLayoutContract` 允许当前示例篇幅使用顶边对齐、等宽的左右卡；任一对比项超过 80 个字符或两项合计超过 150 个字符时，必须改为上下同宽、共享左边界的纵向排列。`highlightContract` 要求全页最多 3 个高亮片段，同类信息使用同一种强调样式；12 个字符以内的短高亮词组整体换行，不得留下 1—2 个字的孤立高亮尾巴。
+
+兼容硬规则：最终 HTML 必须兼容 Android System WebView Chrome 68。基础布局、首屏文字、正文滚动和固定按钮不得依赖新 CSS 函数、动态视口单位、新 JavaScript 语法或新 DOM API；观察器必须先检测再使用，缺失时基础内容仍直接显示。
+
+视觉层级硬规则：`visualHierarchyContract.required=true` 时执行 `semanticHierarchyFirst=true`：优先来源保真、语义关系、阅读清晰和排版优雅，最后才考虑装饰。该突出的重点才在原句原位置使用字重、下划线或柔和底色；该体现的对比、步骤、列表才使用对应关系构图。排版优雅优先，装饰不是必选项，纯 CSS 装饰只在改善构图时使用 0—2 组；不得为了丰富度增加表面，不得用装饰替代关系，禁止自动生成 Emoji、图标文字、标签文案或解释词。
+
+S5 设计执行硬规则：`designExecutionContract.required=true` 时，不得在 S6 重新推测构图。严格按 `layoutArchetype`、`groupPresentation` 和 `sourceProjectionPlan` 投影；fragments 按顺序各出现一次且拼接等于来源块，禁止完整段落重复、句首孤立标点或独立句号。`sentence_sequence` 必须使用 `single_section_flat_steps`；`role_distribution_inline` 必须使用 `continuous_inline_highlights`，整句作为一个连续文本流渲染。`emphasisTargets` 只在原句原位置标色，不得抽取成标签或重复文字。`surfacePolicy.lightDominant=true` 且 `nonCodeDarkSurfaceAreaPercentMax=0` 时，非代码内容禁止大面积近黑背景；顶层视觉区标记 `data-visual-region="top"` 且不超过 `maximumTopLevelVisualRegions`。装饰最多 `maximumDecorativeGroups` 组且可以为零。遵守 `spaceBalance.maximumUnusedLowerAreaPercent`，不得留下大面积无意义底部空白。
 
 列表保真硬规则：有序列表仅在本列表 `items[]` 内按 `itemIndex + 1` 从 1 连续编号；禁止 `contentBlockIndex`、`globalCounter`、`doubleNumbering`。无序列表必须逐项保留原有标签（如“画面A/B/C”），禁止 `numericBadge`、`autoOrdinal`、`doubleNumbering`；不得把无序标签重写为 1/2/3。
 
@@ -213,7 +230,7 @@ HTML 与页面壳硬规则：
 
 <REQUIRED_CSS>
 :root {
-  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-bottom: 0px;
   --page-bottom-rgb: 213, 245, 254;
   --page-bottom-bg: rgb(var(--page-bottom-rgb));
   --footer-h: calc(80px + var(--safe-bottom));
@@ -228,7 +245,7 @@ body {
 .case-page {
   position: relative;
   width: 100%;
-  height: 100dvh;
+  height: 100%;
   overflow: hidden;
   background: linear-gradient(180deg, #d7c4ff 0%, #dce4ff 42%, var(--page-bottom-bg) 66.667%, var(--page-bottom-bg) 100%);
 }
@@ -243,13 +260,13 @@ body {
 }
 .case-content {
   box-sizing: border-box;
-  width: min(100%, 680px);
+  width: 100%;
+  max-width: 680px;
   margin: 0 auto;
-  padding: 0 clamp(20px, 6vw, 35px);
+  padding: 0 24px;
 }
 .case-content h1 {
-  overflow-wrap: anywhere;
-  text-wrap: balance;
+  overflow-wrap: break-word;
   text-align: center;
 }
 .title-keep {
@@ -269,7 +286,8 @@ body {
 .case-primary-button {
   position: static;
   display: block;
-  width: min(260px, calc(100vw - 64px));
+  width: calc(100% - 64px);
+  max-width: 260px;
   min-height: 60px;
   margin: 0;
   border: 2px solid transparent;
@@ -298,6 +316,7 @@ body {
 - 页面必须实现 UNIFIED_PERSISTENT_BOTTOM_ACTION_BAR：`.case-footer` computed position 为 absolute 且 left/right/bottom 均为 0px；按钮自身为 static。
 - 只有 `.case-scroll` 可以纵向滚动并使用 `box-sizing:border-box`；长短页在任意滚动位置都持续显示底栏。底部预留必须用 JavaScript 同步底栏真实高度并额外保留 24px。
 - 全页只有该按钮调用课程 SDK；页面动作是 next，按钮文案必须是“继续学习”。
+- `footerContract.required=true` 时必须无条件输出且只输出一个与字段匹配的 `<footer class="case-footer">` 与 `<button class="case-primary-button">`；不得条件省略、运行时创建、`display:none`、`visibility:hidden`、`opacity:0`，也不得放进 `.case-scroll`。
 
 JavaScript 必须包含并使用以下安全函数：
 
@@ -427,7 +446,7 @@ HTML 与页面壳硬规则：
 
 <REQUIRED_CSS>
 :root {
-  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-bottom: 0px;
   --page-bottom-rgb: 213, 245, 254;
   --page-bottom-bg: rgb(var(--page-bottom-rgb));
   --footer-h: calc(80px + var(--safe-bottom));
@@ -442,7 +461,7 @@ body {
 .case-page {
   position: relative;
   width: 100%;
-  height: 100dvh;
+  height: 100%;
   overflow: hidden;
   background: linear-gradient(180deg, #d7c4ff 0%, #dce4ff 42%, var(--page-bottom-bg) 66.667%, var(--page-bottom-bg) 100%);
 }
@@ -457,13 +476,13 @@ body {
 }
 .case-content {
   box-sizing: border-box;
-  width: min(100%, 680px);
+  width: 100%;
+  max-width: 680px;
   margin: 0 auto;
-  padding: 0 clamp(20px, 6vw, 35px);
+  padding: 0 24px;
 }
 .case-content h1 {
-  overflow-wrap: anywhere;
-  text-wrap: balance;
+  overflow-wrap: break-word;
   text-align: center;
 }
 .title-keep {
@@ -483,7 +502,8 @@ body {
 .case-primary-button {
   position: static;
   display: block;
-  width: min(260px, calc(100vw - 64px));
+  width: calc(100% - 64px);
+  max-width: 260px;
   min-height: 60px;
   margin: 0;
   border: 2px solid transparent;

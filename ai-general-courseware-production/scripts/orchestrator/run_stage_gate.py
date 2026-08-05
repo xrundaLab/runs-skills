@@ -133,13 +133,17 @@ def extract_command_issues(result: dict[str, Any]) -> list[dict[str, str]]:
     except json.JSONDecodeError:
         payload = None
     if isinstance(payload, dict):
-        for report in payload.get("reports") or []:
-            if not isinstance(report, dict):
-                continue
-            for item in report.get("issues") or []:
+        issue_groups = [payload.get("issues") or []]
+        issue_groups.extend(
+            report.get("issues") or []
+            for report in payload.get("reports") or []
+            if isinstance(report, dict)
+        )
+        for group in issue_groups:
+            for item in group:
                 if not isinstance(item, dict):
                     continue
-                code = str(item.get("issue_type") or "").strip()
+                code = str(item.get("issue_type") or item.get("code") or "").strip()
                 if code and code not in seen:
                     extracted.append(
                         {"issue_type": code, "message": str(item.get("message") or code)}

@@ -1,7 +1,7 @@
 # 课程小结页固定模板 OneShot（V3.5）
 
 状态：`CURRENT_PRODUCTION_ASSET`  
-合同版本：`RunS-CourseSummary-FixedTemplate-OneShot-v1.10`  
+合同版本：`RunS-CourseSummary-FixedTemplate-OneShot-v1.11`
 适用范围：Kimi / GLM 一次性、无外部上下文生成课程小结页完整 HTML。  
 固定 Demo SHA-256：`4fe01113b7712686f01406dde73b98b22ec9bc10776330166f72209d6f4cdec3`  
 变量区外 SHA-256：`da54febaa5b03f21a1e0c5dfefa375c2a88465ce82cc87d5ddb3ffeddd487f9a`
@@ -88,7 +88,7 @@
       --muted: rgba(39, 39, 52, 0.58);
       --surface: rgba(255, 255, 255, 0.58);
       --surface-strong: rgba(255, 255, 255, 0.78);
-      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --safe-bottom: 0px;
       --page-bottom-rgb: 232, 219, 255;
       --page-bottom-bg: rgb(var(--page-bottom-rgb));
       --footer-h: calc(80px + var(--safe-bottom));
@@ -121,7 +121,7 @@
       position: relative;
       width: 100%;
       max-width: 538px;
-      height: 100dvh;
+      height: 100%;
       min-height: 100%;
       margin: 0 auto;
       overflow: hidden;
@@ -135,7 +135,7 @@
       height: 100%;
       overflow-y: auto;
       overflow-x: hidden;
-      padding: 28px clamp(24px, 6vw, 35px)
+      padding: 28px 24px
         calc(var(--footer-h) + 24px);
       overscroll-behavior: contain;
       -webkit-overflow-scrolling: touch;
@@ -197,8 +197,6 @@
       box-shadow:
         inset 0 1px 0 rgba(255, 255, 255, 0.82),
         0 12px 30px rgba(111, 105, 177, 0.06);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
     }
 
     .summary-card {
@@ -207,7 +205,7 @@
 
     .summary-card.summary-card--single-block {
       display: grid;
-      min-height: clamp(250px, 39dvh, 360px);
+      min-height: 300px;
       align-content: center;
     }
 
@@ -219,21 +217,19 @@
     .summary-card h2 {
       margin: 0 0 12px;
       color: var(--purple);
-      font-size: clamp(17px, 3.8vw, 20px);
+      font-size: 20px;
       line-height: 1.45;
       font-weight: 800;
       text-align: center;
-      text-wrap: balance;
     }
 
     .next-card h2 {
       margin: 0 0 10px;
       color: var(--purple);
-      font-size: clamp(16px, 3.4vw, 18px);
+      font-size: 18px;
       line-height: 1.45;
       font-weight: 400;
       text-align: center;
-      text-wrap: balance;
     }
 
     .summary-content {
@@ -246,11 +242,10 @@
     .summary-notice {
       margin: 0;
       color: #34313f;
-      font-size: clamp(15px, 3vw, 17px);
+      font-size: 17px;
       line-height: 1.72;
       font-weight: 400;
-      overflow-wrap: anywhere;
-      text-wrap: pretty;
+      overflow-wrap: break-word;
     }
 
     .summary-paragraph {
@@ -274,11 +269,10 @@
       border-radius: 18px;
       background: var(--surface-strong);
       color: #34313f;
-      font-size: clamp(15px, 3vw, 17px);
+      font-size: 17px;
       line-height: 1.58;
       font-weight: 400;
-      overflow-wrap: anywhere;
-      text-wrap: pretty;
+      overflow-wrap: break-word;
     }
 
     .summary-index {
@@ -338,14 +332,13 @@
         0 10px 24px rgba(72, 55, 116, 0.12);
       overflow-x: hidden;
       white-space: pre-wrap;
-      overflow-wrap: anywhere;
+      overflow-wrap: break-word;
       word-break: break-word;
-      text-wrap: wrap;
     }
 
     .summary-code code {
       font-family: ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, "PingFang SC", "Noto Sans Mono CJK SC", monospace;
-      font-size: clamp(14px, 3vw, 16px);
+      font-size: 16px;
       line-height: 1.78;
       font-weight: 650;
     }
@@ -361,8 +354,7 @@
       line-height: 1.65;
       font-weight: 400;
       text-align: center;
-      overflow-wrap: anywhere;
-      text-wrap: pretty;
+      overflow-wrap: break-word;
     }
 
     .summary-footer {
@@ -380,7 +372,8 @@
     }
 
     .complete-button {
-      width: min(260px, calc(100vw - 64px));
+      width: calc(100% - 64px);
+      max-width: 260px;
       min-height: var(--button-height);
       border: 2px solid transparent;
       border-radius: var(--button-radius);
@@ -740,7 +733,8 @@
         fragment.appendChild(createTextBlock(blockConfig[0], blockConfig[1], block.text, block.type));
       });
 
-      container.replaceChildren(fragment);
+      container.textContent = "";
+      container.appendChild(fragment);
     }
 
     function configurePageAction(button, pageAction) {

@@ -1,7 +1,7 @@
 # 课后任务页 Compact 直接生成 OneShot（V3.5）
 
 状态：`CURRENT_PRODUCTION_ASSET`  
-合同版本：`RunS-PostClassTask-Compact-Direct-OneShot-Contract-v1.8-20260727`  
+合同版本：`RunS-PostClassTask-Compact-Direct-OneShot-Contract-v1.9-20260805`
 适用模型：Kimi、GLM 及同类无外部文件上下文的页面生成模型。  
 适用阶段：候选阶段 6 / 正式 P3 课后任务页模型输入装配；完整 OneShot 写入整课 JSON 的 `pages[].prompt`。
 
@@ -11,7 +11,7 @@
 
 以下口径已经替代“只给变量对象、依赖模型读取路径或外部 Demo”的旧口径：
 
-1. 模型输入第一行必须是本次唯一的提示词版本号。
+1. 模型输入第一行必须是内容寻址的提示词实例版本号，包含 OneShot 合同、资产 SHA-256 短指纹、本次归一化完整提示词 SHA-256 短指纹、课次、页号与 R36 后缀；同一 OneShot 的实际输入变化后不得复用旧版本号。
 2. 模型输入必须说明这是一次性提示词，没有任何外部上下文。
 3. 模型输入必须直接内嵌完整 Compact HTML / CSS / JavaScript，不得只给路径、模板名、变量对象或增量修改说明。
 4. 最终回复只能是从 `<!doctype html>` 到 `</html>` 的完整 HTML，不得带 Markdown 围栏、解释、版本说明或调试文字。
@@ -32,7 +32,7 @@
 实际提交时，先替换所有尖括号占位，再把本课完整 HTML 代码直接接在“请根据下方完整代码输出网页：”之后。不得把本段外层 Markdown 围栏复制给模型。
 
 ```text
-提示词版本号：<每次唯一且不复用的模型中立版本号>
+提示词版本号：<OneShot合同>-asset-<资产SHA前12位>-prompt-<归一化完整提示词SHA前12位>-<lesson_id>-<page_no>-R36-20260731
 
 适用页面：<lessonXXX>｜<PXX>｜第 <N/N> 页｜课后任务页。
 
@@ -107,9 +107,9 @@
 
 - 单文件 HTML，声明 UTF-8 和移动端 viewport。
 - 显式引入 `https://res.xrunda.com/runs/plugin/creator/creator-review-sdk.js`。
-- 使用 `100dvh` 页面容器，正文独立纵向滚动，滚动区按实测 footer 高度预留底部空间。
+- 使用 `height:100%` 页面容器，正文独立纵向滚动，滚动区按实测 footer 高度预留底部空间；不得使用动态视口单位。
 - 使用课后任务专属温暖粉紫渐变 `#f0d8f4 → #dfdcff → #ece3ff`，保留 `.task-hero`、登记 HTTPS 头图 `3.png`（`128×128px`，无底色和对号）、玻璃卡、深色 Prompt 卡、浅黄色辅助卡和统一紫色课程按钮。
-- 主内容两侧使用 `clamp(24px, 6vw, 35px)`；主按钮最大宽度 `260px`、最小高度 `60px`、圆角 `40px`、主体色 `#9260fe`。
+- 主内容两侧使用物理属性固定 `24px`，必要时仅用低版本可识别的媒体查询调整；主按钮使用 `width:calc(100% - 64px); max-width:260px`、最小高度 `60px`、圆角 `40px`、主体色 `#9260fe`。
 - 页面主渐变必须连续覆盖到视口底部，并使用 `--page-bottom-rgb: 236, 227, 255` 和派生的 `--page-bottom-bg` 作为最后一个色标；footer 只承载按钮及其上方 `10px`、下方 `10px + safe-area` 的几何空间，背景必须透明。
 - 禁止 footer 单独绘制整宽实色背景，禁止 `footer::before` / `footer::after` 形式的 `18px` 羽化层；不得出现水平硬分界、独立色带、边框、阴影或模糊。
 - 学生内容在装配阶段完成 HTML 转义并写入静态 DOM；Prompt 用 `<pre>` 配合 `white-space: pre-wrap`。
@@ -121,7 +121,7 @@
 ## 6. 提示词版本规则
 
 - 每次生成的新提示词必须使用未使用过的唯一版本号；版本号至少包含页面类型、`lessonXXX`、`PXX`、合同版本、日期和本次运行唯一标识。
-- 同一整课 JSON 中，任意两个非互动页的实际提示词版本号不得相同；重复时标记 `V35_STAGE6_PROMPT_VERSION_DUPLICATE` 并阻断。互动题组件页保持 `prompt: ""`，不分配页面提示词版本号。
+- 同一整课 JSON 中，任意两个非互动页的实际提示词版本号不得相同；同一 OneShot 即使仍用于同一页，只要完整模型输入改变，归一化提示词实例哈希和版本号就必须改变。重复时标记 `V35_STAGE6_PROMPT_VERSION_DUPLICATE`，合同/资产/实例哈希/首行任一不一致时标记 `V35_STAGE6_PROMPT_VERSION_ASSET_MISMATCH`。互动题组件页保持 `prompt: ""`，不分配页面提示词版本号。
 - 新版本号使用模型中立前缀 `RunS-PostClassTask-...`，不得把 Kimi、GLM 或误写的 Kiki 固化为通用合同名。
 - `v1.8` 是新装配唯一允许的课后任务合同；历史 `v1.7` 仅作已发布产物追溯，不得用于新的 Stage 6 装配。
 - 已经用于验证的旧版本号只作为证据保留，不得复用：

@@ -74,9 +74,22 @@ python3 scripts/validators/check_whole_course_static.py \
   --s6-contract --formal-stage6 --lesson-id <lesson_id> \
   --effective-content <S5/effective_content_full.json> \
   --whole-course <S6/whole_course.json>
+
+# Post-generation DOM Gate; run only against an explicitly supplied generated HTML artifact.
+python3 scripts/validators/validate_dynamic_html.py \
+  --effective-content <S5/effective_content_full.json> \
+  --page-no <PXX> --html <generated_page.html>
 ```
 
 Standalone generators and validators are audit/debug tools. They do not create a stage receipt and do not authorize a downstream stage. The official sequence is one `run_stage_gate.py` call per stage, using the prior stage's receipt for S3-S6; see [references/generation-gate-design.md](references/generation-gate-design.md).
+
+For knowledge and case pages, S5 replaces mechanical draft groups with deterministic content relationships only when the frozen text actually exposes comparison, process, list, example/role distribution, or judgment structure. S5 must freeze the executable design, including `alignmentPolicy`: left alignment and top alignment take priority; same-level content shares a left edge; peer comparisons share a top edge and width; asymmetry is allowed only for an explicit primary/supporting relationship. Same-block conflicting evidence and comma/semicolon-linked role clauses stay in one continuous linguistic flow; the latter use `role_distribution_inline` / `continuous_inline_highlights`, with exact-source emphasis applied in place. S6 copies the design into `designExecutionContract` and injects `visualHierarchyContract` plus `alignmentContract`; it must not infer a replacement layout. Source fidelity, semantic relationship, reading clarity, and typographic elegance take priority over decoration. Real comparisons, steps, and lists visibly express those relationships; decoration is optional, with no minimum quota. Random indentation, random widths, stagger-for-variety, generic card stacks, decorative clutter, and large near-black panels are invalid. The post-generation DOM Gate checks exact visible projection and punctuation-linked clause splitting; it does not authorize generation, import, rendering, or publication.
+
+Comparison cards may remain side by side only when every peer is at most 80 Chinese characters and the combined peer copy is at most 150 characters; otherwise use a full-width vertical stack with one shared left edge. The page-wide highlight budget is at most three exact-source segments. The same semantic category uses one highlight style; a short highlight of at most 12 characters moves as a whole and must not leave a one- or two-character highlighted tail on a separate line.
+
+Every bundled prompt, fixed Demo, and generated HTML uses **Android System WebView Chrome 68** as the untranspiled baseline, following the [H5 low-version WebView compatibility specification](https://github.com/xrundaLab/.github-private/wiki/H5%E4%BD%8E%E7%89%88%E6%9C%ACWebView%E5%85%BC%E5%AE%B9%E5%BC%80%E5%8F%91%E8%A7%84%E8%8C%83). Do not emit optional chaining, nullish coalescing, logical assignment, class fields/static blocks, numeric separators, unsupported DOM APIs, dynamic viewport units, CSS `min()` / `max()` / `clamp()`, Flex `gap`, logical spacing, `env()`, `backdrop-filter`, `text-wrap`, or modern color functions. Prefer `height:100%`, physical spacing properties, `width` plus `max-width`, guarded Observer APIs, and a visible static first screen when enhancements or external resources fail. The DOM Gate treats violations as blockers.
+
+Every non-interactive prompt version is content-addressed. Its first line and `page_data.prompt_version` must contain the registered OneShot contract, the first 12 characters of the OneShot asset SHA-256, the first 12 characters of the normalized complete prompt SHA-256, lesson ID, page number, and R36 suffix. `page_data.prompt_instance_sha256` stores the full normalized prompt digest. Normalization replaces only the version line with `__PROMPT_VERSION__`; therefore the same OneShot used again with changed variables, `PAGE_DATA`, `DESIGN_BRIEF`, page context, instructions, HTML, CSS, or JavaScript produces a different prompt version. Duplicate-only checks are insufficient.
 
 Use only the bundled OneShots and Demos. Do not hand-build whole-course JSON, replace a bundled template with a local historical file, or downgrade non-interactive prompts to bare HTML.
 

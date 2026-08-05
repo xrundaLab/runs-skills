@@ -28,10 +28,13 @@ EXIT_REVIEW_REQUIRED = 3
 DYNAMIC_PAGE_KINDS = {"knowledge_explanation", "case_analysis"}
 OLD_FOOTER_CONTRACT = "SHORT_PAGE_BOTTOM_ALIGNED_LONG_PAGE_FLOW_END"
 ONESHOT_VERSION_PREFIX = "提示词版本号："
-CHECKER_VERSION = "0.10.11"
+PROMPT_VERSION_PLACEHOLDER = "__PROMPT_VERSION__"
+PROMPT_VERSION_SUFFIX = "R36-20260731"
+CHECKER_VERSION = "0.10.20"
 POST_CLASS_TASK_ONESHOT_CONTRACT = (
-    "RunS-PostClassTask-Compact-Direct-OneShot-Contract-v1.8-20260727"
+    "RunS-PostClassTask-Compact-Direct-OneShot-Contract-v1.9-20260805"
 )
+POST_CLASS_TASK_ASSET_SHA256 = "2811205ae6b0b037f0b8160ec4dd1d9485e90e36cfe010bcf59dba55e0b616bf"
 DESIGN_BRIEF_TAG_RE = re.compile(
     r"<DESIGN_BRIEF>\s*(?P<json>\{.*?\})\s*</DESIGN_BRIEF>",
     re.S,
@@ -43,35 +46,35 @@ PAGE_DATA_TAG_RE = re.compile(
 FIXED_TEMPLATE_CONTRACTS = {
     "course_intro": {
         "variable": "COURSE_INTRO_VARIABLES",
-        "contract": "RunS-CourseIntro-FixedTemplate-OneShot-v1.8",
-        "oneshot_sha256": "c7f141cceb38443b086d6e2d47b309bc67ab2ff3f97b401c62b07beee96c55c6",
-        "template_sha256": "ba53ef84a86f7286839c8027460714906c1048849fd1d9c1403fe4bc555dfb89",
-        "non_variable_sha256": "070cf9823d34755856019e88d0cd24c64d1c17e6f0535776a08b1a4945cca8e3",
+        "contract": "RunS-CourseIntro-FixedTemplate-OneShot-v1.9",
+        "oneshot_sha256": "9cf6b757e7bc635189c89d585ea65b54efbc6605c57d061726d0aac45ca6b1b8",
+        "template_sha256": "48b56b0fcb700da149078b7ef95b412081bb14937334a31ef24d375d79045090",
+        "non_variable_sha256": "2ad388fffc2fea884354b32429cf648ffc189cd39402c5c849b190636f463012",
     },
     "scene_intro": {
         "variable": "SCENE_INTRO_VARIABLES",
-        "contract": "RunS-SceneIntro-FixedTemplate-OneShot-v1.5",
-        "oneshot_sha256": "01283ebc5662402ed4553d65aba1c633107c63e9dd907802ba13bd4e4097f095",
-        "template_sha256": "0b746794a30a826b376ce6992b9fd896d3ead1a76d93b4d93540ee6eff13973a",
-        "non_variable_sha256": "edd32ece1d155f5b727a5c8e0c7f1cd91228d5e9bded49b2ebf0d72364c0d94c",
+        "contract": "RunS-SceneIntro-FixedTemplate-OneShot-v1.6",
+        "oneshot_sha256": "e4c2ce909288b84c2fa3ab72a273e5b0f2979c0b149a0eed233a9d6c86fa67e9",
+        "template_sha256": "a5134a0e4dd526eca584009e0430372015a8fe9c0200bbbcbdc7b9772dd2876d",
+        "non_variable_sha256": "8315cf8d264b68a93e58a8d5f07c639f2a698dbfe626953e8033dddb7b9578fc",
     },
     "course_summary": {
         "variable": "COURSE_SUMMARY_VARIABLES",
-        "contract": "RunS-CourseSummary-FixedTemplate-OneShot-v1.10",
-        "oneshot_sha256": "247a1e348a80994746ba42be467d86e85072c2106ad48e293e9ca1d6df2e55c1",
-        "template_sha256": "4fe01113b7712686f01406dde73b98b22ec9bc10776330166f72209d6f4cdec3",
-        "non_variable_sha256": "da54febaa5b03f21a1e0c5dfefa375c2a88465ce82cc87d5ddb3ffeddd487f9a",
+        "contract": "RunS-CourseSummary-FixedTemplate-OneShot-v1.11",
+        "oneshot_sha256": "95f033f32583035fb846732e9092d868ede638a8aa837c9fd41bf20d1aaee142",
+        "template_sha256": "52310103bf4db235c39b94f1393b6a1f8436a32794b4b42aee1580d44ee51d8c",
+        "non_variable_sha256": "80570336e03205383a7a296d07b00e57d15e745b7f53f90ac6660d9221efa356",
     },
 }
 DYNAMIC_ONESHOT_CONTRACTS = {
     "knowledge_explanation": (
-        "RunS-Knowledge-Dynamic-OneShot-v1.13",
-        "9c20c5b6dff48fbe2a13d53aaa52c0946e8815b3bf61a097cf0b299d9d6f0233",
+        "RunS-Knowledge-Dynamic-OneShot-v1.19",
+        "71ec5e5f3aefeb37c03102eb86a04f13e7177a21fb69b27006966fe0c4576fc1",
         ("knowledge-page", "knowledge-scroll", "knowledge-footer"),
     ),
     "case_analysis": (
-        "RunS-CaseAnalysis-Dynamic-OneShot-v1.12",
-        "20452514917bbc1bbe7eed1460e66177cdffec2188e16892af800c92108f7d53",
+        "RunS-CaseAnalysis-Dynamic-OneShot-v1.18",
+        "35ee30c45d3b7757b771c785039c6888584b12e3fa66fd7ed9a9c1184305f433",
         ("case-page", "case-scroll", "case-footer"),
     ),
 }
@@ -79,14 +82,153 @@ DYNAMIC_ONESHOT_CONTRACTS = {
 # 已生成的 R10 课件保持历史可读；新课件必须走上方 R11 合同。
 DYNAMIC_ONESHOT_LEGACY_CONTRACTS = {
     "knowledge_explanation": {
+        ("RunS-Knowledge-Dynamic-OneShot-v1.18", "93f6ff5857c2460a6c5e2f7d99f4e017f5ecb0307b53123f06ab7a53a00afaea"),
+        ("RunS-Knowledge-Dynamic-OneShot-v1.17", "8275dd65992a8e9cbcb163855468d573e2b4c08c332a164bd7d3e593b8ccc29f"),
+        ("RunS-Knowledge-Dynamic-OneShot-v1.16", "987e4c7445f39ad44bff82264c8577ef5d66bf2eadf631c39628a899373c7545"),
+        ("RunS-Knowledge-Dynamic-OneShot-v1.15", "d97501da9f3a4b9b91d3a67bdf8d7883dfe6ee16f7b7168a8e127424bad8aa5a"),
+        ("RunS-Knowledge-Dynamic-OneShot-v1.14", "c564a5bec17ee8bdf4dc0b9d25be1f4c3f4b50f75398db7741bcdc6783573f95"),
+        ("RunS-Knowledge-Dynamic-OneShot-v1.13", "9c20c5b6dff48fbe2a13d53aaa52c0946e8815b3bf61a097cf0b299d9d6f0233"),
         ("RunS-Knowledge-Dynamic-OneShot-v1.6", "8b45852a7a50081caf3aeddbce15e3f7e703139340081af81bf610ae1b2575e6"),
     },
     "case_analysis": {
+        ("RunS-CaseAnalysis-Dynamic-OneShot-v1.17", "405debf25f1d0b4a695d863782faa5896692afbd1b2f1a667a0e490c7d54b11e"),
+        ("RunS-CaseAnalysis-Dynamic-OneShot-v1.16", "a99dc0833a25b64aa700ec70be6ee6117c8a2e1e745bf3b9c3808a1b1067ef61"),
+        ("RunS-CaseAnalysis-Dynamic-OneShot-v1.15", "2f6cb159a32110bcc7b53662334c55272bca07da84584d904826decc5385f6c7"),
+        ("RunS-CaseAnalysis-Dynamic-OneShot-v1.14", "c7c69986b18dc687d702a32b66ee90680613bee318e2f7f7eb39fc170873fb72"),
+        ("RunS-CaseAnalysis-Dynamic-OneShot-v1.13", "4aaf49c5baffe6260c20ca7fa7562112301f8f4e830693204e43aa5240c2b4c0"),
+        ("RunS-CaseAnalysis-Dynamic-OneShot-v1.12", "20452514917bbc1bbe7eed1460e66177cdffec2188e16892af800c92108f7d53"),
         ("RunS-CaseAnalysis-Dynamic-OneShot-v1.7", "c5af21a739f1801dbc5e66148c2b90f905fc9c0436fa728abdda9ce15391cc27"),
         ("RunS-CaseAnalysis-Dynamic-OneShot-v1.6", "a4b2dcf01f6dc16e6c8be7d1628688d21fcbf56655e5ce55bce25a0c966ff1e9"),
         ("RunS-CaseAnalysis-Dynamic-OneShot-v1.5", "1f5419101f08e95a20fa00a2c5d7c21741527e20f424977ec28f8e1fb6fe502c"),
     },
 }
+
+CHROME68_PROMPT_CSS_PATTERNS = {
+    "clamp()": re.compile(r"\bclamp\s*\(", re.I),
+    "min()/max()": re.compile(r"\b(?:min|max)\s*\(", re.I),
+    "dynamic viewport unit": re.compile(r"\d(?:dvh|svh|lvh)\b", re.I),
+    "env()": re.compile(r"\benv\s*\(", re.I),
+    "backdrop-filter": re.compile(r"backdrop-filter\s*:", re.I),
+    "text-wrap": re.compile(r"\btext-wrap\s*:", re.I),
+    "overflow-wrap:anywhere": re.compile(r"\boverflow-wrap\s*:\s*anywhere\b", re.I),
+    "aspect-ratio": re.compile(r"\baspect-ratio\s*:", re.I),
+    "inset shorthand": re.compile(r"(?:^|[;{])\s*inset\s*:", re.I),
+    "logical spacing": re.compile(r"\b(?:margin|padding|inset)-(?:inline|block)(?:-start|-end)?\s*:", re.I),
+    "modern color": re.compile(r"\b(?:oklab|oklch|color-mix)\s*\(", re.I),
+}
+CHROME68_PROMPT_JS_PATTERNS = {
+    "optional chaining": re.compile(r"\?\."),
+    "nullish coalescing": re.compile(r"\?\?"),
+    "logical assignment": re.compile(r"(?:\|\||&&|\?\?)="),
+    "numeric separator": re.compile(r"\b\d[\d_]*_\d[\d_]*\b"),
+    "unsupported DOM API": re.compile(r"\.(?:replaceChildren|toggleAttribute|getAnimations)\s*\(|\b(?:queueMicrotask|structuredClone)\s*\(|crypto\.randomUUID\s*\("),
+    "unsupported builtin": re.compile(r"\.(?:flat|flatMap|at|matchAll|replaceAll)\s*\(|Object\.(?:fromEntries|hasOwn)\s*\(|Promise\.(?:allSettled|any)\s*\(|\bglobalThis\b"),
+}
+
+
+def chrome68_prompt_incompatibilities(prompt: str) -> list[str]:
+    styles = "\n".join(re.findall(r"<style\b[^>]*>(.*?)</style>", prompt, re.I | re.S))
+    scripts = "\n".join(re.findall(r"<script\b[^>]*>(.*?)</script>", prompt, re.I | re.S))
+    found = [name for name, pattern in CHROME68_PROMPT_CSS_PATTERNS.items() if pattern.search(styles)]
+    for block in re.findall(r"\{([^{}]*)\}", styles, re.S):
+        if re.search(r"display\s*:\s*(?:inline-)?flex\b", block, re.I) and re.search(r"(?:^|;)\s*gap\s*:", block, re.I):
+            found.append("flex gap")
+            break
+    found.extend(name for name, pattern in CHROME68_PROMPT_JS_PATTERNS.items() if pattern.search(scripts))
+    return sorted(set(found))
+
+
+def normalize_prompt_version(prompt: str) -> str | None:
+    normalized, count = re.subn(
+        r"提示词版本号：[^\n]+",
+        f"提示词版本号：{PROMPT_VERSION_PLACEHOLDER}",
+        prompt,
+        count=1,
+    )
+    return normalized if count == 1 else None
+
+
+def expected_prompt_version(
+    contract: str,
+    asset_sha256: str,
+    prompt_sha256: str,
+    lesson_id: str,
+    page_no: str,
+) -> str:
+    return (
+        f"{contract}-asset-{asset_sha256[:12]}-prompt-{prompt_sha256[:12]}-"
+        f"{lesson_id}-{page_no}-{PROMPT_VERSION_SUFFIX}"
+    )
+
+
+def check_asset_bound_prompt_version(
+    page: dict[str, Any],
+    index: int,
+    lesson_id: str,
+    path: Path,
+    issues: list[dict[str, str]],
+) -> None:
+    kind = str(page.get("page_kind") or "")
+    page_data = page.get("page_data") if isinstance(page.get("page_data"), dict) else {}
+    prompt = page.get("prompt") if isinstance(page.get("prompt"), str) else ""
+    page_no = str(page.get("page_no") or "")
+    contract = ""
+    asset_sha256 = ""
+    if kind in FIXED_TEMPLATE_CONTRACTS:
+        registered = FIXED_TEMPLATE_CONTRACTS[kind]
+        contract = registered["contract"]
+        asset_sha256 = registered["oneshot_sha256"]
+    elif kind in DYNAMIC_ONESHOT_CONTRACTS:
+        contract, asset_sha256, _ = DYNAMIC_ONESHOT_CONTRACTS[kind]
+    elif kind == "post_class_task":
+        contract = POST_CLASS_TASK_ONESHOT_CONTRACT
+        asset_sha256 = POST_CLASS_TASK_ASSET_SHA256
+    else:
+        return
+
+    normalized = normalize_prompt_version(prompt)
+    prompt_sha256 = (
+        hashlib.sha256(normalized.encode("utf-8")).hexdigest()
+        if normalized is not None
+        else ""
+    )
+    expected = expected_prompt_version(
+        contract, asset_sha256, prompt_sha256, lesson_id, page_no
+    )
+    first_line = next((line.strip() for line in prompt.splitlines() if line.strip()), "")
+    actual_first_line = (
+        first_line[len(ONESHOT_VERSION_PREFIX):].strip()
+        if first_line.startswith(ONESHOT_VERSION_PREFIX)
+        else ""
+    )
+    mismatches = []
+    for key, actual, wanted in (
+        ("oneshot_contract_version", page_data.get("oneshot_contract_version"), contract),
+        ("oneshot_asset_sha256", page_data.get("oneshot_asset_sha256"), asset_sha256),
+        ("prompt_instance_sha256", page_data.get("prompt_instance_sha256"), prompt_sha256),
+        ("prompt_version", page_data.get("prompt_version"), expected),
+        ("prompt_first_line", actual_first_line, expected),
+    ):
+        if actual != wanted:
+            mismatches.append(key)
+    if mismatches:
+        issues.append(
+            issue(
+                "V35_STAGE6_PROMPT_VERSION_ASSET_MISMATCH",
+                "BLOCKER",
+                f"pages[{index}] 提示词版本未绑定当前 OneShot、完整提示词实例或页上下文：{'、'.join(mismatches)}",
+                str(path),
+            )
+        )
+
+
+def tag_has_class(value: str, tag: str, class_name: str) -> bool:
+    """Match a required HTML class without rejecting unrelated attributes."""
+    for opening_tag in re.findall(rf"<{re.escape(tag)}\b[^>]*>", value, re.I):
+        class_match = re.search(r"\bclass\s*=\s*([\"'])(.*?)\1", opening_tag, re.I | re.S)
+        if class_match and class_name in class_match.group(2).split():
+            return True
+    return False
 
 
 def uses_current_dynamic_contract(page: dict[str, Any]) -> bool:
@@ -459,7 +601,7 @@ def check_dynamic_page_prompt(page: dict[str, Any], index: int, path: Path, issu
         return
     compact = re.sub(r"\s+", "", prompt).lower()
     required = {
-        "height:100dvh": "外层 100dvh",
+        "height:100%": "Chrome 68 基础高度",
         "overflow:hidden": "外层不滚动",
         "overflow-y:auto": "唯一内部纵向滚动容器",
         "position:absolute": "footer 绝对定位",
@@ -488,7 +630,8 @@ def check_dynamic_page_prompt(page: dict[str, Any], index: int, path: Path, issu
     )
     responsive_content_width = (
         "box-sizing:border-box" in compact
-        and "width:min(100%,680px)" in compact
+        and "width:100%" in compact
+        and "max-width:680px" in compact
     )
     scroll_box_sizing_present = bool(
         re.search(
@@ -535,7 +678,7 @@ def check_dynamic_page_prompt(page: dict[str, Any], index: int, path: Path, issu
             issue(
                 "V35_DYNAMIC_CONTENT_WIDTH_INVALID",
                 "BLOCKER",
-                f"pages[{index}] 动态内容区必须使用 box-sizing:border-box 与 width:min(100%,680px)，"
+                f"pages[{index}] 动态内容区必须使用 box-sizing:border-box、width:100% 与 max-width:680px，"
                 "不得锁死 360px",
                 str(path),
             )
@@ -600,6 +743,13 @@ def check_r34_visual_prompt_contract(
             "list_or_option_compact",
             "sequence_compact",
             "analysis_conclusion_emphasis",
+            "comparison_split",
+            "process_steps",
+            "role_distribution_grid",
+            "role_distribution_inline",
+            "evidence_quote_focus",
+            "open_body_flow",
+            "inline_conflict_evidence",
         }
         recipe_rows = recipes.get("recipes") if isinstance(recipes, dict) else None
         recipe_names = [row.get("recipe") for row in recipe_rows if isinstance(row, dict)] if isinstance(recipe_rows, list) else []
@@ -609,7 +759,7 @@ def check_r34_visual_prompt_contract(
             or recipes.get("nonRenderable") is not True
             or recipes.get("recipeContract") != "R36_REUSABLE_DYNAMIC_VISUAL_RECIPES"
             or prompt_recipes != recipes
-            or len(recipe_names) < 2
+            or len(recipe_names) < 1
             or len(recipe_names) != len(set(recipe_names))
             or any(name not in valid_recipe_names for name in recipe_names)
             or not isinstance(balance, dict)
@@ -627,10 +777,19 @@ def check_r34_visual_prompt_contract(
             )
         required_recipe_markers = (
             "content-module--intro-band",
+            "content-module--open-flow",
+            "content-module--inline-conflict",
             "content-module--list-compact",
             "content-module--sequence-compact",
             "content-module--emphasis",
         )
+        if kind == "knowledge_explanation":
+            required_recipe_markers += (
+                "content-module--comparison",
+                "content-module--process-steps",
+                "content-module--role-inline",
+                "content-module--evidence-quote",
+            )
         if any(marker not in prompt for marker in required_recipe_markers):
             issues.append(
                 issue(
@@ -640,23 +799,252 @@ def check_r34_visual_prompt_contract(
                     str(path),
                 )
             )
-        visible_difference = recipes.get("visibleRecipeDifferenceContract") if isinstance(recipes, dict) else None
-        expected_visible_difference = {
-            "required": len(recipe_names) >= 2,
-            "minimumDistinctTreatments": 2,
-            "forbid": ["sameWhiteCardStack", "positionOnlyDifferentiation"],
+        expected_semantic_composition = {
+            "required": True,
+            "relationshipDriven": True,
+            "preserveContinuousExplanation": True,
+            "preserveListsAsLists": True,
+            "punctuatedClausesUseInlineFlow": True,
+            "forbid": [
+                "sameWhiteCardStack",
+                "positionOnlyDifferentiation",
+                "decorationFirstComposition",
+                "surfaceCountForRichness",
+                "splitContinuousSentenceForVariety",
+            ],
         }
+        semantic_composition = recipes.get("semanticCompositionContract") if isinstance(recipes, dict) else None
+        semantic_composition_markers = (
+            "语义关系决定构图",
+            "真实列表必须保持列表形态",
+            "连续说明不得为了丰富而拆块",
+            "sameWhiteCardStack",
+            "positionOnlyDifferentiation",
+        )
         if (
-            visible_difference != expected_visible_difference
+            semantic_composition != expected_semantic_composition
             or not isinstance(prompt_data, dict)
-            or prompt_data.get("visualRecipePlan", {}).get("visibleRecipeDifferenceContract") != expected_visible_difference
-            or any(marker not in prompt for marker in ("sameWhiteCardStack", "positionOnlyDifferentiation", "至少两种选中的配方"))
+            or prompt_data.get("visualRecipePlan", {}).get("semanticCompositionContract") != expected_semantic_composition
+            or any(marker not in prompt for marker in semantic_composition_markers)
         ):
             issues.append(
                 issue(
-                    "V35_DYNAMIC_VISIBLE_RECIPE_DIFFERENCE_CONTRACT_MISSING",
+                    "V35_DYNAMIC_SEMANTIC_COMPOSITION_CONTRACT_MISSING",
                     "BLOCKER",
-                    f"pages[{index}] R36 动态页缺少至少两种可见阅读重量、禁止同款白卡堆叠的合同",
+                    f"pages[{index}] R36 动态页缺少关系驱动、连续句流或列表保真的构图合同",
+                    str(path),
+                )
+            )
+        expected_alignment = {
+            "priority": [
+                "shared_left_edge",
+                "shared_top_edge",
+                "consistent_width",
+                "semantic_asymmetry",
+            ],
+            "sameSemanticLevelSharedLeftEdge": True,
+            "comparisonPeersTopAligned": True,
+            "comparisonPeersEqualWidth": True,
+            "sequenceItemsSharedLeftEdge": True,
+            "asymmetryOnlyForExplicitPrimarySupporting": True,
+            "forbid": ["randomIndent", "randomWidth", "staggerForVariety"],
+        }
+        alignment = recipes.get("alignmentContract") if isinstance(recipes, dict) else None
+        alignment_markers = (
+            "左对齐优先",
+            "顶部对齐优先",
+            "同级内容共享左边界",
+            "同级对比项顶边对齐且等宽",
+            "只有明确主次关系才允许非对称",
+        )
+        if (
+            alignment != expected_alignment
+            or not isinstance(prompt_data, dict)
+            or prompt_data.get("visualRecipePlan", {}).get("alignmentContract") != expected_alignment
+            or any(marker not in prompt for marker in alignment_markers)
+        ):
+            issues.append(
+                issue(
+                    "V35_DYNAMIC_ALIGNMENT_CONTRACT_MISSING",
+                    "BLOCKER",
+                    f"pages[{index}] R36 动态页缺少左对齐、顶部对齐或同级内容一致栅格合同",
+                    str(path),
+                )
+            )
+        expected_comparison_layout = {
+            "sideBySideAllowed": True,
+            "sideBySideMaxCharsPerPeer": 80,
+            "sideBySideMaxCombinedChars": 150,
+            "withinLimitLayout": "aligned_equal_width_columns",
+            "overLimitLayout": "vertical_full_width_stack",
+            "verticalStackSharedLeftEdge": True,
+        }
+        expected_highlight = {
+            "maximumSegmentsPerPage": 3,
+            "sameSemanticCategoryUsesSameStyle": True,
+            "shortHighlightNoWrapMaxChars": 12,
+            "shortHighlightMoveWholeToNextLine": True,
+            "forbidOrphanTailCharsMax": 2,
+            "forbid": ["multicolorSameCategory", "oneOrTwoCharacterHighlightedTail"],
+        }
+        expected_webview = {
+            "baseline": "Android System WebView Chrome 68",
+            "untranspiledSource": True,
+            "modernFeaturesEnhancementOnly": True,
+            "forbidJavaScriptSyntax": ["nullishCoalescing", "optionalChaining", "logicalAssignment", "classFields", "topLevelAwait"],
+            "forbidDomApis": ["replaceChildren", "toggleAttribute", "queueMicrotask", "structuredClone", "crypto.randomUUID"],
+            "forbidCssFeatures": ["minFunction", "maxFunction", "clampFunction", "dynamicViewportUnits", "aspectRatio", "insetShorthand", "flexGap", "textWrap", "backdropFilter", "logicalProperties", "modernColorFunctions"],
+            "requiredFallbacks": ["height100Percent", "physicalSpacingProperties", "widthPlusMaxWidth", "guardedObservers", "visibleStaticFirstScreen"],
+        }
+        contract_checks = (
+            ("comparisonLayoutContract", expected_comparison_layout, ("任一对比项超过 80 个字符", "上下同宽"), "V35_DYNAMIC_COMPARISON_LAYOUT_CONTRACT_MISSING"),
+            ("highlightContract", expected_highlight, ("全页最多 3 个高亮片段", "短高亮词组整体换行", "孤立高亮尾巴"), "V35_DYNAMIC_HIGHLIGHT_CONTRACT_MISSING"),
+            ("webViewCompatibilityContract", expected_webview, ("Android System WebView Chrome 68", "观察器必须先检测再使用"), "V35_DYNAMIC_CHROME68_CONTRACT_MISSING"),
+        )
+        for key, expected, markers, code in contract_checks:
+            if (
+                recipes.get(key) != expected
+                or not isinstance(prompt_data, dict)
+                or prompt_data.get("visualRecipePlan", {}).get(key) != expected
+                or any(marker not in prompt for marker in markers)
+            ):
+                issues.append(
+                    issue(
+                        code,
+                        "BLOCKER",
+                        f"pages[{index}] R36 动态页缺少 {key} 当前合同",
+                        str(path),
+                    )
+                )
+        expected_source_projection = {
+            "required": True,
+            "visibleOccurrencesPerBlock": 1,
+            "allowContiguousDomFragments": True,
+            "concatenatedTextMustEqualSource": True,
+            "forbidFullBlockPlusDerivedFragments": True,
+            "forbidParaphrasedLabels": True,
+        }
+        source_projection = recipes.get("sourceTextProjectionContract") if isinstance(recipes, dict) else None
+        if source_projection != expected_source_projection or any(
+            marker not in prompt
+            for marker in (
+                "整块原文 + 派生子项",
+                "拼接后的 textContent 必须逐字等于该来源块原文",
+            )
+        ):
+            issues.append(
+                issue(
+                    "V35_DYNAMIC_SOURCE_TEXT_ONCE_CONTRACT_MISSING",
+                    "BLOCKER",
+                    f"pages[{index}] R36 动态页缺少来源文字逐块单次投影合同",
+                    str(path),
+                )
+            )
+
+        expected_hierarchy = {
+            "required": non_heading_count >= 3 and brief.get("shortPageComposition") != "two_layer_reading",
+            "semanticHierarchyFirst": True,
+            "priorityOrder": [
+                "source_fidelity",
+                "semantic_relationship",
+                "reading_clarity",
+                "typographic_elegance",
+                "decoration",
+            ],
+            "minimumReadingAreaCoveragePercent": 60 if brief.get("density") == "medium" else 45,
+            "requireOpenOrNonCardRegion": True,
+            "maximumIndependentContentSurfaces": 4,
+            "sourceSubstringHighlight": {
+                "allowed": True,
+                "exactSourceOnly": True,
+                "maximumSegments": 3,
+                "forbidDuplicateText": True,
+                "preferredStyles": ["font_weight", "underline", "soft_background"],
+            },
+            "decorativeElements": {
+                "minimum": 0,
+                "maximum": 2,
+                "optional": True,
+                "cssOnly": True,
+                "ariaHidden": True,
+                "forbidText": True,
+                "forbidGeneratedEmoji": True,
+            },
+            "forbid": [
+                "allWhiteCards",
+                "allEqualRadius",
+                "allEqualWidthVerticalStack",
+                "inventedBadgeCopy",
+                "decorationFirstComposition",
+                "surfaceCountForRichness",
+                "largeUnusedLowerArea",
+                "topHeavyComposition",
+            ],
+        }
+        hierarchy = recipes.get("visualHierarchyContract") if isinstance(recipes, dict) else None
+        hierarchy_markers = (
+            "semanticHierarchyFirst",
+            "排版优雅优先",
+            "装饰不是必选项",
+            "不得为了丰富度增加表面",
+            "禁止自动生成 Emoji",
+        )
+        if (
+            hierarchy != expected_hierarchy
+            or not isinstance(prompt_data, dict)
+            or prompt_data.get("visualRecipePlan", {}).get("visualHierarchyContract") != expected_hierarchy
+            or any(marker not in prompt for marker in hierarchy_markers)
+        ):
+            issues.append(
+                issue(
+                    "V35_DYNAMIC_VISUAL_HIERARCHY_CONTRACT_MISSING",
+                    "BLOCKER",
+                    f"pages[{index}] R36 动态页缺少语义层级、排版优雅、关系表达或可选装饰合同",
+                    str(path),
+                )
+            )
+        expected_execution = {
+            "required": True,
+            "source": "S5.design_brief",
+            "layoutArchetype": brief.get("layoutArchetype"),
+            "groupPresentation": brief.get("groupPresentation"),
+            "sourceProjectionPlan": brief.get("sourceProjectionPlan"),
+            "emphasisTargets": brief.get("emphasisTargets"),
+            "surfacePolicy": brief.get("surfacePolicy"),
+            "colorRoles": brief.get("colorRoles"),
+            "spaceBalance": brief.get("spaceBalance"),
+            "alignmentPolicy": brief.get("alignmentPolicy"),
+            "comparisonLayoutPolicy": brief.get("comparisonLayoutPolicy"),
+            "highlightPolicy": brief.get("highlightPolicy"),
+        }
+        execution = recipes.get("designExecutionContract") if isinstance(recipes, dict) else None
+        execution_markers = (
+            "designExecutionContract",
+            "sourceProjectionPlan",
+            "emphasisTargets",
+            "nonCodeDarkSurfaceAreaPercentMax",
+            "非代码内容禁止大面积近黑背景",
+            "inline_conflict_evidence",
+            "continuous_inline_flow",
+            "single_section_flat_steps",
+            "continuous_inline_highlights",
+            "punctuated clauses 不得拆成独立块",
+            "semanticHierarchyFirst",
+            "maximumTopLevelVisualRegions",
+            "maximumDecorativeGroups",
+        )
+        if (
+            execution != expected_execution
+            or not isinstance(prompt_data, dict)
+            or prompt_data.get("visualRecipePlan", {}).get("designExecutionContract")
+            != expected_execution
+            or any(marker not in prompt for marker in execution_markers)
+        ):
+            issues.append(
+                issue(
+                    "V35_DYNAMIC_S5_DESIGN_EXECUTION_CONTRACT_MISSING",
+                    "BLOCKER",
+                    f"pages[{index}] R36 动态页未逐字执行 S5 构图、唯一投影、原句强调、浅色表面或空间平衡合同",
                     str(path),
                 )
             )
@@ -669,14 +1057,18 @@ def check_r34_visual_prompt_contract(
             "buttonText": "完成学习" if page.get("sdk_action") == "complete" else "继续学习",
         }
         footer_markers = (
-            f'<footer class="{expected_footer["footerClass"]}">',
-            f'<button class="{expected_footer["buttonClass"]}">',
             "不得条件省略",
             "display:none",
             "visibility:hidden",
             "opacity:0",
         )
-        if footer != expected_footer or prompt_footer != footer or any(marker not in prompt for marker in footer_markers):
+        if (
+            footer != expected_footer
+            or prompt_footer != footer
+            or not tag_has_class(prompt, "footer", expected_footer["footerClass"])
+            or not tag_has_class(prompt, "button", expected_footer["buttonClass"])
+            or any(marker not in prompt for marker in footer_markers)
+        ):
             issues.append(
                 issue(
                     "V35_DYNAMIC_VISIBLE_CTA_CONTRACT_MISSING",
@@ -765,7 +1157,7 @@ def check_r34_visual_prompt_contract(
                 )
             )
 
-    if kind == "course_summary" and contract.endswith("-v1.10") and (
+    if kind == "course_summary" and contract.endswith("-v1.11") and (
         "单一总结块时使用单块小结构图分支" not in prompt
         or "不得补写、拆改或重复学生原文" not in prompt
     ):
@@ -777,7 +1169,7 @@ def check_r34_visual_prompt_contract(
                 str(path),
             )
         )
-    elif kind == "course_summary" and contract.endswith("-v1.10") and (
+    elif kind == "course_summary" and contract.endswith("-v1.11") and (
         "summary-card--single-block" not in prompt
         or "classList.toggle(\"summary-card--single-block\"" not in prompt
     ):
@@ -1060,7 +1452,7 @@ def check_course_intro_variable_schema(
             issue(
                 "COURSE_INTRO_VARIABLE_SCHEMA_INVALID",
                 "BLOCKER",
-                f"pages[{index}] 课程开篇 v1.8 变量合同不匹配（{detail}）",
+                f"pages[{index}] 课程开篇 v1.9 变量合同不匹配（{detail}）",
                 str(path),
             )
         )
@@ -1381,7 +1773,7 @@ def check_post_class_task_compact_oneshot(
     required_markers = {
         "runs-postclasstask-": "Compact 课后任务提示词版本",
         "compact-oneshot": "登记的 Compact OneShot 路线",
-        POST_CLASS_TASK_ONESHOT_CONTRACT.lower(): "当前 v1.8 正式合同",
+        POST_CLASS_TASK_ONESHOT_CONTRACT.lower(): "当前 v1.9 正式合同",
         "https://res.xrunda.com/runs/plugin/creator/creator-review-sdk.js": "正式 CreatorReview SDK",
         'class="post-task-page"': "正式课后任务页面外层",
         'class="task-hero"': "正式课后任务头部",
@@ -1663,6 +2055,23 @@ def check_p3(path: Path, issues: list[dict[str, str]]) -> dict[str, Any]:
             if require_governed_envelope:
                 check_governed_oneshot_asset_contract(page, index, path, issues)
             prompt = page.get("prompt") if isinstance(page.get("prompt"), str) else ""
+            incompatible = chrome68_prompt_incompatibilities(prompt)
+            if incompatible:
+                issues.append(
+                    issue(
+                        "V35_STAGE6_CHROME68_INCOMPATIBLE",
+                        "BLOCKER",
+                        f"pages[{index}] OneShot 使用 Chrome 68 不兼容特性：{'、'.join(incompatible)}",
+                        str(path),
+                    )
+                )
+            check_asset_bound_prompt_version(
+                page,
+                index,
+                str(payload.get("course_id", "")),
+                path,
+                issues,
+            )
             first_line = next((line.strip() for line in prompt.splitlines() if line.strip()), "")
             if first_line.startswith(ONESHOT_VERSION_PREFIX):
                 version = first_line[len(ONESHOT_VERSION_PREFIX):].strip()
@@ -1738,6 +2147,8 @@ def check_p3(path: Path, issues: list[dict[str, str]]) -> dict[str, Any]:
         "V35_STAGE6_PAGE_ENVELOPE_INVALID",
         "V35_STAGE6_REGISTERED_ONESHOT_ASSET_INVALID",
         "V35_STAGE6_PROMPT_CONTEXT_INVALID",
+        "V35_STAGE6_CHROME68_INCOMPATIBLE",
+        "V35_STAGE6_PROMPT_VERSION_ASSET_MISMATCH",
         "CATEGORIZATION_INSTRUCTION_NOT_EMPTY",
     }
     blocked = any(item["code"].startswith("P3_") or item["code"] in stage6_codes for item in issues)

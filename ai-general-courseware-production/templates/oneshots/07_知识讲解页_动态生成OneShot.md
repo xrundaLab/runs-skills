@@ -1,7 +1,7 @@
 # 知识讲解页动态生成 OneShot（V3.5）
 
 状态：`CURRENT_PRODUCTION_ASSET`（已正式吸收灵活排版策略；R11 顶部三分之二渐变、同色实底 footer 与居中标题口径）  
-合同版本：`RunS-Knowledge-Dynamic-OneShot-v1.13`
+合同版本：`RunS-Knowledge-Dynamic-OneShot-v1.19`
 适用范围：Kimi / GLM 一次性、无外部上下文生成知识讲解页完整 HTML。  
 页面性质：动态内容页；冻结输入、运行底座与验收 Gate，不冻结内容区 DOM，不执行变量区外哈希。
 
@@ -66,10 +66,13 @@
       "preserveExistingLabels": true,
       "forbid": ["numericBadge", "autoOrdinal", "doubleNumbering"]
     },
-    "visibleRecipeDifferenceContract": {
+    "semanticCompositionContract": {
       "required": true,
-      "minimumDistinctTreatments": 2,
-      "forbid": ["sameWhiteCardStack", "positionOnlyDifferentiation"]
+      "relationshipDriven": true,
+      "preserveContinuousExplanation": true,
+      "preserveListsAsLists": true,
+      "punctuatedClausesUseInlineFlow": true,
+      "forbid": ["sameWhiteCardStack", "positionOnlyDifferentiation", "decorationFirstComposition", "surfaceCountForRichness", "splitContinuousSentenceForVariety"]
     }
   },
   "footerContract": {
@@ -111,6 +114,49 @@ R6 起，每个知识讲解页必须在 `PAGE_DATA` 后完整内嵌一份 `DESIG
   "rhythmRole": "structured",
   "shortPageComposition": "two_layer_reading（仅恰有两条独立短原文时）",
   "hierarchyFocus": ["group_id"],
+  "layoutArchetype": "open_explanation",
+  "groupPresentation": [
+    {
+      "groupId": "group_id",
+      "geometry": "open_body_flow",
+      "surfaceRole": "open_background",
+      "visualWeight": "normal"
+    }
+  ],
+  "sourceProjectionPlan": [
+    {"blockIndex": 1, "mode": "single_region", "region": "group_id"}
+  ],
+  "emphasisTargets": [
+    {"blockIndex": 1, "exactText": "逐字来源片段", "colorRole": "primary_judgment"}
+  ],
+  "surfacePolicy": {
+    "lightDominant": true,
+    "allowLargeDarkSurface": false,
+    "nonCodeDarkSurfaceAreaPercentMax": 0,
+    "minimumOpenRegions": 1,
+    "maximumTopLevelVisualRegions": 4,
+    "nestedItemStyle": "flat_subregion",
+    "nestedItemsUseIndependentShadow": false,
+    "maximumDecorativeGroups": 2,
+    "forbid": [
+      "largeNearBlackContentPanel",
+      "allContentInsideCards",
+      "uniformRoundedCardStack"
+    ]
+  },
+  "colorRoles": {
+    "primaryEmphasis": "runs_purple_inline",
+    "conflictEvidence": "warm_amber_inline",
+    "supportingInformation": "cool_blue_tint",
+    "conclusionSurface": "light_purple_tint",
+    "bodyText": "dark_neutral",
+    "inlineHighlightOnly": true
+  },
+  "spaceBalance": {
+    "readingAreaTarget": "60_to_75_percent",
+    "maximumUnusedLowerAreaPercent": 12,
+    "forbidTopHeavyComposition": true
+  },
   "layoutFreedom": "允许按内容关系动态组合，不绑定固定组件。",
   "visualSystem": "沿用 RunS 统一视觉与固定底栏。",
   "visibleCopyPolicy": "只显示 PAGE_DATA 原文；原文已有小标题、列表名称或短标签可独立呈现，不显示本简报。"
@@ -126,14 +172,19 @@ R6 起，每个知识讲解页必须在 `PAGE_DATA` 后完整内嵌一份 `DESIG
 5. 相邻内容块可按真实关系合并为一个完整模块；禁止“一段一张同款卡”、强制左右对称、等宽三栏、逐字对齐或预设卡片数量。
 6. 允许通过字号、字重、底色、留白、位置和原文字符串内部的 `<span>` / `<strong>` 做层级；PAGE_DATA / 原文中已有的小标题、列表名称或明确短标签可以独立呈现为标签、徽章或模块名，但必须逐字来源，不得追加新词、解释或结论。原文中不存在的标签仍不得新增。
 7. 页面必须实际表达 `readingFlow` 和 `hierarchyFocus`，同时保持 `PAGE_DATA.contentBlocks` 的文字、列表项、Markdown 类型、顺序和出现次数完全不变；不能只把所有正文平铺成同权重文字，也不能把 `DESIGN_BRIEF` 当模板逐字段渲染。
+7a. `layoutArchetype`、`groupPresentation`、`sourceProjectionPlan`、`emphasisTargets`、`surfacePolicy`、`colorRoles` 与 `spaceBalance` 是 S5 已冻结的可执行设计，S6 不得重新推测。每个语义组必须有唯一 presentation；每个来源块必须有唯一 projection。片段拆分必须连续覆盖原文且只出现一次；强调目标必须是同块原文的逐字子串，只能在原句原位置标色。`inline_conflict_evidence` 必须用 `continuous_inline_flow` 保持为同一自然句流，只给证据子串加行内底色，严禁拆成独立左右卡；`sentence_sequence` 必须在一个 section 内使用 `single_section_flat_steps`。逗号或分号连接的媒介/角色分工必须使用 `role_distribution_inline` / `continuous_inline_highlights`，整句在一个连续文本流中只出现一次；`punctuated clauses 不得拆成独立块`，只能在原位置使用字重、下划线或柔和底色突出逐字来源片段，标点留在连续句流中。
+7b. `surfacePolicy.lightDominant=true` 且 `nonCodeDarkSurfaceAreaPercentMax=0` 时，非代码内容不得使用大面积黑色、深灰或深紫背景。结论使用浅色表面与局部主题色文字；页面至少保留一个开放式非卡片区域。最终 DOM 的顶层视觉区统一标记 `data-visual-region="top"`，不得超过 `maximumTopLevelVisualRegions`；流程步骤与媒介分工子项标记 `data-visual-region="nested" data-surface="flat"`，执行 `nestedItemStyle=flat_subregion`，禁止独立阴影和重描边。无文字 CSS 装饰不得超过 `maximumDecorativeGroups` 组。
 8. 当 `DESIGN_BRIEF.shortPageComposition` 为 `two_layer_reading` 时，页面恰用两条来源原文形成上下两个阅读层：第一层为主阅读层，第二层为弱结果层。两条文字必须逐字、按原顺序、各出现一次；不得拆句改写、补写、重复或硬凑成多段。两层之间只能通过无文字、无可见线条的连续留白与背景节奏连接；不得添加箭头、竖线、横线、编号、标签、图标或任何学生可见新文案。禁止“顶部单小卡＋下方大面积空白”。
 9. 知识讲解与案例分析的学生内容卡一律禁止装饰性左侧彩色竖线、轨道、连接点或箭头；不得使用 `border-left`，也不得以 `::before` / `::after` 在卡片左缘制造强调线、点列或箭头。语义层级只能使用原文的字号、字重、底色、描边、阴影、间距与完整容器比例表达。
 10. 当 `density` 为 `medium` 的知识讲解页含三块及以上真实阅读块时，中等篇幅知识讲解页不得让内容仅堆在上半屏；必须用已冻结原文的分层、卡片尺寸和垂直节奏平衡主要阅读区，使最后一个来源模块自然延展到固定底栏前的可见阅读区域。不得用新增文案、空白占位、强行拉高单一卡片或可见连接轨凑高度；`two_layer_reading` 短页仍按第 8 条处理，不得硬凑内容。
-11. `PAGE_DATA.visualRecipePlan` 是 R36 的非渲染构图执行表，必须逐项落实为真实 DOM class，且不得把其字段或配方名显示给学生。可复用配方只有以下含义：`intro_observation_band` 必须使用 `content-module--intro-band` 的轻量高亮信息带承接引入/观察原文；`list_or_option_compact` 必须使用 `content-module--list-compact` 的紧凑序号或标签项组承接冻结列表/选项；`sequence_compact` 必须使用 `content-module--sequence-compact`，且只用于原文真实流程关系、不新增步骤号；`analysis_conclusion_emphasis` 必须使用 `content-module--emphasis` 的单独强调卡或柔和色块承接分析/结论原文。若 `visibleRecipeDifferenceContract.required=true`，至少两个已选配方必须有真实可见差异（背景、描边、字号层级或容器比例至少一项不同），禁止 `sameWhiteCardStack` 或仅靠位置不同的 `positionOnlyDifferentiation`。对 `ordered_list`，若 `orderedListOrdinalContract.required=true`，最终 DOM 必须只遍历该块 `items[]`，以局部 `itemIndex + 1` 显示序号；每个列表从 1 连续开始，禁止把 Markdown 前缀、`contentBlockIndex` 或 `globalCounter` 与显示序号叠加。对 `unordered_list`，若 `unorderedListPresentationContract.required=true`，只显示原有 `items[]` 文字标签，不得生成 `numericBadge`、`autoOrdinal` 或数字徽标。
+11. `PAGE_DATA.visualRecipePlan` 是 R36 的非渲染构图执行表，必须逐项落实为真实 DOM class，且不得把其字段或配方名显示给学生。可复用配方只按真实关系选用：列表保持列表，对比体现对象差异，步骤体现先后，`role_distribution_inline` 使用 `content-module--role-inline` 与 `continuous_inline_highlights` 保留连续句流。`semanticCompositionContract.required=true` 时由语义关系决定构图，禁止 `sameWhiteCardStack`、`positionOnlyDifferentiation` 和为了丰富而拆分连续说明。对 `ordered_list`，最终 DOM 只遍历本块 `items[]` 并从 1 连续编号；对 `unordered_list`，只显示原有文字标签，不生成数字徽标或自动序号。
+11a. `sourceTextProjectionContract.required=true` 时，每个 `contentBlocks` 来源块的学生可见文字只能出现一次。关系构图若拆分同一来源块，只允许把原文连续切成 DOM 片段，片段按 DOM 顺序拼接后的 textContent 必须逐字等于该来源块原文；严禁“整块原文 + 派生子项”双重输出，严禁先显示完整段落再把其中短句复制成小卡、标签或徽章。
+11b. `semanticCompositionContract.required=true` 时由语义关系决定构图。真实对比可使用并列/分区，真实步骤可使用有序节奏，真实列表必须保持列表形态；连续说明不得为了丰富而拆块，逗号连接的同一句话不得被拆成多个表面。
+11c. `visualHierarchyContract.required=true` 时执行 `semanticHierarchyFirst=true`：优先级固定为来源保真、语义关系、阅读清晰、排版优雅、最后才是装饰。该突出的重点才在原句原位置使用字重、下划线或柔和底色；该体现的对比、步骤、列表才用对应关系构图。排版优雅优先，装饰不是必选项，纯 CSS 装饰只在改善构图时使用 0—2 组；不得为了丰富度增加表面，不得用装饰替代内容关系，禁止自动生成 Emoji、图标文字、标签文案或解释词。
 12. `PAGE_DATA.visualRecipePlan.mediumReadingAreaBalance.required` 为 `true` 时，必须在 `.knowledge-content--medium-structured` 上使用真实分组的分布式构图（例如 `display:grid` 与 `align-content:space-between`）；只可调整模块比例、密度和真实组间距，使主体约覆盖可用阅读区的 60%—75%。不得用空块、隐藏文本、单一卡片强拉高或新增学生文案填满。
 13. `PAGE_DATA.footerContract.required` 为 `true` 时，最终 HTML 必须无条件输出且只输出一个与字段匹配的 `<footer class="knowledge-footer">`、`<button class="knowledge-primary-button">` 与按钮原文；不得条件省略、运行时创建、`display:none`、`visibility:hidden`、`opacity:0`、裁到 `.knowledge-scroll` 内或被正文覆盖。`pageAction` 非空时 CTA 必须在 `scrollTop=0`、中段和最大值持续可见并可点击。
 
-R36 必须在最终 HTML 中真实定义并按 `visualRecipePlan.recipes` 选用这些 class：`.content-module--intro-band`、`.content-module--list-compact`、`.content-module--sequence-compact`、`.content-module--emphasis`。`visibleRecipeDifferenceContract.required: true` 时，至少两种被选配方必须有可见样式差异，禁止 `sameWhiteCardStack` 与 `positionOnlyDifferentiation`；`mediumReadingAreaBalance.required: true` 时，内容容器必须额外带 `.knowledge-content--medium-structured`，并使用 `display:grid`、`align-content:space-between` 与有限真实组间距使主体约覆盖可用阅读区 60%—75%；这些 class 不得作为学生可见文字。有序列表的可见编号只能取同一列表 `items[]` 内 `itemIndex + 1`，每个列表独立从 1 连续递增；不得使用 `contentBlockIndex`、`globalCounter` 或 `doubleNumbering`。无序列表保留既有标签，不得生成 `numericBadge`、`autoOrdinal` 或数字徽标。
+R36 必须在最终 HTML 中真实定义并按 `visualRecipePlan.recipes` 选用这些 class：`.content-module--intro-band`、`.content-module--open-flow`、`.content-module--list-compact`、`.content-module--sequence-compact`、`.content-module--emphasis`、`.content-module--comparison`、`.content-module--process-steps`、`.content-module--role-inline`、`.content-module--evidence-quote`。构图由真实语义关系决定，禁止 `sameWhiteCardStack` 与 `positionOnlyDifferentiation`；中篇内容仅用真实分组和有限间距覆盖主要阅读区。这些 class 不得作为学生可见文字；列表必须保留其原有列表语义和标签。
 
 ## 3. 固定运行底座与动态边界
 
@@ -143,14 +194,14 @@ R36 必须在最终 HTML 中真实定义并按 `visualRecipePlan.recipes` 选用
 - 平台壳层负责状态栏、关闭按钮、页面类型胶囊和进度条；HTML 内不生成平台壳层、`知识讲解`胶囊、Pxx、顶部安全区或空白占位。
 - 第一个学生可见元素只能是非空 `transitionText`、合法的 `preTitleBlocks` 首块或原文 `title`；具体顺序必须由本页 PAGE_DATA 确定，不得写死其他课程标题。
 - `before_title` 的过渡句必须作为 `.knowledge-content` 首个学生可见元素并位于标题前；`after_content` 必须作为最后正文块后的 `.knowledge-content` 最后一个元素。两者统一使用 `.knowledge-transition`，不得作为普通 `<p>`、卡片、按钮或互动题字段输出。
-- 页面壳必须执行 `UNIFIED_PERSISTENT_BOTTOM_ACTION_BAR`：`html`、`body` 与 `.knowledge-page` 高度锁定为 `100% / 100dvh` 且不参与正文滚动。
+- 页面壳必须执行 `UNIFIED_PERSISTENT_BOTTOM_ACTION_BAR`：`html`、`body` 与 `.knowledge-page` 高度均锁定为 `100%`，不得依赖动态视口单位。
 - 长短页统一使用 iframe 内绝对定位底栏；`.knowledge-footer` computed `position:absolute` 且 `left/right/bottom=0px`，按钮自身 computed `position:static`。
 - 页面只有 `.knowledge-scroll` 一个内部纵向滚动容器；它必须显式使用 `box-sizing:border-box`，避免 `height:100%` 与上下 padding 按 content-box 叠加后把滚动层撑出 iframe。其底部 padding 必须由底栏真实高度动态同步，并额外保留 `24px`。滚到最大 `scrollTop` 后，最后一个正文块必须完整停在按钮上方，不得进入底栏可视区域。
 - 在 `scrollTop=0`、中段和最大值时，底栏与按钮都必须保持可见、可点击且位置不漂移。
-- 内容视口顶部保留且仅保留 `8px` 呼吸空间；标题按可用宽度自然换行并可使用 `text-wrap: balance`，不得对完整中文标题使用 `white-space: nowrap`。只有需避免拆开的最小原文短语或英文词可使用 `.title-keep { white-space: nowrap; }`。
+- 内容视口顶部保留且仅保留 `8px` 呼吸空间；标题按可用宽度自然换行，使用 Chrome 68 可用的普通换行和 `overflow-wrap: break-word`。只有需避免拆开的最小原文短语或英文词可使用 `.title-keep { white-space: nowrap; }`。
 - 页面统一采用 `#d7c4ff → #dce4ff → #d5f5fe` 的纵向连续渐变：在页面 `66.667%` 前自然进入 `--page-bottom-bg`，其后保持同一纯色。footer 使用同一 `--page-bottom-bg` 实底，且不得有边框、阴影、模糊、`::before` / `::after` 羽化层或可见水平分界；footer 与页面底部必须视觉连续。footer 只保留按钮上下各 `10px`（下方另加 safe-area）的几何空间。课程主按钮使用实色 `#9260fe`，白字、`60px` 最小高度、`40px` 圆角。
 - 页面内部不得生成任何页型胶囊；原文标题存在时必须居中，并保持原文、顺序和首个学生可见元素合同不变。
-- `.knowledge-content` 必须采用 `box-sizing: border-box; width: min(100%, 680px)`；移动端继续依靠 `clamp(20px, 6vw, 35px)` 保持安全边距，宽预览不得锁死 `360px`。内容区仍按 `DESIGN_BRIEF` 动态构图，不得把 `680px` 解释为固定卡片、固定分栏或固定 DOM。
+- `.knowledge-content` 必须采用 `box-sizing: border-box; width: 100%; max-width: 680px`；移动端使用固定 `24px` 左右安全边距，宽屏媒体查询可增至 `35px`。内容区仍按 `DESIGN_BRIEF` 动态构图。
 - 全页只有固定底栏中的主按钮调用课程 SDK，且必须无条件保留 `<footer class="knowledge-footer">` 与 `<button class="knowledge-primary-button">` 的最终 DOM；禁止将 footer 放入 `.knowledge-scroll`、以条件分支省略按钮，或用隐藏样式替代 CTA。
 - 内容区 DOM、卡片数量和排版必须根据 `DESIGN_BRIEF` 与本页语义动态变化；不得新增、删减、改写、调序或重复学生可见文案。
 - 相邻页面不得机械重复同一构图；允许共享颜色、字体、圆角、阴影与底栏，但教学动作、内容形状或信息密度不同时，主构图与层级节奏应随之变化。
@@ -234,7 +285,15 @@ R36 注入优先级：S6 只替换本文件第 2 节的首个 `<PAGE_DATA>` 与 
 7. P3 不生成音频、播放器、TTS、字幕、CUE、输入框或 Powered by RunS。
 8. 知识讲解与案例分析的学生内容卡一律禁止装饰性左侧彩色竖线、轨道、连接点或箭头；不得使用 `border-left`，也不得以 `::before` / `::after` 在卡片左缘制造强调线、点列或箭头。语义层级只能使用原文的字号、字重、底色、描边、阴影、间距与完整容器比例表达。
 9. 中等篇幅知识讲解页不得让内容仅堆在上半屏；当本页有三块及以上真实阅读块时，必须只用原文分层、卡片尺寸和垂直节奏平衡主要阅读区。不得新增学生文案、空白占位、强拉单一卡片或可见连接轨凑高度；两条短原文 `two_layer_reading` 不硬凑内容。
-10. `visualRecipePlan` 必须逐项落实，不显示字段名或配方名：`intro_observation_band` 使用 `content-module--intro-band`，`list_or_option_compact` 使用 `content-module--list-compact`，`sequence_compact` 使用 `content-module--sequence-compact`，`analysis_conclusion_emphasis` 使用 `content-module--emphasis`。当 `visibleRecipeDifferenceContract.required=true` 时，至少两种选中的配方必须有不同阅读重量，并真实改变背景、描边、字号层级或容器比例；禁止 `sameWhiteCardStack` 和仅靠位置移动的 `positionOnlyDifferentiation`。
+10. `visualRecipePlan` 必须逐项落实，不显示字段名或配方名：`intro_observation_band` 使用 `content-module--intro-band`，`open_body_flow` 使用 `content-module--open-flow` 保留开放式非卡片正文，`inline_conflict_evidence` 使用 `content-module--inline-conflict` 保持同一自然句流并只做行内证据标色，`list_or_option_compact` 使用 `content-module--list-compact` 保留真实列表，`sequence_compact` 使用 `content-module--sequence-compact`，`analysis_conclusion_emphasis` 使用 `content-module--emphasis`，`evidence_quote_focus` 使用 `content-module--evidence-quote` 承接原文确有的引用或证据，`comparison_split` 使用 `content-module--comparison` 形成真实对比区域，`process_steps` 使用 `content-module--process-steps` 表达原文已有先后关系，`role_distribution_inline` 使用 `content-module--role-inline` 与 `continuous_inline_highlights` 在同一连续句流中表达媒介或角色分工；不得为这些结构新增学生可见标签。禁止 `sameWhiteCardStack` 和仅靠位置移动的 `positionOnlyDifferentiation`。
+10a. `sourceTextProjectionContract.required=true` 时，每个 `contentBlocks` 来源块的学生可见文字只能出现一次。关系构图若拆分同一来源块，只允许把原文连续切成 DOM 片段，片段按 DOM 顺序拼接后的 textContent 必须逐字等于该来源块原文；严禁“整块原文 + 派生子项”双重输出，严禁先显示完整段落再把其中短句复制成小卡、标签或徽章。
+10b. `semanticCompositionContract.required=true` 时由语义关系决定构图。真实对比可使用并列/分区，真实步骤可使用有序节奏，真实列表必须保持列表形态；连续说明不得为了丰富而拆块，逗号连接的同一句话也不得被拆成多个表面。禁止 `uniformRoundedCardStack`、嵌套同款圆角卡和仅改变底色的纵向等宽卡栈。
+10b-1. `alignmentContract` 必须执行左对齐优先、顶部对齐优先：同级内容共享左边界；同级对比项顶边对齐且等宽；步骤项共享同一左边界。只有明确主次关系才允许非对称，禁止随机缩进、随机宽度和为了变化而错位。
+10b-2. `comparisonLayoutContract` 允许图示这种篇幅使用顶边对齐、等宽的左右卡；任一对比项超过 80 个字符或两项合计超过 150 个字符时，必须改为上下同宽、共享左边界的纵向排列。
+10b-3. `highlightContract` 要求全页最多 3 个高亮片段；同类信息使用同一种强调样式。12 个字符以内的短高亮词组整体换行，宁可整体移到下一行，也不得留下 1—2 个字的孤立高亮尾巴。
+10b-4. 最终 HTML 必须兼容 Android System WebView Chrome 68。基础布局、首屏文字、正文滚动和固定按钮不得依赖新 CSS 函数、动态视口单位、新 JavaScript 语法或新 DOM API；观察器必须先检测再使用，缺失时基础内容仍直接显示。
+10c. `visualHierarchyContract.required=true` 时执行 `semanticHierarchyFirst=true`：优先级固定为来源保真、语义关系、阅读清晰、排版优雅、最后才是装饰。该突出的重点才在原句原位置使用字重、下划线或柔和底色；该体现的对比、步骤、列表才用对应关系构图。排版优雅优先，装饰不是必选项，纯 CSS 装饰只在改善构图时使用 0—2 组；不得为了丰富度增加表面，不得用装饰替代内容关系，禁止自动生成 Emoji、图标文字、标签文案或解释词。
+10d. `designExecutionContract.required=true` 时，S5 已完成页面设计，S6 不得重新推测：严格按 `layoutArchetype` 与 `groupPresentation` 决定几何和浅色表面；严格按 `sourceProjectionPlan` 逐块投影。`inline_conflict_evidence` 必须使用 `continuous_inline_flow` 保持同一自然句流，只给证据子串行内标色，严禁拆成独立左右卡；`sentence_sequence` 必须在一个 section 内使用 `single_section_flat_steps`；`role_distribution_inline` 必须使用 `continuous_inline_highlights`，整句作为一个连续文本流渲染，`punctuated clauses 不得拆成独立块`。所有 fragments 必须按顺序各出现一次且拼接等于来源块；任何 fragment 不得成为句首孤立标点或独立句号。`emphasisTargets` 只能在原句原位置标色，不得抽取成标签或第二份文字。`surfacePolicy.lightDominant=true` 且 `nonCodeDarkSurfaceAreaPercentMax=0` 时，非代码内容禁止大面积近黑背景；结论使用浅紫或浅蓝表面加局部主题色文字。最终 DOM 的顶层视觉区标记 `data-visual-region="top"` 且不得超过 `maximumTopLevelVisualRegions`；无文字 CSS 装饰不得超过 `maximumDecorativeGroups` 组且可以为零。必须遵守 `spaceBalance.maximumUnusedLowerAreaPercent`，不得靠扩大空白制造层级。
 11. 当 `mediumReadingAreaBalance.required=true`，`.knowledge-content` 必须额外使用 `.knowledge-content--medium-structured`、`display:grid` 和 `align-content:space-between`，仅凭真实原文分组使主体约覆盖可用阅读区的 60%—75%。
 12. 当 `orderedListOrdinalContract.required=true`，有序列表只能遍历该列表 `items[]` 内 `itemIndex + 1`；每个列表必须从 1 连续编号，禁止 `contentBlockIndex`、`globalCounter`、Markdown 既有序号与生成序号的 `doubleNumbering`。
 13. 当 `unorderedListPresentationContract.required=true`，无序列表只显示 `items[]` 原有文字标签；不得生成 `numericBadge`、`autoOrdinal`、数字圆点或其他自动序号，特别是不得把“画面A/B/C”等已有标签转换为 `1/2/3`。
@@ -250,7 +309,7 @@ HTML 与页面壳硬规则：
 
 <REQUIRED_CSS>
 :root {
-  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-bottom: 0px;
   --page-bottom-rgb: 213, 245, 254;
   --page-bottom-bg: rgb(var(--page-bottom-rgb));
   --footer-h: calc(80px + var(--safe-bottom));
@@ -265,7 +324,7 @@ body {
 .knowledge-page {
   position: relative;
   width: 100%;
-  height: 100dvh;
+  height: 100%;
   overflow: hidden;
   background: linear-gradient(180deg, #d7c4ff 0%, #dce4ff 42%, var(--page-bottom-bg) 66.667%, var(--page-bottom-bg) 100%);
 }
@@ -280,13 +339,13 @@ body {
 }
 .knowledge-content {
   box-sizing: border-box;
-  width: min(100%, 680px);
+  width: 100%;
+  max-width: 680px;
   margin: 0 auto;
-  padding: 0 clamp(20px, 6vw, 35px);
+  padding: 0 24px;
 }
 .knowledge-content h1 {
-  overflow-wrap: anywhere;
-  text-wrap: balance;
+  overflow-wrap: break-word;
   text-align: center;
 }
 .title-keep {
@@ -328,7 +387,8 @@ body {
 .knowledge-primary-button {
   position: static;
   display: block;
-  width: min(260px, calc(100vw - 64px));
+  width: calc(100% - 64px);
+  max-width: 260px;
   min-height: 60px;
   margin: 0;
   border: 2px solid transparent;
@@ -493,7 +553,7 @@ HTML 与页面壳硬规则：
 
 <REQUIRED_CSS>
 :root {
-  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-bottom: 0px;
   --page-bottom-rgb: 213, 245, 254;
   --page-bottom-bg: rgb(var(--page-bottom-rgb));
   --footer-h: calc(80px + var(--safe-bottom));
@@ -508,7 +568,7 @@ body {
 .knowledge-page {
   position: relative;
   width: 100%;
-  height: 100dvh;
+  height: 100%;
   overflow: hidden;
   background: linear-gradient(180deg, #d7c4ff 0%, #dce4ff 42%, var(--page-bottom-bg) 66.667%, var(--page-bottom-bg) 100%);
 }
@@ -523,13 +583,13 @@ body {
 }
 .knowledge-content {
   box-sizing: border-box;
-  width: min(100%, 680px);
+  width: 100%;
+  max-width: 680px;
   margin: 0 auto;
-  padding: 0 clamp(20px, 6vw, 35px);
+  padding: 0 24px;
 }
 .knowledge-content h1 {
-  overflow-wrap: anywhere;
-  text-wrap: balance;
+  overflow-wrap: break-word;
   text-align: center;
 }
 .title-keep {
@@ -571,7 +631,8 @@ body {
 .knowledge-primary-button {
   position: static;
   display: block;
-  width: min(260px, calc(100vw - 64px));
+  width: calc(100% - 64px);
+  max-width: 260px;
   min-height: 60px;
   margin: 0;
   border: 2px solid transparent;

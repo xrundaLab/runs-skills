@@ -56,6 +56,64 @@ For a `课程小结` page:
 6. If that status sentence shares a paragraph with a next-lesson preview,
    preserve the remainder verbatim and in order.
 
+## S5-S6 knowledge relationship projection
+
+- S5 recalculates real reading density from the frozen structured blocks; a medium page cannot remain `light` merely because the candidate draft said so.
+- Mechanical `frozen_segment` groups are replaced when the source exposes comparison, process, example or role-distribution, and judgment relationships.
+- S6 maps real relationships to executable `comparison_split`, `process_steps`, list-preserving, and `role_distribution_inline` recipes. Comma/semicolon-linked role clauses remain one continuous sentence with exact-source inline emphasis.
+- The knowledge OneShot must carry the matching DOM class contracts. Recording recipe names without a differentiated layout is blocked.
+- `sourceTextProjectionContract` forbids rendering a complete source paragraph and then copying its clauses into derivative cards. A split representation is allowed only when contiguous DOM fragments concatenate exactly to the frozen source text and each fragment is a complete sentence or natural clause rather than orphan punctuation.
+- `semanticCompositionContract` makes geometry relationship-driven without a recipe-count quota: lists remain lists, comparisons and steps express their real relationships, and continuous explanations remain continuous. It blocks uniform card stacks and style-for-variety splitting.
+- `visualHierarchyContract` is injected on every dynamic page and becomes required for multi-block, non-short compositions. It prioritizes source fidelity, semantic relationships, reading clarity, and typographic elegance before decoration. Exact-source in-place emphasis is preferred; CSS decoration is optional (0–2 groups) and cannot be used to manufacture richness. Real comparisons, steps, and lists must visibly preserve their relationships; a medium page must cover at least 60% of its reading area.
+- The same contract blocks all-white or equal-radius card stacks, invented badge copy, generated emoji, top-heavy composition, and large unused lower areas. Frozen blockquote evidence maps to `evidence_quote_focus`; visual emphasis must not create new student-facing labels.
+- S5 freezes an executable `design_brief`, not a generic style sentence: layout archetype, per-group presentation, per-block projection, exact-source emphasis, light surface policy, semantic color roles, and space balance. The S5 validator blocks missing or internally inconsistent fields.
+- S6 copies those fields verbatim into `designExecutionContract`. Non-code dark-surface allowance is zero; same-block conflicting evidence remains a continuous inline flow instead of becoming two cards. Sentence sequences and role-distribution content remain one top-level section with flat nested items. The surface policy allows at most four top-level visual regions, forbids independent nested shadows, and allows at most two decorative groups.
+- Side-by-side peer cards are allowed only when every peer is at most 80 Chinese characters and combined peer copy is at most 150 characters. Longer comparisons switch deterministically to full-width vertical cards with a shared left edge.
+- Highlighting has one page-wide budget of at most three exact-source segments. One semantic category uses one style; highlights of at most 12 characters move as a whole and cannot leave a one- or two-character highlighted tail on its own line.
+
+## Chrome 68 WebView compatibility Gate
+
+All current OneShots, fixed Demos, and supplied generated HTML target untranspiled
+Android System WebView Chrome 68. The baseline forbids modern JavaScript syntax
+and unsupported DOM APIs as well as dynamic viewport units, CSS
+`min()` / `max()` / `clamp()`, Flex `gap`, logical spacing, `env()`,
+`backdrop-filter`, `text-wrap`, and modern color functions. Use physical
+properties, `height:100%`, `width` plus `max-width`, guarded Observer APIs,
+and visible static fallback content. Compatibility is checked on the actual
+HTML/CSS/JS; a prose declaration alone does not pass the Gate.
+
+## Content-addressed prompt instance version
+
+Every non-interactive prompt uses:
+
+`<OneShot contract>-asset-<asset SHA first 12>-prompt-<normalized prompt SHA first 12>-<lesson_id>-<page_no>-R36-20260731`
+
+The complete prompt is assembled first with the version line normalized to
+`提示词版本号：__PROMPT_VERSION__`. SHA-256 is calculated over that normalized
+complete prompt after page context, variables, `PAGE_DATA`, `DESIGN_BRIEF`,
+HTML, CSS, and JavaScript are final. The full digest is stored in
+`page_data.prompt_instance_sha256`; only then is the visible version line
+inserted. The static Gate recomputes the digest and compares the contract,
+asset hash, full instance hash, `page_data.prompt_version`, first line, lesson,
+and page. Thus the same OneShot with different model input cannot reuse a
+version number.
+
+## Post-generation DOM Gate
+
+When an authorized external generation step returns a dynamic knowledge or case
+HTML artifact, validate that supplied artifact with:
+
+```bash
+python3 scripts/validators/validate_dynamic_html.py \
+  --effective-content <S5/effective_content_full.json> \
+  --page-no <PXX> --html <generated_page.html>
+```
+
+This Gate blocks Chrome 68 incompatibilities, visible-copy drift or duplication,
+orphan punctuation, and more than four `data-visual-region="top"` regions. It does not invoke a model,
+RunS import, create, rendering, or publication and does not expand S6 static
+authorization.
+
 ## Gate receipt
 
 Each Gate execution writes one JSON receipt containing:
@@ -72,6 +130,10 @@ The official runner must verify the preceding receipt, referenced artifact path,
 and SHA-256 before invoking the next stage. A missing receipt, non-`PASS`
 status, path mismatch, or hash mismatch blocks execution without creating the
 next-stage artifact.
+
+The runner must preserve both validator-style `issue_type` values and static
+checker-style top-level `issues[].code` values in the stage receipt. It must not
+collapse a known blocker into a generic command-failure code.
 
 The registered entry point is:
 
@@ -120,3 +182,9 @@ release authority.
 - A course summary without a structured heading is blocked at S5.
 - A valid heading becomes S6 `summaryTitle` and is absent from S6 body blocks.
 - A failed or stale receipt prevents the runner from invoking the next stage.
+- Same-block conflicting quotes become one continuous inline sentence with two
+  in-place evidence highlights and no orphan punctuation.
+- A process paragraph becomes complete-sentence flat steps inside one top-level
+  section; role-distribution clauses become flat nested items inside one section.
+- Generated HTML with duplicated source copy, orphan punctuation, or more than
+  four top-level visual regions is blocked by the DOM Gate.
