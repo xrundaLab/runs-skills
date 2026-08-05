@@ -188,12 +188,16 @@ Use `VERSION` as the single current formal identifier in
 not a resettable release counter. The core version therefore remains monotonic
 when the RunS track changes.
 
-Keep the append-only history in `references/version-registry.json`. Its schema
+Keep the release history in `references/version-registry.json`. Its schema
 records the Skill name, current and released versions, permanently reserved
-legacy numbers, and one ordered entry for every exact source snapshot. A
-`source_exact` entry contains the version, status, summary, formation time,
-lowercase payload SHA-256, namespaced source ref, validation evidence,
-supersession, and rollback fields. The `0.2.1-r36` through `0.2.7-r36` range is
+local numbers, and one ordered entry for every remotely traceable source
+snapshot. Multiple unpublished local checkpoints may be compacted into one
+non-reusable reserved range with a cumulative summary and the version they were
+rolled into; they are not downloadable rollback sources and must not claim
+`source_exact`, `sourceRef`, or a Tag. A `source_exact` entry contains the
+version, status, summary, formation time, lowercase payload SHA-256, namespaced
+source ref, validation evidence, supersession, and rollback fields. The
+`0.2.1-r36` through `0.2.7-r36` range is
 `legacy_audit_only`: it is permanently unavailable for reuse and does not claim
 an exact historical source snapshot.
 

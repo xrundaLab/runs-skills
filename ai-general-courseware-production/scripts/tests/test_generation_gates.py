@@ -1699,9 +1699,10 @@ class GenerationGateTests(unittest.TestCase):
 
     def test_skill_declares_independent_version_gate(self) -> None:
         skill = (SKILL_ROOT / "SKILL.md").read_text(encoding="utf-8")
+        current_version = (SKILL_ROOT / "VERSION").read_text(encoding="utf-8").strip()
         for marker in (
             "validate_skill_version.py",
-            "0.2.20-r36",
+            current_version,
             "runs-ai-monorepo",
             "runs-skills",
             "禁止直接",

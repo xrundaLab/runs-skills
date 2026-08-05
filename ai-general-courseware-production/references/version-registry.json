@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "skill": "ai-general-courseware-production",
-  "currentVersion": "0.2.20-r36",
+  "currentVersion": "0.2.21-r36",
   "releasedVersions": [
     "0.1.0-r36"
   ],
@@ -12,7 +12,14 @@
     "0.2.4-r36",
     "0.2.5-r36",
     "0.2.6-r36",
-    "0.2.7-r36"
+    "0.2.7-r36",
+    "0.2.13-r36",
+    "0.2.14-r36",
+    "0.2.15-r36",
+    "0.2.16-r36",
+    "0.2.17-r36",
+    "0.2.18-r36",
+    "0.2.19-r36"
   ],
   "reservedLegacyRanges": [
     {
@@ -21,6 +28,15 @@
       "status": "legacy_audit_only",
       "reusable": false,
       "summary": "Pre-registry local iteration numbers without independent source snapshots; permanently reserved and not advertised as exact rollback sources."
+    },
+    {
+      "from": "0.2.13-r36",
+      "to": "0.2.19-r36",
+      "status": "local_iterations_compacted",
+      "reusable": false,
+      "rolledIntoVersion": "0.2.20-r36",
+      "issue": "xrundaLab/runs-ai-monorepo#632",
+      "summary": "Unpublished local checkpoints for repairable receipts, isolated three-input routing, direct S4-to-S5 projection, P01/P05/P10 fidelity, semantic task layout, and checklist Gate alignment. Their cumulative implementation shipped in 0.2.20-r36; the individual checkpoints are permanently reserved but are not downloadable rollback sources."
     }
   ],
   "versions": [
@@ -137,141 +153,6 @@
         "regression:cross-stage-freeze-sha-without-byte-count",
         "unit:test_generation_gates"
       ],
-      "supersededByVersion": "0.2.13-r36",
-      "restoredFromVersion": null,
-      "rollbackStatus": "not_restored"
-    },
-    {
-      "version": "0.2.13-r36",
-      "formedAt": "2026-08-05T14:00:00+08:00",
-      "status": "local_valid_iteration",
-      "summary": "Make S3 freeze metadata unambiguous and preserve immutable per-attempt Gate receipts for repairable current-stage formatting corrections.",
-      "traceabilityLevel": "source_exact",
-      "payloadSha256": "1eade521df7c85461212e6b6c65fc0041efb964c5cde244dd6c42008d0b9d5f3",
-      "sourceRef": "skill-ai-general-courseware-production-v0.2.13-r36",
-      "tag": "skill-ai-general-courseware-production-v0.2.13-r36",
-      "issue": "xrundaLab/runs-ai-monorepo#632",
-      "validationEvidence": [
-        "regression:s3-canonical-freeze-header",
-        "regression:immutable-gate-attempt-receipts",
-        "unit:test_generation_gates"
-      ],
-      "supersededByVersion": "0.2.14-r36",
-      "restoredFromVersion": null,
-      "rollbackStatus": "not_restored"
-    },
-    {
-      "version": "0.2.14-r36",
-      "formedAt": "2026-08-05T18:17:13+08:00",
-      "status": "local_valid_iteration",
-      "summary": "Add an explicit Skill-only self-test and black-box verification routing boundary that excludes SOP and historical outputs.",
-      "traceabilityLevel": "source_exact",
-      "payloadSha256": "62a8a27d859942d50490093ac79456f89524907f2c5b89443a6d5db2f0dc2aeb",
-      "sourceRef": "skill-ai-general-courseware-production-v0.2.14-r36",
-      "tag": "skill-ai-general-courseware-production-v0.2.14-r36",
-      "validationEvidence": [
-        "local:skill-only-routing-boundary",
-        "validator:validate_skill_version-local"
-      ],
-      "supersededByVersion": "0.2.15-r36",
-      "restoredFromVersion": null,
-      "rollbackStatus": "not_restored"
-    },
-    {
-      "version": "0.2.15-r36",
-      "formedAt": "2026-08-05T18:35:00+08:00",
-      "status": "local_valid_iteration",
-      "summary": "Deterministically project every post-class-task title and source block at S5, and block S5 before any task title or body section can be lost during S6 assembly.",
-      "traceabilityLevel": "source_exact",
-      "payloadSha256": "d64aeffa026e29e7c5bdf939c86f410dc470aeec6390f48256acdc20eda365a5",
-      "sourceRef": "skill-ai-general-courseware-production-v0.2.15-r36",
-      "tag": "skill-ai-general-courseware-production-v0.2.15-r36",
-      "issue": "xrundaLab/runs-ai-monorepo#632",
-      "validationEvidence": [
-        "regression:lesson014-p10-full-source-projection",
-        "regression:s5-blocks-post-task-first-section-only",
-        "unit:test_generation_gates"
-      ],
-      "supersededByVersion": "0.2.16-r36",
-      "restoredFromVersion": null,
-      "rollbackStatus": "not_restored"
-    },
-    {
-      "version": "0.2.16-r36",
-      "formedAt": "2026-08-05T19:00:00+08:00",
-      "status": "local_valid_iteration",
-      "summary": "Remove the incomplete all-page S5 candidate contract; deterministically project every S5 page and its content requirements directly from frozen S4.",
-      "traceabilityLevel": "source_exact",
-      "payloadSha256": "034e9fdedc54f1f093f8a0e66fede476a929d6609578ccfe68cb43b984078c9e",
-      "sourceRef": "skill-ai-general-courseware-production-v0.2.16-r36",
-      "tag": "skill-ai-general-courseware-production-v0.2.16-r36",
-      "issue": "xrundaLab/runs-ai-monorepo#632",
-      "validationEvidence": ["regression:lesson014-s4-direct-s5-s6", "unit:test_generation_gates"],
-      "supersededByVersion": "0.2.17-r36",
-      "restoredFromVersion": null,
-      "rollbackStatus": "not_restored"
-    },
-    {
-      "version": "0.2.17-r36",
-      "formedAt": "2026-08-05T20:00:00+08:00",
-      "status": "local_valid_iteration",
-      "summary": "Complete three-input self-contained S5-S6 projection: split P01 knowledge-point lists, derive P05 exact design contracts without course-specific seeds, and preserve P10 section order in static DOM.",
-      "traceabilityLevel": "source_exact",
-      "payloadSha256": "d15e4650ccf36936a9a6eaf5566ea90398f12fbf68cb108b1a1dc9347d0aaad4",
-      "sourceRef": "skill-ai-general-courseware-production-v0.2.17-r36",
-      "tag": "skill-ai-general-courseware-production-v0.2.17-r36",
-      "issue": "xrundaLab/runs-ai-monorepo#632",
-      "validationEvidence": [
-        "regression:p01-knowledge-points-list-cardinality",
-        "regression:p05-exact-block-and-recipe-projection",
-        "regression:p10-sections-visible-order",
-        "smoke:three-input-fresh-output",
-        "unit:test_generation_gates",
-        "validator:validate_skill_version-local"
-      ],
-      "supersededByVersion": "0.2.18-r36",
-      "restoredFromVersion": null,
-      "rollbackStatus": "not_restored"
-    },
-    {
-      "version": "0.2.18-r36",
-      "formedAt": "2026-08-05T22:00:00+08:00",
-      "status": "local_valid_iteration",
-      "summary": "Preserve P10 source order while compiling deterministic semantic roles into one task timeline, with dedicated checklist rendering and static grouping gates.",
-      "traceabilityLevel": "source_exact",
-      "payloadSha256": "de840d4408df0aa82ece1ba28b1f6120376fa2e3eb412bc04fbdc9330457737d",
-      "sourceRef": "skill-ai-general-courseware-production-v0.2.18-r36",
-      "tag": "skill-ai-general-courseware-production-v0.2.18-r36",
-      "issue": "xrundaLab/runs-ai-monorepo#632",
-      "validationEvidence": [
-        "regression:p10-semantic-role-projection",
-        "regression:p10-single-ordered-action-timeline",
-        "regression:p10-checklist-not-prompt",
-        "visual:lesson014-local-417x904-static-html",
-        "unit:test_generation_gates",
-        "validator:validate_skill_version-local"
-      ],
-      "supersededByVersion": "0.2.19-r36",
-      "restoredFromVersion": null,
-      "rollbackStatus": "not_restored"
-    },
-    {
-      "version": "0.2.19-r36",
-      "formedAt": "2026-08-05T22:22:45+08:00",
-      "status": "local_valid_iteration",
-      "summary": "Align the P10 static source-order Gate with deterministic multi-row checklist DOM while retaining ordered field-level drift detection.",
-      "traceabilityLevel": "source_exact",
-      "payloadSha256": "a6bd7ab3f9f4b6ea268a1bc0e7bba6882338452f4bf28354dcc2c14cedfe8aec",
-      "sourceRef": "skill-ai-general-courseware-production-v0.2.19-r36",
-      "tag": "skill-ai-general-courseware-production-v0.2.19-r36",
-      "issue": "xrundaLab/runs-ai-monorepo#632",
-      "validationEvidence": [
-        "regression:p10-multiline-checklist-dom-source-order",
-        "regression:p10-checklist-field-drift-blocked",
-        "smoke:lesson014-s5-s6-fresh-output",
-        "unit:test_generation_gates",
-        "validator:validate_skill_version-local"
-      ],
       "supersededByVersion": "0.2.20-r36",
       "restoredFromVersion": null,
       "rollbackStatus": "not_restored"
@@ -279,20 +160,44 @@
     {
       "version": "0.2.20-r36",
       "formedAt": "2026-08-05T23:07:39+08:00",
-      "status": "local_valid_iteration",
-      "summary": "Canonicalize all post-class source aliases to the single visible and semantic page label 拓展练习 across S2-S6, OneShot context, and static Gates.",
-      "traceabilityLevel": "source_exact",
+      "status": "superseded_before_tag",
+      "summary": "Merged cumulative implementation of local checkpoints 0.2.13-r36 through 0.2.19-r36, plus canonical 拓展练习 metadata across S2-S6. It was synchronized to the public mirror but superseded before an immutable release Tag and active installation.",
+      "traceabilityLevel": "merged_candidate",
       "payloadSha256": "82074876283216435dc564689fb743c8bb4df4abdc4cdd0362b93bdffdea49f1",
-      "sourceRef": "skill-ai-general-courseware-production-v0.2.20-r36",
-      "tag": "skill-ai-general-courseware-production-v0.2.20-r36",
       "issue": "xrundaLab/runs-ai-monorepo#632",
+      "pullRequest": "xrundaLab/runs-ai-monorepo#637",
+      "mergeCommitSha": "c3a694a4d66b3fe9e643b38ac64accc9836cf3e0",
       "validationEvidence": [
+        "pr:runs-ai-monorepo#637",
+        "public-mirror:version-and-payload-match",
         "regression:post-class-aliases-canonicalize-to-extension-practice",
         "regression:s2-rejects-noncanonical-post-class-metadata",
         "regression:s6-context-title-tag-extension-practice",
+        "smoke:lesson020-three-input-s1-s6",
         "smoke:lesson012-s6-repairable-retry",
         "unit:test_generation_gates",
         "validator:validate_skill_version-local"
+      ],
+      "supersededByVersion": "0.2.21-r36",
+      "restoredFromVersion": null,
+      "rollbackStatus": "not_restored"
+    },
+    {
+      "version": "0.2.21-r36",
+      "formedAt": "2026-08-05T23:55:09+08:00",
+      "status": "release_candidate",
+      "summary": "Publish the cumulative three-input S1-S6 repair as one exact downloadable version while compacting unpublished local checkpoints into a permanently reserved audit range.",
+      "traceabilityLevel": "source_exact",
+      "payloadSha256": "cec903d493d260cd0d4b44ffe2c326aed6904c9104ed2125928c17ec2910ae06",
+      "sourceRef": "skill-ai-general-courseware-production-v0.2.21-r36",
+      "tag": "skill-ai-general-courseware-production-v0.2.21-r36",
+      "issue": "xrundaLab/runs-ai-monorepo#632",
+      "validationEvidence": [
+        "regression:compact-unpublished-local-iterations",
+        "regression:release-gate-checks-only-exact-published-sources",
+        "unit:test_skill_versioning",
+        "unit:test_generation_gates",
+        "validator:validate_skill_version-pr"
       ],
       "supersededByVersion": null,
       "restoredFromVersion": null,
