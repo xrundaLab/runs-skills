@@ -10,6 +10,7 @@ from pathlib import Path
 
 
 SKILL_ROOT = Path(__file__).resolve().parents[2]
+REPOSITORY_ROOT = SKILL_ROOT.parents[1]
 VALIDATORS = SKILL_ROOT / "scripts" / "validators"
 VALIDATOR = VALIDATORS / "validate_skill_version.py"
 sys.path.insert(0, str(VALIDATORS))
@@ -273,6 +274,40 @@ class SkillVersionTests(unittest.TestCase):
             result = run_cli("--skill-root", skill_root, "--mode", "release")
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("SKILL_VERSION_CHECK=PASS", result.stdout)
+
+    def test_pr_workflow_runs_version_gate_for_skill_paths(self) -> None:
+        workflow_path = (
+            REPOSITORY_ROOT / ".github" / "workflows" /
+            "validate-ai-courseware-skill.yml"
+        )
+        workflow = workflow_path.read_text(encoding="utf-8")
+        for marker in (
+            "skills/ai-general-courseware-production/**",
+            "fetch-depth: 0",
+            "validate_skill_version.py",
+            "--base-ref origin/${{ github.base_ref }}",
+            "--mode pr",
+            "test_skill_versioning.py",
+            "test_generation_gates.py",
+        ):
+            self.assertIn(marker, workflow)
+
+    def test_sync_workflow_verifies_latest_public_skill_mirror(self) -> None:
+        workflow_path = REPOSITORY_ROOT / ".github" / "workflows" / "sync-subtrees.yml"
+        workflow = workflow_path.read_text(encoding="utf-8")
+        self.assertEqual(workflow.count("git push target HEAD:main --force"), 1)
+        for marker in (
+            "git clone --depth 1 https://github.com/xrundaLab/runs-skills.git /tmp/runs-skills-verify",
+            "/tmp/skills-work/ai-general-courseware-production/VERSION",
+            "/tmp/runs-skills-verify/ai-general-courseware-production/VERSION",
+            "/tmp/runs-skills-verify/ai-general-courseware-production/scripts/validators/validate_skill_version.py",
+            "canonical_payload=",
+            "public_payload=",
+            'test "$canonical_payload" = "$public_payload"',
+            "--mode local",
+        ):
+            self.assertIn(marker, workflow)
+        self.assertNotIn("git push target --tags", workflow)
 
 
 if __name__ == "__main__":
