@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "skill": "ai-general-courseware-production",
-  "currentVersion": "0.2.11-r36",
+  "currentVersion": "0.2.12-r36",
   "releasedVersions": [
     "0.1.0-r36"
   ],
@@ -117,6 +117,25 @@
         "unit:test_generation_gates=36-pass",
         "regression:s2-boundary-owner-and-s4-no-repeat",
         "regression:s5-draft-preflight"
+      ],
+      "supersededByVersion": "0.2.12-r36",
+      "restoredFromVersion": null,
+      "rollbackStatus": "not_restored"
+    },
+    {
+      "version": "0.2.12-r36",
+      "formedAt": "2026-08-05T13:30:00+08:00",
+      "status": "release_candidate",
+      "summary": "Remove redundant cross-stage byte counts; freeze integrity is verified only by absolute path and SHA-256.",
+      "traceabilityLevel": "source_exact",
+      "payloadSha256": "c5360fe7963deb8f5722b3ee24ad45c90a9751441c10fc9eed7db4188bbe8ca2",
+      "sourceRef": "skill-ai-general-courseware-production-v0.2.12-r36",
+      "tag": "skill-ai-general-courseware-production-v0.2.12-r36",
+      "issue": "xrundaLab/runs-ai-monorepo#632",
+      "validationEvidence": [
+        "issue:runs-ai-monorepo#632",
+        "regression:cross-stage-freeze-sha-without-byte-count",
+        "unit:test_generation_gates"
       ],
       "supersededByVersion": null,
       "restoredFromVersion": null,

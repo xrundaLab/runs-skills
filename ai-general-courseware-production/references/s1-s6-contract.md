@@ -51,7 +51,7 @@ S1 只读取以下两类输入：
 - `sources.teacher_final`、`sources.course_info`、`sources.sop_entry` 及各自 SHA-256；学生版如登记，只能标注 `S2 辅助结构核查，不在 S1 分析`；
 - 原文六项 `course_info`；
 - 三个输出路径与 SHA-256；
-- `checks.six_course_fields_complete`、`checks.teacher_body_byte_preserved`、`checks.teacher_body_sha256_matches`；
+- `checks.six_course_fields_complete`、`checks.teacher_body_sha256_matches`；
 - `blocking_points`。不得含题目、场景、课后任务、页面块、声明/推断或资源分支字段。
 
 `final_preprocessed.md` 必须由两部分组成：
@@ -59,17 +59,17 @@ S1 只读取以下两类输入：
 1. `S1` 来源预处理头：合同版本、`source_manifest.json` 引用及六项课程信息原文；
 2. `<!-- 教师正文开始 -->` 后的教师正文逐字节副本。
 
-`preprocess_comparison.json` 必须含：`schema_version`、`lesson_id`、`sop_version`、教师源路径/SHA-256、预处理文件 SHA-256、教师正文前后字节数与 SHA-256、六项字段完整性、允许变化清单（仅预处理头与边界标记）、`status`、`blocking_points`。正文摘要、块类型、题目数据或页面判断都不得写入该文件。
+`preprocess_comparison.json` 必须含：`schema_version`、`lesson_id`、`sop_version`、教师源路径/SHA-256、预处理文件 SHA-256、教师正文前后 SHA-256、六项字段完整性、允许变化清单（仅预处理头与边界标记）、`status`、`blocking_points`。正文摘要、块类型、题目数据或页面判断都不得写入该文件。
 
 ### S1 Gate
 
-以下任一情况为 `BLOCKED`：教师版或课程信息缺失；六项字段缺失/与教师版冲突；源 SHA 未登记；正文哈希或字节数不一致；出现未授权正文改写；输出含 S2 以后字段。仅当三个 S1 输出齐全、比对为 `PASS` 才能进入 S2。
+以下任一情况为 `BLOCKED`：教师版或课程信息缺失；六项字段缺失/与教师版冲突；源 SHA 未登记；正文 SHA-256 不一致；出现未授权正文改写；输出含 S2 以后字段。仅当三个 S1 输出齐全、比对为 `PASS` 才能进入 S2。
 
 ## S2 页面规划工作版
 
 ### 输入、输出与页面块格式
 
-S2 的冻结验证只读取同课 `source_manifest.json` 的 `outputs.final_preprocessed.path`、`bytes`、`sha256`，确认工作输入未漂移；课程语义只读取该声明指向的冻结 `final_preprocessed.md`。学生版只用于结构辅助核查，不得覆盖教师版语义或补写课程内容。输出仅为 `page_plan_working_full.md` 与 `student_structure_check.md`；不得生成题目 JSON、最终页面计划、有效内容 JSON、整课 JSON 或页面提示词。
+S2 的冻结验证只读取同课 `source_manifest.json` 的 `outputs.final_preprocessed.path` 与 `sha256`，确认工作输入未漂移；课程语义只读取该声明指向的冻结 `final_preprocessed.md`。学生版只用于结构辅助核查，不得覆盖教师版语义或补写课程内容。输出仅为 `page_plan_working_full.md` 与 `student_structure_check.md`；不得生成题目 JSON、最终页面计划、有效内容 JSON、整课 JSON 或页面提示词。
 
 工作版由一个不面向学生的“输入冻结声明”、来源路由表、互动题边界决策表、页面交接清单及连续页面块组成。四个声明块必须置于首个页面块之前。S2 只拥有“页面路由与切分”权，不拥有内容删留权：从 S1 接收到的学生正文必须逐字、按原顺序完整流经 S2、S3、S4；不得摘要、概括、补写、重排、合并或提前剔除任何看似干扰的句子。只有 S5 才能按冻结的有效内容规则处理非学生可见研发注释、状态句等不进入最终有效内容的部分，同时保留 `source.rawMarkdown` 作为上游审计真源。页面块按连续页序使用下列单行标记；标记后的内容必须按原文顺序保留该页完整学生可见内容：
 
@@ -83,7 +83,6 @@ S2 的冻结验证只读取同课 `source_manifest.json` 的 `outputs.final_prep
 <!-- S2_INPUT_FREEZE
 source_manifest: <绝对路径>/source_manifest.json
 final_preprocessed: <绝对路径>/final_preprocessed.md
-bytes: 1234
 sha256: <64位十六进制>
 -->
 ```
@@ -131,7 +130,7 @@ sha256: <64位十六进制>
 
 S2 不是把教师正文直接切成页面后再靠 Gate 纠错。每课必须依次执行下列步骤，完成上一步才可写下一步：
 
-1. **核验并建立 P01**：先以同课 `source_manifest.json` 核验冻结 `final_preprocessed.md` 的路径、字节数和 SHA-256；再从其 S1 头部逐字复制六项课程信息，建立 `课程开篇` P01；课程开篇只允许出现在 P01。
+1. **核验并建立 P01**：先以同课 `source_manifest.json` 核验冻结 `final_preprocessed.md` 的路径和 SHA-256；再从其 S1 头部逐字复制六项课程信息，建立 `课程开篇` P01；课程开篇只允许出现在 P01。
 2. **先建立完整来源路由**：逐个读取 S1 学生正文内容块，先写 `S2_SOURCE_ROUTE_MANIFEST`，为每块决定全部目标页及理由；不写概述，不删句，不先生成页面。真实开场情境必须先落为场景引入；知识、案例、互动、小结和任务的路由只决定位置与页面类型，不改变原文。
 3. **圈定互动题候选块**：针对教师正文中每个有唯一标准答案的题，先圈出题目材料、问句、操作指令、选项、答案、解析、答错提示与重试方式；此时不写页面标记。
 4. **逐题填写边界决策表**：对每个候选题紧邻前的动作句做删除测试，分别填写删除后作答对象、操作指令、判断标准是否仍存在；必要背景是否超过 50 字只由校验器从页面正文判断，不手填精确字数。不能用动作词本身代替删除测试。
@@ -164,7 +163,7 @@ S2 不是把教师正文直接切成页面后再靠 Gate 纠错。每课必须�
 python3 scripts/validators/validate_v35_page_plan_question_boundaries.py --working-plan-contract page_plan_working_full.md
 ```
 
-以下任一情况为 `BLOCKED`：S1 冻结凭据缺失、路径/字节数/SHA-256 漂移；页面标记无法识别或页数为 0；P01 不是课程开篇或六项字段不全；页号不连续；页面类型不在七类正式枚举中；存在 S1 内容块时缺来源路由表、来源块覆盖不全/重复、原始类型或路由页不一致、“开场”未路由为场景引入、页面正文拼回后不再逐字等于 S1 学生正文；互动题缺边界决策记录、页面交接清单缺页或字段非法、记录与页面类型/相邻关系/实际背景路由不一致；知识页末句实际属于紧邻互动题的作答动作、题干或必要背景而审计表仍声明“知识页保留”；学生版被当作语义真源；工作版以外的阶段产物被提前生成。校验器直接从页面正文判断是否超过 50 字；禁止人工填写或核对精确背景字数。互动边界只在 S2 裁决，`PASS` 后 S3-S6 不得重新判断该归属。
+以下任一情况为 `BLOCKED`：S1 冻结凭据缺失、路径/SHA-256 漂移；页面标记无法识别或页数为 0；P01 不是课程开篇或六项字段不全；页号不连续；页面类型不在七类正式枚举中；存在 S1 内容块时缺来源路由表、来源块覆盖不全/重复、原始类型或路由页不一致、“开场”未路由为场景引入、页面正文拼回后不再逐字等于 S1 学生正文；互动题缺边界决策记录、页面交接清单缺页或字段非法、记录与页面类型/相邻关系/实际背景路由不一致；知识页末句实际属于紧邻互动题的作答动作、题干或必要背景而审计表仍声明“知识页保留”；学生版被当作语义真源；工作版以外的阶段产物被提前生成。校验器直接从页面正文判断是否超过 50 字；禁止人工填写或核对精确背景字数。互动边界只在 S2 裁决，`PASS` 后 S3-S6 不得重新判断该归属。
 
 ## S3 题目处理
 
@@ -172,7 +171,7 @@ python3 scripts/validators/validate_v35_page_plan_question_boundaries.py --worki
 
 只读取已冻结的 `page_plan_working_full.md`，只输出 `question_processed_full.md`。不得回读教师版 `final.md`、`final_preprocessed.md`、学生版、历史题目处理版教案或任何旧页面规划；不得改动工作版中的页面块、页序、页面类型、胶囊、来源块和非互动正文。每个题目必须使用 S2 页面交接清单中该互动页登记的互动编号和组件类型；不得新编、替换或重新映射。
 
-`question_processed_full.md` 必须是完整的 S2 派生页面规划：文件头先登记 `S3_INPUT_FREEZE`（S2 绝对路径、字节数、SHA-256），随后放置 `--- 冻结页面规划原文（只读基底） ---`，并逐字保留全部 S2 输入冻结声明、边界审计、页面交接清单和页面块。每个非互动页必须逐字不变；每个互动题页也须先逐字保留原题块，再在该页末尾原位追加一对题目数据。不得抽取为孤立题目清单、独立题目 JSON 文件、题目汇总表、页面提示词或整课 JSON。
+`question_processed_full.md` 必须是完整的 S2 派生页面规划：文件头先登记 `S3_INPUT_FREEZE`（S2 绝对路径、SHA-256），随后放置 `--- 冻结页面规划原文（只读基底） ---`，并逐字保留全部 S2 输入冻结声明、边界审计、页面交接清单和页面块。每个非互动页必须逐字不变；每个互动题页也须先逐字保留原题块，再在该页末尾原位追加一对题目数据。不得抽取为孤立题目清单、独立题目 JSON 文件、题目汇总表、页面提示词或整课 JSON。
 
 ### `question_processed_full.md` 合同
 

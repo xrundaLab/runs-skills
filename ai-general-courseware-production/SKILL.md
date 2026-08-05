@@ -96,7 +96,7 @@ Use only the bundled OneShots and Demos. Do not hand-build whole-course JSON, re
 
 ## Govern independent Skill versions
 
-Treat `0.2.11-r36` as the next release candidate. Before claiming any local iteration valid, run:
+Treat `0.2.12-r36` as the next release candidate. Before claiming any local iteration valid, run:
 
 ```bash
 python3 scripts/validators/validate_skill_version.py \
