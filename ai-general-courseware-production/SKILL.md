@@ -102,7 +102,7 @@ Use only the bundled OneShots and Demos. Do not hand-build whole-course JSON, re
 
 ## Govern independent Skill versions
 
-Treat `0.2.20-r36` as the next release candidate. Before claiming any local iteration valid, run:
+Treat `0.2.21-r36` as the next release candidate. Local working iterations may reserve version numbers for audit, but only a remotely published exact source snapshot receives a `source_exact` registry entry and immutable Tag. Before claiming any local iteration valid, run:
 
 ```bash
 python3 scripts/validators/validate_skill_version.py \

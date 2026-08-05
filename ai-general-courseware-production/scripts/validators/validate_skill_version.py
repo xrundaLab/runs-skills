@@ -178,7 +178,8 @@ def validate_registry(registry: dict[str, object]) -> list[dict[str, str]]:
             )
         prior_version = version
 
-        if raw_entry.get("traceabilityLevel") == "source_exact":
+        traceability = raw_entry.get("traceabilityLevel")
+        if traceability == "source_exact":
             expected_ref = f"skill-{SKILL_NAME}-v{version}"
             if raw_entry.get("sourceRef") != expected_ref:
                 issues.append(
@@ -203,6 +204,56 @@ def validate_registry(registry: dict[str, object]) -> list[dict[str, str]]:
                         f"source_exact version {version} requires validation evidence",
                     )
                 )
+        elif traceability == "merged_candidate":
+            payload = raw_entry.get("payloadSha256")
+            if not isinstance(payload, str) or re.fullmatch(r"[0-9a-f]{64}", payload) is None:
+                issues.append(
+                    issue(
+                        "SKILL_VERSION_PAYLOAD_MISSING",
+                        f"merged_candidate version {version} requires a lowercase SHA-256",
+                    )
+                )
+            merge_commit = raw_entry.get("mergeCommitSha")
+            if (
+                not isinstance(merge_commit, str)
+                or re.fullmatch(r"[0-9a-f]{40}", merge_commit) is None
+            ):
+                issues.append(
+                    issue(
+                        "SKILL_VERSION_MERGE_COMMIT_MISSING",
+                        f"merged_candidate version {version} requires a full merge commit SHA",
+                    )
+                )
+            pull_request = raw_entry.get("pullRequest")
+            if not isinstance(pull_request, str) or not pull_request.strip():
+                issues.append(
+                    issue(
+                        "SKILL_VERSION_PULL_REQUEST_MISSING",
+                        f"merged_candidate version {version} requires a pull request",
+                    )
+                )
+            if raw_entry.get("sourceRef") is not None or raw_entry.get("tag") is not None:
+                issues.append(
+                    issue(
+                        "SKILL_VERSION_UNPUBLISHED_TAG_INVALID",
+                        f"merged_candidate version {version} must not claim a release Tag",
+                    )
+                )
+            evidence = raw_entry.get("validationEvidence")
+            if not isinstance(evidence, list) or not evidence:
+                issues.append(
+                    issue(
+                        "SKILL_VERSION_EVIDENCE_MISSING",
+                        f"merged_candidate version {version} requires validation evidence",
+                    )
+                )
+        else:
+            issues.append(
+                issue(
+                    "SKILL_VERSION_TRACEABILITY_INVALID",
+                    f"version {version} has unsupported traceabilityLevel {traceability!r}",
+                )
+            )
 
     ranges = registry.get("reservedLegacyRanges", [])
     if isinstance(ranges, list):

@@ -121,6 +121,44 @@ def initialize_repository(repo: Path, base_version: str) -> Path:
 
 
 class SkillVersionTests(unittest.TestCase):
+    def test_canonical_registry_compacts_unpublished_local_iterations(self) -> None:
+        registry_path = SKILL_ROOT / "references" / "version-registry.json"
+        registry = json.loads(registry_path.read_text(encoding="utf-8"))
+
+        formal_entries = {
+            entry["version"]: entry
+            for entry in registry["versions"]
+        }
+        local_versions = {
+            f"0.2.{patch}-r36"
+            for patch in range(13, 20)
+        }
+        self.assertTrue(local_versions.isdisjoint(formal_entries))
+        self.assertTrue(
+            local_versions.issubset(set(registry["localReservedVersions"]))
+        )
+
+        compact_range = next(
+            item
+            for item in registry["reservedLegacyRanges"]
+            if item["from"] == "0.2.13-r36"
+        )
+        self.assertEqual(compact_range["to"], "0.2.19-r36")
+        self.assertFalse(compact_range["reusable"])
+        self.assertEqual(compact_range["rolledIntoVersion"], "0.2.20-r36")
+
+        merged_candidate = formal_entries["0.2.20-r36"]
+        self.assertEqual(
+            merged_candidate["traceabilityLevel"],
+            "merged_candidate",
+        )
+        self.assertNotIn("sourceRef", merged_candidate)
+        self.assertNotIn("tag", merged_candidate)
+
+        current = formal_entries[registry["currentVersion"]]
+        self.assertEqual(registry["currentVersion"], "0.2.21-r36")
+        self.assertEqual(current["traceabilityLevel"], "source_exact")
+
     def test_parse_version_accepts_current_contract(self) -> None:
         self.assertEqual(parse_version("0.2.9-r36"), (0, 2, 9, 36))
 
@@ -185,6 +223,17 @@ class SkillVersionTests(unittest.TestCase):
         entry["payloadSha256"] = "a" * 64  # type: ignore[index]
         report = validate_registry(registry)
         self.assertIn("SKILL_VERSION_EVIDENCE_MISSING", issue_codes(report))
+
+    def test_merged_candidate_requires_merge_evidence_without_release_tag(self) -> None:
+        registry = registry_with_versions("0.2.20-r36")
+        entry = registry["versions"][0]  # type: ignore[index]
+        entry["traceabilityLevel"] = "merged_candidate"  # type: ignore[index]
+        entry["payloadSha256"] = "a" * 64  # type: ignore[index]
+        entry["sourceRef"] = "skill-ai-general-courseware-production-v0.2.20-r36"  # type: ignore[index]
+        report = validate_registry(registry)
+        codes = issue_codes(report)
+        self.assertIn("SKILL_VERSION_MERGE_COMMIT_MISSING", codes)
+        self.assertIn("SKILL_VERSION_UNPUBLISHED_TAG_INVALID", codes)
 
     def test_cli_local_accepts_matching_registry_and_payload(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
