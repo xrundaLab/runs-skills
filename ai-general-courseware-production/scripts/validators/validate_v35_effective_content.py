@@ -11,8 +11,18 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import sys
 from pathlib import Path
 from typing import Any
+
+SCRIPT_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(SCRIPT_ROOT))
+
+from page_type_contract import (  # noqa: E402
+    POST_CLASS_CANONICAL_PAGE_TYPE,
+    canonical_capsule,
+    canonical_page_type,
+)
 
 from validate_v35_page_plan_question_boundaries import JSON_FENCE_RE, parse_pages
 
@@ -50,6 +60,20 @@ POST_CLASS_SECTION_TYPES = {
     "decision",
     "safety",
     "fallback",
+}
+POST_CLASS_SECTION_ROLES = {
+    "lead",
+    "preflight",
+    "action",
+    "prompt",
+    "review",
+    "checklist",
+    "condition",
+    "correctivePrompt",
+    "decision",
+    "safetyFallback",
+    "fallback",
+    "note",
 }
 FORBIDDEN_DOWNSTREAM_FIELDS = {"prompt", "components", "sdk_action", "is_last_page"}
 LESSON_NUMBER_RE = re.compile(r"(\d+)")
@@ -165,7 +189,7 @@ EXPECTED_HIGHLIGHT_POLICY = {
 ORDERED_PARAGRAPH_RE = re.compile(
     r"^(?:第[一二三四五六七八九十百]+[，、：:]|[一二三四五六七八九十]+[、.]|\d+[、.])"
 )
-NON_EFFECTIVE_STATUS_RE = re.compile(r"本课没有课后(?:练习|任务)[^。\n]*[。.]?")
+NON_EFFECTIVE_STATUS_RE = re.compile(r"本课没有(?:课后练习|课后任务|拓展练习)[^。\n]*[。.]?")
 DYNAMIC_STRUCTURED_BLOCK_TYPES = {
     "heading",
     "paragraph",
@@ -334,6 +358,15 @@ def add_issue(
     issues.append(issue)
 
 
+def split_course_intro_knowledge_points(raw_value: str) -> list[str]:
+    points: list[str] = []
+    for value in re.split(r"[;；\n]+", raw_value):
+        normalized = re.sub(r"^\s*(?:[-*•]|\d+[.．、)）:：])\s*", "", value).strip()
+        if normalized:
+            points.append(normalized)
+    return points
+
+
 def validate_p01(
     page: dict[str, Any],
     plan_body: str,
@@ -366,13 +399,25 @@ def validate_p01(
         "lessonNumber": expected_lesson_number,
         "courseName": effective["课程标题"],
         "courseIntroduction": effective["课程目标"],
-        "knowledgePoints": effective["知识点"],
+        "knowledgePoints": split_course_intro_knowledge_points(
+            str(effective["知识点"])
+        ),
     }
-    if not ordered_equal(content, expected_content):
+    if any(
+        content.get(key) != expected_content[key]
+        for key in P01_CONTENT_FIELDS[:-1]
+    ):
         add_issue(
             issues,
             "V35_S2E_P01_SIX_FIELDS_INVALID",
-            "P01 六个模板变量不是课程信息六字段的确定性投影。",
+            "P01 前五个模板变量不是课程信息字段的确定性投影。",
+            page_no,
+        )
+    if content.get("knowledgePoints") != expected_content["knowledgePoints"]:
+        add_issue(
+            issues,
+            "V35_S2E_P01_KNOWLEDGE_POINTS_PROJECTION_INVALID",
+            "P01 必须保留知识点原始字段，并按分号或换行确定性投影为非空有序 knowledgePoints list。",
             page_no,
         )
     if any(f"{label}：" not in plan_body for label in P01_EFFECTIVE_FIELDS):
@@ -760,7 +805,7 @@ def validate_template_preflight(
     issues: list[dict[str, str]],
 ) -> None:
     page_no = str(page.get("page_no") or "")
-    page_type = page.get("page_type")
+    page_type = canonical_page_type(page.get("page_type"))
     if page_type == "互动题目":
         if not isinstance(page.get("layout_plan"), dict) or not page["layout_plan"]:
             add_issue(
@@ -807,7 +852,7 @@ def validate_template_preflight(
     if page_type in DESIGN_BRIEF_PAGE_TYPES:
         validate_dynamic_structured_block_projection(page, issues)
 
-    if page_type == "课后任务" and isinstance(sections, list):
+    if page_type == POST_CLASS_CANONICAL_PAGE_TYPE and isinstance(sections, list):
         invalid_types = sorted(
             {
                 str(section.get("type"))
@@ -820,7 +865,58 @@ def validate_template_preflight(
             add_issue(
                 issues,
                 "V35_S2E_POST_CLASS_TASK_SECTION_INVALID",
-                "课后任务 sections 只允许八类受控块：" + "、".join(sorted(POST_CLASS_SECTION_TYPES)),
+                "拓展练习 sections 只允许八类受控块：" + "、".join(sorted(POST_CLASS_SECTION_TYPES)),
+                page_no,
+            )
+        invalid_roles = sorted(
+            {
+                str(section.get("role"))
+                for section in sections
+                if not isinstance(section, dict)
+                or section.get("role") not in POST_CLASS_SECTION_ROLES
+            }
+        )
+        if invalid_roles:
+            add_issue(
+                issues,
+                "V35_S2E_POST_CLASS_TASK_ROLE_INVALID",
+                "拓展练习 sections 必须携带受控语义 role，以供 S6 原位组合："
+                + "、".join(sorted(POST_CLASS_SECTION_ROLES)),
+                page_no,
+            )
+        raw_markdown = source.get("rawMarkdown") if isinstance(source, dict) else None
+        source_blocks = (
+            parse_dynamic_source_blocks(raw_markdown)
+            if isinstance(raw_markdown, str)
+            else []
+        )
+        expected_title = (
+            source_blocks[0].get("text")
+            if source_blocks and source_blocks[0].get("type") == "heading"
+            else None
+        )
+        actual_title = content.get("taskTitle") if isinstance(content, dict) else None
+        if (
+            not isinstance(expected_title, str)
+            or not expected_title.strip()
+            or actual_title != expected_title.strip()
+        ):
+            add_issue(
+                issues,
+                "V35_S2E_POST_CLASS_TASK_TITLE_INVALID",
+                "拓展练习 content.taskTitle 必须由 source.rawMarkdown 的首个标题逐字投影。",
+                page_no,
+            )
+        expected_source = [str(block.get("markdown") or "") for block in source_blocks[1:]]
+        actual_source = [
+            section.get("sourceMarkdown") if isinstance(section, dict) else None
+            for section in sections
+        ]
+        if not expected_source or actual_source != expected_source:
+            add_issue(
+                issues,
+                "V35_S2E_POST_CLASS_TASK_SOURCE_PROJECTION_INVALID",
+                "拓展练习 sections 必须逐块、按原序完整覆盖 source.rawMarkdown 的标题后全部正文，不得漏段、重排或仅保留首段。",
                 page_no,
             )
 
@@ -1058,10 +1154,11 @@ def validate_effective_content(path: Path, page_plan: Path | None = None) -> dic
                 f"页面编号必须连续；期望 {expected_no}。",
                 page_no,
             )
+        source_plan_page_type = plan_page["page_type"]
         expected_base = {
             "page_no": plan_page["page_no"],
-            "page_type": plan_page["page_type"],
-            "capsule": plan_page["capsule"],
+            "page_type": canonical_page_type(source_plan_page_type),
+            "capsule": canonical_capsule(source_plan_page_type, plan_page["capsule"]),
             "page_action": plan_page["action"],
             "source_block_ids": source_block_ids(plan_page["source_block"]),
         }
@@ -1115,7 +1212,7 @@ def validate_effective_content(path: Path, page_plan: Path | None = None) -> dic
             add_issue(
                 issues,
                 "V35_S2E_STATUS_SENTENCE_NOT_FILTERED",
-                "S5 是唯一有效内容筛除阶段；“本课没有课后练习/任务”等纯状态句必须保留在 source.rawMarkdown 审计真源中，不能进入 effective_content、content 或 sections。",
+                "S5 是唯一有效内容筛除阶段；“本课没有课后练习/课后任务/拓展练习”等纯状态句必须保留在 source.rawMarkdown 审计真源中，不能进入 effective_content、content 或 sections。",
                 page_no,
             )
 

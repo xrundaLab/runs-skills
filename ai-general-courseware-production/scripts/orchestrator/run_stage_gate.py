@@ -39,6 +39,19 @@ def receipt_path(receipt_dir: Path, stage: str) -> Path:
     return receipt_dir / f"{stage.lower()}_gate_receipt.json"
 
 
+def attempt_receipt_path(receipt_dir: Path, stage: str) -> tuple[int, Path]:
+    """Allocate an immutable receipt for each invocation of one stage."""
+    receipt_dir.mkdir(parents=True, exist_ok=True)
+    prefix = f"{stage.lower()}_gate_receipt_attempt-"
+    attempts = []
+    for path in receipt_dir.glob(f"{prefix}*.json"):
+        suffix = path.stem.removeprefix(prefix)
+        if suffix.isdigit():
+            attempts.append(int(suffix))
+    attempt = max(attempts, default=0) + 1
+    return attempt, receipt_dir / f"{prefix}{attempt:03d}.json"
+
+
 def write_receipt(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
@@ -196,13 +209,14 @@ def main() -> int:
     parser.add_argument("--working-plan", type=Path)
     parser.add_argument("--question-processed", type=Path)
     parser.add_argument("--page-plan", type=Path)
-    parser.add_argument("--draft", type=Path)
     parser.add_argument("--effective-content", type=Path)
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
 
     stage = args.stage
-    receipt_file = receipt_path(args.receipt_dir.resolve(), stage)
+    resolved_receipt_dir = args.receipt_dir.resolve()
+    receipt_file = receipt_path(resolved_receipt_dir, stage)
+    attempt, immutable_receipt_file = attempt_receipt_path(resolved_receipt_dir, stage)
     inputs: list[dict[str, str]] = []
     commands: list[list[str]] = []
     prior_record: dict[str, str] | None = None
@@ -216,7 +230,6 @@ def main() -> int:
         working = required_path(args.working_plan, "working_plan") if stage in {"S2", "S3", "S4"} else None
         question = required_path(args.question_processed, "question_processed") if stage in {"S3", "S4"} else None
         page_plan = required_path(args.page_plan, "page_plan") if stage == "S5" else None
-        draft = required_path(args.draft, "draft") if stage == "S5" else None
         effective = required_path(args.effective_content, "effective_content") if stage == "S6" else None
         upstream = {
             "S3": working,
@@ -254,11 +267,11 @@ def main() -> int:
         elif stage == "S5":
             if args.output is None:
                 raise ValueError("ARGUMENT_MISSING:output")
-            inputs = [artifact("page_plan", page_plan), artifact("draft", draft)]
+            inputs = [artifact("page_plan", page_plan)]
             final_output = args.output.resolve()
             temporary = temp_output(final_output)
             commands = [
-                [sys.executable, str(GENERATORS / "build_effective_content.py"), "--lesson-id", args.lesson_id, "--page-plan", str(page_plan), "--draft", str(draft), "--output", str(temporary)],
+                [sys.executable, str(GENERATORS / "build_effective_content.py"), "--lesson-id", args.lesson_id, "--page-plan", str(page_plan), "--output", str(temporary)],
                 [sys.executable, str(VALIDATORS / "validate_v35_effective_content.py"), "--page-plan", str(page_plan), str(temporary)],
             ]
         else:
@@ -305,6 +318,7 @@ def main() -> int:
         "contract": CONTRACT,
         "lesson_id": args.lesson_id,
         "stage": stage,
+        "attempt": attempt,
         "status": status,
         "commands": commands,
         "exit_code": exit_code,
@@ -316,6 +330,7 @@ def main() -> int:
         "downstream_authorized": status == "PASS" and stage != "S6",
         "static_result": "IMPORT_READY_STATIC" if status == "PASS" and stage == "S6" else None,
     }
+    write_receipt(immutable_receipt_file, payload)
     write_receipt(receipt_file, payload)
     print(json.dumps(payload, ensure_ascii=False, indent=2))
     return 0 if status == "PASS" else 1

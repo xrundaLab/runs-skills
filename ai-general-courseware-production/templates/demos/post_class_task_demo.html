@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>课后任务页固定模板 Demo</title>
+  <title>拓展练习页固定模板 Demo</title>
   <script src="https://res.xrunda.com/runs/plugin/creator/creator-review-sdk.js"></script>
   <style>
     /* FIXED_LAYOUT_CONTRACT: 顶部/两侧/底部留白、底栏和主按钮均为固定代码；每课只替换 POST_CLASS_TASK_VARIABLES。 */
@@ -66,7 +66,7 @@
       height: 100%;
       overflow-y: auto;
       overflow-x: hidden;
-      padding: 28px 24px
+      padding: 20px 24px
         calc(var(--footer-h) + var(--safe-bottom) + 22px);
       overscroll-behavior: contain;
       -webkit-overflow-scrolling: touch;
@@ -80,7 +80,7 @@
     .task-hero {
       display: grid;
       justify-items: center;
-      padding: 0 8px 24px;
+      padding: 0 8px 16px;
       text-align: center;
     }
 
@@ -88,9 +88,9 @@
       position: relative;
       display: grid;
       place-items: center;
-      width: 128px;
-      height: 128px;
-      margin-bottom: 15px;
+      width: 76px;
+      height: 76px;
+      margin-bottom: 8px;
       transform: rotate(-2deg);
     }
 
@@ -100,8 +100,8 @@
 
     .notebook-image {
       display: block;
-      width: 128px;
-      height: 128px;
+      width: 76px;
+      height: 76px;
       object-fit: contain;
       filter: drop-shadow(0 5px 7px rgba(42, 24, 94, 0.18));
       transform: rotate(2deg);
@@ -111,7 +111,7 @@
       max-width: 450px;
       margin: 0;
       color: var(--ink);
-      font-size: 29px;
+      font-size: 27px;
       line-height: 1.35;
       font-weight: 850;
     }
@@ -133,6 +133,13 @@
       line-height: 1.72;
       text-align: center;
       overflow-wrap: break-word;
+    }
+
+    .task-lead {
+      max-width: 460px;
+      margin-right: auto;
+      margin-left: auto;
+      font-weight: 600;
     }
 
     .glass-card {
@@ -238,7 +245,7 @@
     .action-section {
       display: grid;
       gap: 12px;
-      padding: 18px 0 2px;
+      padding: 10px 0 2px;
     }
 
     .action-title {
@@ -364,6 +371,46 @@
       font-weight: 450;
     }
 
+    .checklist-block {
+      overflow: hidden;
+      border: 1px solid rgba(104, 64, 218, 0.12);
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.72);
+    }
+
+    .checklist-label {
+      padding: 10px 13px;
+      color: var(--purple-deep);
+      background: rgba(134, 88, 245, 0.1);
+      font-size: 13px;
+      line-height: 1.4;
+      font-weight: 850;
+    }
+
+    .checklist-row {
+      display: grid;
+      grid-template-columns: minmax(76px, auto) minmax(0, 1fr);
+      gap: 8px;
+      min-height: 40px;
+      padding: 9px 13px;
+      color: #403a50;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .checklist-row + .checklist-row {
+      border-top: 1px solid rgba(104, 64, 218, 0.08);
+    }
+
+    .checklist-key {
+      color: #54496b;
+      font-weight: 750;
+    }
+
+    .checklist-row-full {
+      display: block;
+    }
+
     .decision-card {
       position: relative;
       overflow: hidden;
@@ -475,8 +522,8 @@
       }
 
       .notebook-badge {
-        width: 128px;
-        height: 128px;
+        width: 76px;
+        height: 76px;
       }
 
       .facts-grid {
@@ -512,9 +559,14 @@
       }
 
       .notebook-badge {
-        width: 128px;
-        height: 128px;
+        width: 64px;
+        height: 64px;
         margin: 0;
+      }
+
+      .notebook-image {
+        width: 64px;
+        height: 64px;
       }
 
       .task-hero h1 {
@@ -537,18 +589,18 @@
   </style>
 </head>
 <body>
-  <main class="post-task-page" data-screen-label="课后任务页方案A">
+  <main class="post-task-page" data-screen-label="拓展练习页方案A">
     <div class="task-scroll" id="taskScroll">
       <div class="top-safe-area" aria-hidden="true"></div>
 
       <header class="task-hero" aria-labelledby="taskTitle">
         <div class="notebook-badge" aria-hidden="true">
-          <img class="notebook-image" src="https://res.xrunda.com/xruns/static/image/20270724/3.png" width="128" height="128" alt="">
+          <img class="notebook-image" src="https://res.xrunda.com/xruns/static/image/20270724/3.png" width="76" height="76" alt="">
         </div>
         <h1 id="taskTitle"></h1>
       </header>
 
-      <section class="task-content" id="taskContent" aria-label="课后任务内容"></section>
+      <section class="task-content" id="taskContent" aria-label="拓展练习内容"></section>
     </div>
 
     <footer class="task-footer">
@@ -843,7 +895,7 @@
             if (!actionSection) {
               actionSection = createElement("section", "action-section");
               const title = createElement("div", "action-title");
-              title.appendChild(createElement("h2", "", "开始行动"));
+              title.appendChild(createElement("h2", "", "操作步骤"));
               actionSection.appendChild(title);
               content.appendChild(actionSection);
             }

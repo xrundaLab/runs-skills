@@ -144,6 +144,19 @@ class GenerationGateTests(unittest.TestCase):
         self.assertNotIn("bytes", s2_validator.S2_INPUT_FREEZE_RE.pattern)
         self.assertNotIn("bytes", s3_validator.S3_INPUT_FREEZE_RE.pattern)
 
+    def test_gate_receipt_attempt_paths_are_immutable_and_incrementing(self) -> None:
+        runner = self.load_module("courseware_gate_attempt_receipts", GATE_RUNNER)
+        with tempfile.TemporaryDirectory() as temp_dir:
+            receipts = Path(temp_dir) / "receipts"
+            first_attempt, first_path = runner.attempt_receipt_path(receipts, "S3")
+            first_path.write_text("{}\n", encoding="utf-8")
+            second_attempt, second_path = runner.attempt_receipt_path(receipts, "S3")
+
+            self.assertEqual(first_attempt, 1)
+            self.assertEqual(first_path.name, "s3_gate_receipt_attempt-001.json")
+            self.assertEqual(second_attempt, 2)
+            self.assertEqual(second_path.name, "s3_gate_receipt_attempt-002.json")
+
     def test_s5_generator_filters_only_status_sentence(self) -> None:
         fixture = FIXTURES / "summary-status-preview"
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -154,8 +167,6 @@ class GenerationGateTests(unittest.TestCase):
                 "lesson001",
                 "--page-plan",
                 fixture / "page_plan_full.md",
-                "--draft",
-                fixture / "draft_effective_content.json",
                 "--output",
                 output,
             )
@@ -173,13 +184,377 @@ class GenerationGateTests(unittest.TestCase):
             self.assertEqual(blocks[0]["type"], "heading")
             self.assertEqual(blocks[0]["text"], "这一课记住一件事")
 
-    def test_s5_preflight_blocks_missing_dynamic_design_seed(self) -> None:
+    def test_s5_projects_complete_post_class_task_from_frozen_source(self) -> None:
+        generator = self.load_module("courseware_post_class_projection", S5_GENERATOR_MODULE)
+        assembler = self.load_module("courseware_post_class_assembler", ASSEMBLER)
+        raw = (
+            "## 课后练习：完成太空猫语音责任卡\n\n"
+            "请完成一次固定的合成语音实践。\n\n"
+            "**固定材料：**课程原创太空猫；不模仿真人。\n\n"
+            "```text\n请把这段文字转换为通用合成语音。\n```\n\n"
+            "完整听一遍，再填写责任卡。"
+        )
+        page = generator.protected_page(
+            {
+                "page_no": "P10",
+                "page_type": "课后任务",
+                "capsule": "课后任务",
+                "action": "complete",
+                "source_block": "S1U2-L014-B06",
+                "body": raw,
+            },
+        )
+
+        self.assertEqual(page["content"]["taskTitle"], "课后练习：完成太空猫语音责任卡")
+        self.assertEqual(
+            [section["type"] for section in page["sections"]],
+            ["task", "facts", "prompt", "paragraph"],
+        )
+        self.assertEqual(
+            [section["role"] for section in page["sections"]],
+            ["lead", "preflight", "prompt", "review"],
+        )
+        self.assertEqual(
+            "\n\n".join(section["sourceMarkdown"] for section in page["sections"]),
+            "\n\n".join(raw.split("\n\n")[1:]),
+        )
+
+        html = assembler.task_html(
+            page["content"]["taskTitle"], page["sections"], "complete"
+        )
+        for expected in (
+            "请完成一次固定的合成语音实践。",
+            "课程原创太空猫；不模仿真人。",
+            "请把这段文字转换为通用合成语音。",
+            "完整听一遍，再填写责任卡。",
+        ):
+            self.assertIn(expected, html)
+
+    def test_s5_blocks_post_class_task_that_only_projects_first_section(self) -> None:
+        sys.path.insert(0, str(VALIDATOR.parent))
+        try:
+            validator = self.load_module("courseware_post_class_validator", VALIDATOR)
+        finally:
+            sys.path.pop(0)
+        raw = "## 课后练习\n\n第一段。\n\n第二段。"
+        issues: list[dict[str, str]] = []
+        validator.validate_template_preflight(
+            {
+                "page_no": "P10",
+                "page_type": "课后任务",
+                "content": {"taskTitle": "课后练习"},
+                "sections": [
+                    {
+                        "type": "task",
+                        "text": "第一段。",
+                        "sourceMarkdown": "第一段。",
+                    }
+                ],
+                "display_hints": {"layout": "task"},
+                "source": {"rawMarkdown": raw},
+            },
+            issues,
+        )
+        self.assertIn(
+            "V35_S2E_POST_CLASS_TASK_SOURCE_PROJECTION_INVALID",
+            {issue["issue_type"] for issue in issues},
+        )
+
+    def test_s5_does_not_require_dynamic_design_seed(self) -> None:
         generator = self.load_module("courseware_s5_preflight_generator", S5_GENERATOR_MODULE)
-        with self.assertRaisesRegex(SystemExit, "S5_DRAFT_DYNAMIC_DESIGN_BRIEF_INCOMPLETE"):
-            generator.validate_dynamic_draft_seed(
-                {"page_type": "知识讲解"},
-                {"page_no": "P03", "layout_plan": {"layout": "reading"}},
+        blocks = generator.parse_dynamic_source_blocks("## 标题\n\n第一段。")
+        brief = generator.normalize_dynamic_design_brief(blocks)
+        self.assertTrue(brief["teachingAction"].strip())
+        self.assertTrue(brief["readingFlow"])
+
+    def test_p01_projects_delimited_knowledge_points_to_ordered_list(self) -> None:
+        generator = self.load_module("courseware_p01_projection", S5_GENERATOR_MODULE)
+        validator = self.load_module("courseware_p01_validator", VALIDATOR)
+        assembler = self.load_module("courseware_p01_assembler", ASSEMBLER)
+        raw = (
+            FIXTURES / "representative-projections" / "p01_source.md"
+        ).read_text(encoding="utf-8").strip()
+        page = generator.protected_page(
+            {
+                "page_no": "P01",
+                "page_type": "课程开篇",
+                "capsule": "课程开篇",
+                "action": "nextPage",
+                "source_block": "course_info_header",
+                "body": raw,
+            }
+        )
+
+        self.assertIn("；", page["effective_content"]["知识点"])
+        self.assertIn("\n", page["effective_content"]["知识点"])
+        self.assertEqual(
+            page["content"]["knowledgePoints"],
+            ["识别输入", "比较输出", "记录判断"],
+        )
+        self.assertEqual(
+            page["sections"][-1]["items"],
+            page["content"]["knowledgePoints"],
+        )
+        self.assertEqual(
+            assembler.intro_values(page, "nextpage")["knowledgePoints"],
+            ["识别输入", "比较输出", "记录判断"],
+        )
+        issues: list[dict[str, str]] = []
+        validator.validate_p01(page, raw, issues)
+        self.assertFalse(issues)
+
+        page["content"]["knowledgePoints"] = [page["effective_content"]["知识点"]]
+        validator.validate_p01(page, raw, issues)
+        self.assertIn(
+            "V35_S2E_P01_KNOWLEDGE_POINTS_PROJECTION_INVALID",
+            {item["issue_type"] for item in issues},
+        )
+
+    def test_p05_exact_blocks_and_visual_recipe_are_source_derived(self) -> None:
+        generator = self.load_module("courseware_p05_projection", S5_GENERATOR_MODULE)
+        assembler = self.load_module("courseware_p05_assembler", ASSEMBLER)
+        raw = (
+            FIXTURES / "representative-projections" / "p05_source.md"
+        ).read_text(encoding="utf-8").strip()
+        page = generator.protected_page(
+            {
+                "page_no": "P05",
+                "page_type": "知识讲解",
+                "capsule": "知识讲解",
+                "action": "nextPage",
+                "source_block": "fixture-p05",
+                "body": raw,
+            }
+        )
+        expected_blocks = generator.parse_dynamic_source_blocks(raw)
+        self.assertEqual(page["effective_content"]["blocks"], expected_blocks)
+        self.assertEqual(page["content"]["blocks"], expected_blocks)
+        self.assertEqual(page["sections"], expected_blocks)
+
+        page_data = assembler.dynamic_page_data(
+            page, "lesson999", 5, 10, "knowledge_explanation", "next"
+        )
+        self.assertEqual(page_data["contentBlocks"], expected_blocks)
+        recipes = {row["recipe"] for row in page_data["visualRecipePlan"]["recipes"]}
+        self.assertTrue(
+            {"process_steps", "list_or_option_compact", "role_distribution_inline"}.issubset(recipes)
+        )
+        execution = page_data["visualRecipePlan"]["designExecutionContract"]
+        for key in (
+            "layoutArchetype",
+            "groupPresentation",
+            "sourceProjectionPlan",
+            "emphasisTargets",
+            "surfacePolicy",
+            "colorRoles",
+            "spaceBalance",
+            "alignmentPolicy",
+            "comparisonLayoutPolicy",
+            "highlightPolicy",
+        ):
+            self.assertEqual(execution[key], page["design_brief"][key])
+        self.assertTrue(
+            page_data["visualRecipePlan"]["sourceTextProjectionContract"]["required"]
+        )
+
+    def test_p10_task_dom_follows_s5_section_order(self) -> None:
+        generator = self.load_module("courseware_p10_projection", S5_GENERATOR_MODULE)
+        assembler = self.load_module("courseware_p10_assembler", ASSEMBLER)
+        checker = self.load_module("courseware_p10_checker", STATIC_CHECKER)
+        raw = (
+            FIXTURES / "representative-projections" / "p10_source.md"
+        ).read_text(encoding="utf-8").strip()
+        page = generator.protected_page(
+            {
+                "page_no": "P10",
+                "page_type": "课后任务",
+                "capsule": "课后任务",
+                "action": "complete",
+                "source_block": "fixture-p10",
+                "body": raw,
+            }
+        )
+        self.assertEqual(
+            [section["type"] for section in page["sections"]],
+            ["task", "facts", "step", "prompt", "decision", "fallback"],
+        )
+        self.assertEqual(
+            [section["role"] for section in page["sections"]],
+            ["lead", "preflight", "action", "prompt", "decision", "fallback"],
+        )
+        document = assembler.task_html(
+            page["content"]["taskTitle"], page["sections"], "complete"
+        )
+        self.assertEqual(
+            [int(value) for value in re.findall(r'data-source-section-index="(\d+)"', document)],
+            list(range(len(page["sections"]))),
+        )
+        self.assertTrue(checker.task_sections_match_static_dom(page["sections"], document))
+        self.assertFalse(
+            checker.task_sections_match_static_dom(
+                list(reversed(page["sections"])), document
             )
+        )
+        visible = [
+            section.get("text") or "".join(section.get("items", []))
+            for section in page["sections"]
+        ]
+        positions = [document.index(assembler.esc(value)) for value in visible]
+        self.assertEqual(positions, sorted(positions))
+
+    def test_p10_semantic_steps_compile_into_one_ordered_timeline(self) -> None:
+        generator = self.load_module("courseware_p10_semantic_projection", S5_GENERATOR_MODULE)
+        assembler = self.load_module("courseware_p10_semantic_assembler", ASSEMBLER)
+        checker = self.load_module("courseware_p10_semantic_checker", STATIC_CHECKER)
+        raw = (
+            FIXTURES
+            / "representative-projections"
+            / "p10_semantic_steps_source.md"
+        ).read_text(encoding="utf-8").strip()
+        page = generator.protected_page(
+            {
+                "page_no": "P10",
+                "page_type": "课后任务",
+                "capsule": "课后任务",
+                "action": "complete",
+                "source_block": "fixture-p10-semantic-steps",
+                "body": raw,
+            }
+        )
+
+        self.assertEqual(
+            [section.get("role") for section in page["sections"]],
+            [
+                "lead",
+                "preflight",
+                "action",
+                "prompt",
+                "review",
+                "checklist",
+                "note",
+                "condition",
+                "correctivePrompt",
+                "safetyFallback",
+            ],
+        )
+        document = assembler.task_html(
+            page["content"]["taskTitle"], page["sections"], "complete"
+        )
+        self.assertEqual(document.count("<h2>操作步骤</h2>"), 1)
+        self.assertNotIn("开始行动", document)
+        for pair in (
+            "action-prompt",
+            "review-checklist",
+            "condition-correctivePrompt",
+        ):
+            self.assertEqual(document.count(f'data-task-group-pair="{pair}"'), 1)
+        self.assertIn('class="checklist-block"', document)
+        checklist_html = document.split('class="checklist-block"', 1)[1].split(
+            "</section>", 1
+        )[0]
+        self.assertNotIn('class="prompt-label"', checklist_html)
+        lead_html = document.split('data-section-role="lead"', 1)[0]
+        self.assertNotIn('class="glass-card task-card"', lead_html)
+        self.assertTrue(checker.task_sections_match_static_dom(page["sections"], document))
+        self.assertFalse(
+            checker.task_sections_match_static_dom(
+                page["sections"], document.replace("仍需核验：", "待补充：", 1)
+            )
+        )
+        self.assertTrue(checker.task_semantic_structure_matches_static_dom(page["sections"], document))
+        self.assertFalse(
+            checker.task_semantic_structure_matches_static_dom(
+                page["sections"], document.replace("操作步骤", "开始行动")
+            )
+        )
+
+    def test_s2_requires_extension_practice_for_post_class_metadata(self) -> None:
+        validator = self.load_module(
+            "courseware_post_class_page_type_validator", BOUNDARY_VALIDATOR
+        )
+        working = (
+            '<mark>页面块 P01｜页面类型：课后任务｜胶囊文案：课后练习</mark>\n'
+            "## 课后练习\n\n完成一次练习。\n"
+        )
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "page_plan_working_full.md"
+            path.write_text(working, encoding="utf-8")
+            report = validator.validate(path, legacy_boundary_heuristic=False)
+
+        self.assertIn(
+            "POST_CLASS_PAGE_LABEL_NOT_CANONICAL",
+            {issue["issue_type"] for issue in report["issues"]},
+        )
+
+    def test_s5_s6_canonicalize_post_class_input_aliases(self) -> None:
+        generator = self.load_module(
+            "courseware_post_class_alias_projection", S5_GENERATOR_MODULE
+        )
+        assembler = self.load_module(
+            "courseware_post_class_alias_assembler", ASSEMBLER
+        )
+        checker = self.load_module(
+            "courseware_post_class_alias_checker", STATIC_CHECKER
+        )
+        raw = "## 课后练习\n\n完成一次练习。"
+
+        for alias in ("课后任务", "课后练习", "拓展练习"):
+            with self.subTest(alias=alias):
+                self.assertEqual(
+                    checker.expected_page_envelope_metadata(
+                        {"page_type": alias, "capsule": alias}
+                    ),
+                    {
+                        "page_kind": "post_class_task",
+                        "title": "拓展练习",
+                        "tag": "拓展练习",
+                    },
+                )
+                page = generator.protected_page(
+                    {
+                        "page_no": "P10",
+                        "page_type": alias,
+                        "capsule": alias,
+                        "action": "complete",
+                        "source_block": "fixture-post-class-alias",
+                        "body": raw,
+                    }
+                )
+                self.assertEqual(page["page_type"], "拓展练习")
+                self.assertEqual(page["capsule"], "拓展练习")
+                self.assertEqual(page["effective_content"]["text"], "拓展练习")
+
+                prompt, _, _ = assembler.task_prompt(
+                    page, "lesson012", "complete", 10, 10
+                )
+                self.assertIn(
+                    "适用页面：lesson012｜P10｜第 10/10 页｜拓展练习页。",
+                    prompt,
+                )
+                issues: list[dict[str, str]] = []
+                checker.check_current_prompt_context(
+                    {
+                        "page_no": "P10",
+                        "page_kind": "post_class_task",
+                        "title": "拓展练习",
+                        "tag": "拓展练习",
+                        "prompt": prompt,
+                    },
+                    9,
+                    10,
+                    "lesson012",
+                    Path("whole_course.json"),
+                    issues,
+                )
+                self.assertEqual(issues, [])
+
+    def test_s5_help_and_runner_expose_no_candidate_input(self) -> None:
+        generator_help = run(S5_GENERATOR, "--help")
+        runner_help = run(GATE_RUNNER, "--help")
+        self.assertEqual(generator_help.returncode, 0, generator_help.stderr)
+        self.assertEqual(runner_help.returncode, 0, runner_help.stderr)
+        self.assertNotIn("--draft", generator_help.stdout)
+        self.assertNotIn("--draft", runner_help.stdout)
 
     def test_s6_summary_projection_uses_heading_only_as_title(self) -> None:
         fixture = FIXTURES / "summary-status-preview"
@@ -191,8 +566,6 @@ class GenerationGateTests(unittest.TestCase):
                 "lesson001",
                 "--page-plan",
                 fixture / "page_plan_full.md",
-                "--draft",
-                fixture / "draft_effective_content.json",
                 "--output",
                 output,
             )
@@ -346,7 +719,6 @@ class GenerationGateTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             temp = Path(temp_dir)
             page_plan = fixture / "page_plan_full.md"
-            draft = fixture / "effective_content_full.json"
             prior = temp / "s4.json"
             prior.write_text(
                 json.dumps(
@@ -378,8 +750,6 @@ class GenerationGateTests(unittest.TestCase):
                 prior,
                 "--page-plan",
                 page_plan,
-                "--draft",
-                draft,
                 "--output",
                 temp / "effective_content_full.json",
             )
@@ -505,7 +875,7 @@ class GenerationGateTests(unittest.TestCase):
         ):
             self.assertIn(marker, prompt)
 
-    def test_s5_replaces_generic_knowledge_groups_with_content_relationships(self) -> None:
+    def test_s5_derives_knowledge_groups_from_content_relationships(self) -> None:
         generator = self.load_module("courseware_s5_generator", S5_GENERATOR_MODULE)
         comparison_blocks = [
             {"type": "heading", "text": "每一种媒介都要对共同目标有用"},
@@ -515,24 +885,7 @@ class GenerationGateTests(unittest.TestCase):
             {"type": "paragraph", "text": "方案B中，三种媒介重复同一段通知。"},
             {"type": "paragraph", "text": "关键是每一种媒介都承担有用的任务。"},
         ]
-        generic = {
-            "nonRenderable": True,
-            "teachingAction": "按冻结页面边界讲解",
-            "contentShape": "claim_to_evidence_to_judgment",
-            "readingFlow": ["按原顺序阅读"],
-            "semanticGroups": [
-                {"id": "frozen_segment_01", "blockIndexes": [1, 2], "purpose": "按冻结顺序呈现"},
-                {"id": "frozen_segment_02", "blockIndexes": [3, 4, 5], "purpose": "按冻结顺序呈现"},
-            ],
-            "density": "light",
-            "rhythmRole": "statement",
-            "hierarchyFocus": ["frozen_segment_01", "frozen_segment_02"],
-            "layoutFreedom": "按顺序组织",
-            "visualSystem": "RunS紫蓝视觉",
-            "visibleCopyPolicy": "只使用冻结内容",
-        }
-
-        brief = generator.normalize_dynamic_design_brief(comparison_blocks, generic)
+        brief = generator.normalize_dynamic_design_brief(comparison_blocks)
 
         self.assertEqual(brief["density"], "medium")
         self.assertEqual(brief["contentShape"], "parallel_comparison")
@@ -557,24 +910,7 @@ class GenerationGateTests(unittest.TestCase):
                 "text": "工具可以帮助整理或生成其中一部分，但哪些信息可靠、哪些素材能用、最终是否采用，仍要由人判断。",
             },
         ]
-        candidate = {
-            "nonRenderable": True,
-            "teachingAction": "按冻结页面边界讲解",
-            "contentShape": "process_or_sequence",
-            "readingFlow": ["按原顺序阅读"],
-            "semanticGroups": [
-                {"id": "frozen_segment_01", "blockIndexes": [1, 2], "purpose": "按冻结顺序呈现"},
-                {"id": "frozen_segment_02", "blockIndexes": [3, 4], "purpose": "按冻结顺序呈现"},
-            ],
-            "density": "light",
-            "rhythmRole": "structured",
-            "hierarchyFocus": ["frozen_segment_01"],
-            "layoutFreedom": "按顺序组织",
-            "visualSystem": "沿用RunS紫蓝视觉与固定底栏。",
-            "visibleCopyPolicy": "只使用冻结内容",
-        }
-
-        brief = generator.normalize_dynamic_design_brief(blocks, candidate)
+        brief = generator.normalize_dynamic_design_brief(blocks)
 
         self.assertEqual(
             brief["layoutArchetype"], "guided_process_with_role_distribution"
@@ -679,25 +1015,7 @@ class GenerationGateTests(unittest.TestCase):
             {"type": "paragraph", "text": "同一件事在不同媒介里出现了两个时间。"},
             {"type": "paragraph", "text": "发现冲突时，先改最妨碍目标的一处，再重新检查其他部分。"},
         ]
-        candidate = {
-            "nonRenderable": True,
-            "teachingAction": "分析案例",
-            "contentShape": "parallel_comparison",
-            "readingFlow": ["先看材料", "再判断"],
-            "semanticGroups": [
-                {"id": "comparison", "blockIndexes": [1], "purpose": "候选错误分组"},
-                {"id": "context", "blockIndexes": [2, 3], "purpose": "候选错误分组"},
-                {"id": "process", "blockIndexes": [4], "purpose": "候选错误分组"},
-            ],
-            "density": "medium",
-            "rhythmRole": "contrast",
-            "hierarchyFocus": ["comparison", "process"],
-            "layoutFreedom": "做对比",
-            "visualSystem": "沿用RunS紫蓝视觉与固定底栏。",
-            "visibleCopyPolicy": "只使用冻结内容",
-        }
-
-        brief = generator.normalize_dynamic_design_brief(blocks, candidate)
+        brief = generator.normalize_dynamic_design_brief(blocks)
 
         comparison = next(
             row for row in brief["semanticGroups"] if row["role"] == "comparison"
@@ -752,23 +1070,7 @@ class GenerationGateTests(unittest.TestCase):
             {"type": "paragraph", "text": "同一件事出现两个时间。"},
             {"type": "paragraph", "text": "发现冲突时，先改最妨碍目标的一处，再检查其他部分。"},
         ]
-        candidate = {
-            "nonRenderable": True,
-            "teachingAction": "分析案例",
-            "contentShape": "parallel_comparison",
-            "readingFlow": ["先看材料", "再判断"],
-            "semanticGroups": [
-                {"id": "frozen_segment_01", "blockIndexes": [1, 2], "purpose": "按冻结顺序呈现"},
-                {"id": "frozen_segment_02", "blockIndexes": [3, 4], "purpose": "按冻结顺序呈现"},
-            ],
-            "density": "medium",
-            "rhythmRole": "contrast",
-            "hierarchyFocus": ["frozen_segment_01"],
-            "layoutFreedom": "做对比",
-            "visualSystem": "RunS紫蓝视觉",
-            "visibleCopyPolicy": "只使用冻结内容",
-        }
-        brief = generator.normalize_dynamic_design_brief(blocks, candidate)
+        brief = generator.normalize_dynamic_design_brief(blocks)
         projection = next(
             row for row in brief["sourceProjectionPlan"] if row["blockIndex"] == 2
         )
@@ -803,23 +1105,7 @@ class GenerationGateTests(unittest.TestCase):
             {"type": "paragraph", "text": "文字负责信息，图片负责场景，声音负责提醒。"},
             {"type": "paragraph", "text": "最终是否采用，仍要由人判断。"},
         ]
-        candidate = {
-            "nonRenderable": True,
-            "teachingAction": "讲解",
-            "contentShape": "process_or_sequence",
-            "readingFlow": ["先看", "再判断"],
-            "semanticGroups": [
-                {"id": "frozen_segment_01", "blockIndexes": [1], "purpose": "按冻结顺序呈现"},
-                {"id": "frozen_segment_02", "blockIndexes": [2, 3], "purpose": "按冻结顺序呈现"},
-            ],
-            "density": "medium",
-            "rhythmRole": "structured",
-            "hierarchyFocus": ["frozen_segment_01"],
-            "layoutFreedom": "按顺序组织",
-            "visualSystem": "RunS紫蓝视觉",
-            "visibleCopyPolicy": "只使用冻结内容",
-        }
-        brief = generator.normalize_dynamic_design_brief(blocks, candidate)
+        brief = generator.normalize_dynamic_design_brief(blocks)
         page = {
             "page_no": "P03",
             "page_type": "知识讲解",
@@ -850,7 +1136,7 @@ class GenerationGateTests(unittest.TestCase):
             {"type": "paragraph", "text": "文字负责精确信息，图片帮助看懂活动场景，声音提醒内容开始。"},
             {"type": "paragraph", "text": "最终是否采用，仍要由人判断。"},
         ]
-        brief = generator.normalize_dynamic_design_brief(blocks, {"nonRenderable": True})
+        brief = generator.normalize_dynamic_design_brief(blocks)
         role_projection = next(
             row for row in brief["sourceProjectionPlan"] if row["blockIndex"] == 2
         )
@@ -893,23 +1179,7 @@ class GenerationGateTests(unittest.TestCase):
             {"type": "paragraph", "text": "在这个观星提醒里，受众是第一次参加的家庭，目标是迅速获得完整、准确的准备信息。文字负责精确信息，图片帮助看懂活动场景，声音提醒内容开始。"},
             {"type": "paragraph", "text": "工具可以帮助整理或生成其中一部分，但哪些信息可靠、哪些素材能用、最终是否采用，仍要由人判断。"},
         ]
-        candidate = {
-            "nonRenderable": True,
-            "teachingAction": "讲解组合计划",
-            "contentShape": "process_or_sequence",
-            "readingFlow": ["先看计划", "再看分工", "最后判断"],
-            "semanticGroups": [
-                {"id": "frozen_segment_01", "blockIndexes": [1, 2], "purpose": "按冻结顺序呈现"},
-                {"id": "frozen_segment_02", "blockIndexes": [3, 4], "purpose": "按冻结顺序呈现"},
-            ],
-            "density": "light",
-            "rhythmRole": "structured",
-            "hierarchyFocus": ["frozen_segment_01"],
-            "layoutFreedom": "按顺序组织",
-            "visualSystem": "沿用RunS紫蓝视觉与固定底栏。",
-            "visibleCopyPolicy": "只使用冻结内容",
-        }
-        brief = generator.normalize_dynamic_design_brief(blocks, candidate)
+        brief = generator.normalize_dynamic_design_brief(blocks)
 
         plan = assembler.dynamic_visual_recipe_plan(blocks, brief, "knowledge_explanation")
 
@@ -1431,7 +1701,7 @@ class GenerationGateTests(unittest.TestCase):
         skill = (SKILL_ROOT / "SKILL.md").read_text(encoding="utf-8")
         for marker in (
             "validate_skill_version.py",
-            "0.2.12-r36",
+            "0.2.20-r36",
             "runs-ai-monorepo",
             "runs-skills",
             "禁止直接",
