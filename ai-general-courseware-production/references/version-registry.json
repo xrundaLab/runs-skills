@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "skill": "ai-general-courseware-production",
-  "currentVersion": "0.2.10-r36",
+  "currentVersion": "0.2.11-r36",
   "releasedVersions": [
     "0.1.0-r36"
   ],
@@ -97,6 +97,26 @@
         "regression:utf8-source-ref-path",
         "unit:test_skill_versioning=19-pass",
         "unit:test_generation_gates=34-pass"
+      ],
+      "supersededByVersion": "0.2.11-r36",
+      "restoredFromVersion": null,
+      "rollbackStatus": "not_restored"
+    },
+    {
+      "version": "0.2.11-r36",
+      "formedAt": "2026-08-05T13:00:00+08:00",
+      "status": "release_candidate",
+      "summary": "Move interaction-boundary ownership to S2, add S5 dynamic-draft preflight, and require clean GitHub SHA installation canaries.",
+      "traceabilityLevel": "source_exact",
+      "payloadSha256": "bdeed3a93330841115fd92c7ca703c414b30c1ea57ee89aee09e68bcfb72efce",
+      "sourceRef": "skill-ai-general-courseware-production-v0.2.11-r36",
+      "tag": "skill-ai-general-courseware-production-v0.2.11-r36",
+      "issue": "xrundaLab/runs-ai-monorepo#632",
+      "validationEvidence": [
+        "issue:runs-ai-monorepo#632",
+        "unit:test_generation_gates=36-pass",
+        "regression:s2-boundary-owner-and-s4-no-repeat",
+        "regression:s5-draft-preflight"
       ],
       "supersededByVersion": null,
       "restoredFromVersion": null,

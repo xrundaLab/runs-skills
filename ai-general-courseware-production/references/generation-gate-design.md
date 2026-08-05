@@ -230,10 +230,33 @@ Gate, package validation, governance check, `VERSION`, registry, and payload
 identity all agree. `IMPORT_READY_STATIC` remains a course-artifact status and
 does not authorize import, create, rendering, acceptance, or publication.
 
+### Development/install separation and release acceptance
+
+Maintain only one canonical development worktree in `runs-ai-monorepo`; its
+Git history and immutable Tags are the version archive. The installed Codex
+Skill directory is a runtime copy, not a maintenance location: it must be a
+separate non-symlink directory and may contain only the currently accepted
+release. Do not patch an installed copy and copy it back into the worktree.
+
+Before switching the active installation, record the immutable GitHub full
+commit SHA, release Tag, `VERSION`, and relevant payload/file SHA-256 values in
+the release evidence. Install afresh from that exact GitHub SHA into an
+isolated test location, verify that it is not linked to the worktree and that
+the recorded values match, then run the required black-box canaries with fresh
+output directories. The required canaries are lesson011 and one lesson with a
+different page/interaction structure; both must complete S1-S6 with every
+stage receipt passing and S6 reporting `IMPORT_READY_STATIC`. Only then may the
+active installed Skill be replaced or a 21-lesson batch be started.
+
 ## Required regression scenarios
 
 - S2 routes `试一试：再连一次` to an interactive page while the preceding
   knowledge page records `none / 无`; S4 preserves both decisions.
+- An action-oriented sentence incorrectly retained on the knowledge page is
+  blocked by S2; after S2 routes it with the interaction page, S4 must not
+  emit an interaction-boundary semantic issue.
+- A dynamic knowledge/case candidate without its minimum `design_brief` seed is
+  blocked before S5 generation.
 - A course-summary source paragraph contains `本课没有课后练习。` followed by
   a next-lesson preview; S5 removes only the status sentence from student
   projections and preserves the preview.

@@ -164,7 +164,7 @@ S2 不是把教师正文直接切成页面后再靠 Gate 纠错。每课必须�
 python3 scripts/validators/validate_v35_page_plan_question_boundaries.py --working-plan-contract page_plan_working_full.md
 ```
 
-以下任一情况为 `BLOCKED`：S1 冻结凭据缺失、路径/字节数/SHA-256 漂移；页面标记无法识别或页数为 0；P01 不是课程开篇或六项字段不全；页号不连续；页面类型不在七类正式枚举中；存在 S1 内容块时缺来源路由表、来源块覆盖不全/重复、原始类型或路由页不一致、“开场”未路由为场景引入、页面正文拼回后不再逐字等于 S1 学生正文；互动题缺边界决策记录、页面交接清单缺页或字段非法、记录与页面类型/相邻关系/实际背景路由不一致；学生版被当作语义真源；工作版以外的阶段产物被提前生成。校验器直接从页面正文判断是否超过 50 字；禁止人工填写或核对精确背景字数。`PASS` 后才可进入 S3。
+以下任一情况为 `BLOCKED`：S1 冻结凭据缺失、路径/字节数/SHA-256 漂移；页面标记无法识别或页数为 0；P01 不是课程开篇或六项字段不全；页号不连续；页面类型不在七类正式枚举中；存在 S1 内容块时缺来源路由表、来源块覆盖不全/重复、原始类型或路由页不一致、“开场”未路由为场景引入、页面正文拼回后不再逐字等于 S1 学生正文；互动题缺边界决策记录、页面交接清单缺页或字段非法、记录与页面类型/相邻关系/实际背景路由不一致；知识页末句实际属于紧邻互动题的作答动作、题干或必要背景而审计表仍声明“知识页保留”；学生版被当作语义真源；工作版以外的阶段产物被提前生成。校验器直接从页面正文判断是否超过 50 字；禁止人工填写或核对精确背景字数。互动边界只在 S2 裁决，`PASS` 后 S3-S6 不得重新判断该归属。
 
 ## S3 题目处理
 
@@ -279,7 +279,7 @@ python3 scripts/validators/validate_v35_page_plan_question_boundaries.py --effec
   page_plan_full.md
 ```
 
-以下任一情况为 `BLOCKED`：缺失工作版或已批准题目 JSON；元数据、P01、有效内容或页面动作不完整；页面结构或非互动原文漂移；互动 JSON 缺失、冲突、不可解析或非逐字副本；出现研发说明或下游字段。S4 不得因状态句而删改原文。`PASS` 后才可进入 S5。
+以下任一情况为 `BLOCKED`：缺失工作版或已批准题目 JSON；元数据、P01、有效内容或页面动作不完整；页面结构或非互动原文漂移；互动 JSON 缺失、冲突、不可解析或非逐字副本；出现研发说明或下游字段。S4 不得因状态句而删改原文，也不得再次执行互动边界语义判断。`PASS` 后才可进入 S5。
 
 ## S5 有效内容 JSON
 
@@ -301,7 +301,7 @@ R32 对知识讲解/案例分析追加确定性结构投影：必须仅从同页
 
 ### S5 Gate
 
-串行生产使用官方 Gate 入口，它会先核对 S4 `PASS` 回执与输出哈希，再生成和校验 S5：
+串行生产使用官方 Gate 入口，它会先核对 S4 `PASS` 回执与输出哈希，再对 candidate draft 执行生成前预检，然后生成和校验 S5。知识讲解与案例分析页的 candidate `design_brief` 至少必须给出 `nonRenderable: true`、非空 `teachingAction`、`contentShape`、`rhythmRole`、`layoutFreedom` 与非空 `readingFlow`；缺任一项即 `S5_DRAFT_DYNAMIC_DESIGN_BRIEF_INCOMPLETE`，不得生成临时或正式 S5 输出。
 
 ```bash
 python3 scripts/orchestrator/run_stage_gate.py --stage S5 --lesson-id <lesson_id> \
