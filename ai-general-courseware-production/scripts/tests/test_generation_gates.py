@@ -18,6 +18,7 @@ VALIDATOR = SKILL_ROOT / "scripts" / "validators" / "validate_v35_effective_cont
 S4_GENERATOR = SKILL_ROOT / "scripts" / "generators" / "build_final_page_plan.py"
 S5_GENERATOR = SKILL_ROOT / "scripts" / "generators" / "build_effective_content.py"
 BOUNDARY_VALIDATOR = SKILL_ROOT / "scripts" / "validators" / "validate_v35_page_plan_question_boundaries.py"
+QUESTION_VALIDATOR = SKILL_ROOT / "scripts" / "validators" / "validate_question_component_json.py"
 GATE_RUNNER = SKILL_ROOT / "scripts" / "orchestrator" / "run_stage_gate.py"
 ASSEMBLER = SKILL_ROOT / "scripts" / "assembler" / "assemble_whole_course.py"
 STATIC_CHECKER = SKILL_ROOT / "scripts" / "validators" / "check_whole_course_static.py"
@@ -121,6 +122,27 @@ class GenerationGateTests(unittest.TestCase):
 
         self.assertIn("V35_INTERACTION_STEM_SPLIT_ACROSS_PAGES", s2_issue_types)
         self.assertNotIn("V35_INTERACTION_STEM_SPLIT_ACROSS_PAGES", s4_issue_types)
+
+    def test_stage_freeze_contracts_use_path_and_sha_without_redundant_byte_count(self) -> None:
+        s2_validator = self.load_module("courseware_s2_sha_freeze", BOUNDARY_VALIDATOR)
+        s3_validator = self.load_module("courseware_s3_sha_freeze", QUESTION_VALIDATOR)
+        digest = "a" * 64
+        s2_header = (
+            "<!-- S2_INPUT_FREEZE\n"
+            "source_manifest: /tmp/source_manifest.json\n"
+            "final_preprocessed: /tmp/final_preprocessed.md\n"
+            f"sha256: {digest}\n-->"
+        )
+        s3_header = (
+            "<!-- S3_INPUT_FREEZE\n"
+            "page_plan_working_full: /tmp/page_plan_working_full.md\n"
+            f"sha256: {digest}\n-->"
+        )
+
+        self.assertIsNotNone(s2_validator.S2_INPUT_FREEZE_RE.search(s2_header))
+        self.assertIsNotNone(s3_validator.S3_INPUT_FREEZE_RE.search(s3_header))
+        self.assertNotIn("bytes", s2_validator.S2_INPUT_FREEZE_RE.pattern)
+        self.assertNotIn("bytes", s3_validator.S3_INPUT_FREEZE_RE.pattern)
 
     def test_s5_generator_filters_only_status_sentence(self) -> None:
         fixture = FIXTURES / "summary-status-preview"
@@ -1409,7 +1431,7 @@ class GenerationGateTests(unittest.TestCase):
         skill = (SKILL_ROOT / "SKILL.md").read_text(encoding="utf-8")
         for marker in (
             "validate_skill_version.py",
-            "0.2.11-r36",
+            "0.2.12-r36",
             "runs-ai-monorepo",
             "runs-skills",
             "禁止直接",

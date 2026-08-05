@@ -40,7 +40,6 @@ NO_QUESTION_PROCESSING_MARKER = "NO_QUESTION_PROCESSING_REQUIRED"
 S3_INPUT_FREEZE_RE = re.compile(
     r"<!--\s*S3_INPUT_FREEZE\s*\n"
     r"page_plan_working_full:\s*(?P<path>.+)\n"
-    r"bytes:\s*(?P<bytes>\d+)\n"
     r"sha256:\s*(?P<sha>[0-9a-f]{64})\s*\n-->",
     flags=re.I,
 )
@@ -120,8 +119,8 @@ def validate_stage3_inheritance(text: str, document_path: Path) -> list[str]:
     if not source_path.is_file():
         return ["S3_INPUT_FREEZE page_plan_working_full.md does not exist"]
     source_bytes = source_path.read_bytes()
-    if len(source_bytes) != int(freeze.group("bytes")) or sha256_bytes(source_bytes) != freeze.group("sha").lower():
-        return ["S3_INPUT_FREEZE bytes or SHA-256 does not match page_plan_working_full.md"]
+    if sha256_bytes(source_bytes) != freeze.group("sha").lower():
+        return ["S3_INPUT_FREEZE SHA-256 does not match page_plan_working_full.md"]
     marker_index = text.find(S3_BASELINE_MARKER, freeze.end())
     if marker_index < 0:
         return ["stage3 document must contain the frozen page-plan baseline marker"]

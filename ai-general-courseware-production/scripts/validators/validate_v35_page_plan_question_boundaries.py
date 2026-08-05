@@ -120,7 +120,6 @@ S2_INPUT_FREEZE_RE = re.compile(
     r"<!--\s*S2_INPUT_FREEZE\s*\n"
     r"source_manifest:\s*(?P<manifest>.+)\n"
     r"final_preprocessed:\s*(?P<preprocessed>.+)\n"
-    r"bytes:\s*(?P<bytes>\d+)\n"
     r"sha256:\s*(?P<sha>[0-9a-f]{64})\s*\n-->",
     re.DOTALL,
 )
@@ -579,21 +578,17 @@ def validate_working_plan_contract(path: Path) -> dict[str, object]:
     else:
         manifest_path = Path(freeze_match.group("manifest").strip())
         preprocessed_path = Path(freeze_match.group("preprocessed").strip())
-        declared_bytes = int(freeze_match.group("bytes"))
         declared_sha = freeze_match.group("sha")
         try:
             source_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
             upstream = source_manifest["outputs"]["final_preprocessed"]
-            actual_bytes = preprocessed_path.stat().st_size
             actual_sha = hashlib.sha256(preprocessed_path.read_bytes()).hexdigest()
             if (
                 str(preprocessed_path) != upstream.get("path")
-                or declared_bytes != upstream.get("bytes")
                 or declared_sha != upstream.get("sha256")
-                or actual_bytes != declared_bytes
                 or actual_sha != declared_sha
             ):
-                add_issue("S2_INPUT_FREEZE 与 S1 source_manifest 或冻结文件的路径、字节数、SHA-256 不一致。")
+                add_issue("S2_INPUT_FREEZE 与 S1 source_manifest 或冻结文件的路径、SHA-256 不一致。")
             else:
                 frozen_source_blocks = source_content_blocks(
                     preprocessed_path.read_text(encoding="utf-8")
