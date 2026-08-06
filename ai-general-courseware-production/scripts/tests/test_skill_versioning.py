@@ -121,6 +121,33 @@ def initialize_repository(repo: Path, base_version: str) -> Path:
 
 
 class SkillVersionTests(unittest.TestCase):
+    def test_startup_preflight_selects_mode_before_output_confirmation(self) -> None:
+        skill_text = (SKILL_ROOT / "SKILL.md").read_text(encoding="utf-8")
+        input_contract = (
+            SKILL_ROOT / "references" / "input-manifest.md"
+        ).read_text(encoding="utf-8")
+        combined = skill_text + "\n" + input_contract
+
+        self.assertIn("STARTUP_MODE_SELECTION_NEEDED", combined)
+        self.assertIn("1. 配图增强模式（推荐）", combined)
+        self.assertIn("2. 纯文字模式", combined)
+        self.assertIn("回复数字 `1` 或 `2`", combined)
+        self.assertIn("STARTUP_OUTPUT_CONFIRMATION_NEEDED", combined)
+        self.assertIn("recommendedOutputRoot", combined)
+        self.assertIn(
+            "Do not recommend or confirm an output root in the same message as the mode selection",
+            combined,
+        )
+        self.assertIn("must not report `BLOCKED_INPUT`", combined)
+        self.assertIn("does not contain a section for the target lesson", combined)
+        self.assertIn("recommend excluding it from that lesson", combined)
+        self.assertIn("纯文字模式", combined)
+        self.assertIn("配图增强模式", combined)
+        self.assertIn(
+            "Do not present `text_only` or `visual_enhanced` as user-facing choice labels",
+            combined,
+        )
+
     def test_canonical_registry_compacts_unpublished_local_iterations(self) -> None:
         registry_path = SKILL_ROOT / "references" / "version-registry.json"
         registry = json.loads(registry_path.read_text(encoding="utf-8"))
@@ -156,7 +183,7 @@ class SkillVersionTests(unittest.TestCase):
         self.assertNotIn("tag", merged_candidate)
 
         current = formal_entries[registry["currentVersion"]]
-        self.assertEqual(registry["currentVersion"], "0.2.21-r36")
+        self.assertEqual(registry["currentVersion"], "0.2.23-r36")
         self.assertEqual(current["traceabilityLevel"], "source_exact")
 
     def test_parse_version_accepts_current_contract(self) -> None:

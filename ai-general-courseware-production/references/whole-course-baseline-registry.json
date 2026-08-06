@@ -1,0 +1,80 @@
+{
+  "schemaVersion": 1,
+  "skill": "ai-general-courseware-production",
+  "formedVersion": "0.2.23-r36",
+  "purpose": "Executable test-owned S5-to-S6 regression baselines only; never production inputs, Golden Baselines, visual acceptance, or import/create/render/release authority.",
+  "baselines": [
+    {
+      "baselineId": "lesson022-text-only-v1",
+      "visualMode": "text_only",
+      "purpose": "Protect the 0.2.21-r36 text-only S6 routes, registered assets, page envelopes, canonical page types, and prompt identities.",
+      "effectiveContent": {
+        "path": "scripts/tests/fixtures/whole-course-baselines/text-only/effective_content_full.json",
+        "sha256": "32b15cc1eeeb09d14a55ca2c646dbb6918bab3b17444ddba3a3527de1230c434"
+      },
+      "expectedWholeCourse": {
+        "path": "scripts/tests/fixtures/whole-course-baselines/text-only/expected_whole_course.json",
+        "sha256": "99552e5471b1cf1eb734adc6d93be35c8fef6f729b752b19574d51b48acf0001",
+        "normalizedPaths": ["source.effective_content", "source.whole_course_oneshot"]
+      },
+      "receipt": "scripts/tests/fixtures/whole-course-baselines/text-only/baseline_receipt.json",
+      "coveredPageTypes": ["课程开篇", "场景引入", "知识讲解", "案例分析", "互动题目", "拓展练习", "课程小结"],
+      "oneshotAssets": {
+        "03": "79d9a7fdad4701c784a9e0e6cfbbbdfaeb727211ce26b8eda7e9a5e46effba98",
+        "04": "95f033f32583035fb846732e9092d868ede638a8aa837c9fd41bf20d1aaee142",
+        "05": "9cf6b757e7bc635189c89d585ea65b54efbc6605c57d061726d0aac45ca6b1b8",
+        "06": "e4c2ce909288b84c2fa3ab72a273e5b0f2979c0b149a0eed233a9d6c86fa67e9",
+        "07": "71ec5e5f3aefeb37c03102eb86a04f13e7177a21fb69b27006966fe0c4576fc1",
+        "08": "35ee30c45d3b7757b771c785039c6888584b12e3fa66fd7ed9a9c1184305f433"
+      },
+      "demoAssets": {},
+      "formedVersion": "0.2.22-r36",
+      "replaceable": true,
+      "supersededBy": null
+    },
+    {
+      "baselineId": "lesson022-visual-enhanced-v1",
+      "visualMode": "visual_enhanced",
+      "purpose": "Protect S5-only image projection, reviewed/fixed placement evidence, terminal-placement prohibition, vertical image groups with optional adjacent source-copy pairing, the P01 top-hero reference style, interaction no-image, visual prompt identity, and centered same-page lightbox contracts.",
+      "effectiveContent": {
+        "path": "scripts/tests/fixtures/whole-course-baselines/visual-enhanced/effective_content_full.json",
+        "sha256": "fe7107b8bd508c9e3f3d00a42b50bd2581dd0261e6a9b7b3dc6a82d1322e5a73"
+      },
+      "expectedWholeCourse": {
+        "path": "scripts/tests/fixtures/whole-course-baselines/visual-enhanced/expected_whole_course.json",
+        "sha256": "34e3d35bfd3f4178fb44a3660969aa8fa5e24ec311543d5f43bcedc9fe12c5e3",
+        "normalizedPaths": ["source.effective_content", "source.whole_course_oneshot"]
+      },
+      "receipt": "scripts/tests/fixtures/whole-course-baselines/visual-enhanced/baseline_receipt.json",
+      "coveredPageTypes": ["课程开篇", "场景引入", "知识讲解", "案例分析", "互动题目", "拓展练习", "课程小结"],
+      "oneshotAssets": {
+        "09": "27fad071461415610848acfbf0c82a0c81ad5f25772f7c4c91669845925637fc",
+        "10": "ec635077f50001a342b1113966ba7d3a9b8603ea53b6bc5bf9cdf8a3090fcc2e",
+        "11": "4f8662b08570ec69ec77eb43c5598f04882fd5a378ee096a1079cc1a2b78d3f7",
+        "12": "ddee8287fa0c930ab4733150f275f872d1fc859ed050fc462a8729e675244b7b",
+        "13": "a28f94cde053f681f06787190f4d299abb8f253880846a4ccb708c2ecf7f5a8d",
+        "14": "c9f78ed240270a0b6ecfa457a5c5cba6673d4d8e6cd82d3a5e30f2b895cd3e02"
+      },
+      "demoAssets": {
+        "course_intro": "2e99eb9d7b4374d8ba8d0309df157ef43d4f68c40e0a9c35e7fce52c1bfc75d1",
+        "scene_intro": "e48c478b2c952b59e8d1a6f320ac7ec9efe4aaa51ae6da15abc90fa34fffe3b3",
+        "knowledge": "dea98a110c79d7c9443926fed78038d472d213d8a085e5b651c41c37bb104427",
+        "case_analysis": "bc04888863b9f3c1e01f1aca6d57666752db77d70f695b0fe7fb6f25b9cbb44c",
+        "post_class_task": "3250a91ce8dddfe86d7419d41fb3f238449f383035f29ea606155c5eb62c8ed4",
+        "course_summary": "08a4d61d14e6669019b1dc64c7c2a8e0fcc0ea770d8ebcb581273fd440fe56e0"
+      },
+      "formedVersion": "0.2.23-r36",
+      "replaceable": true,
+      "supersededBy": null
+    }
+  ],
+  "manualReferences": [
+    {
+      "id": "lesson012-user-supplied-json",
+      "status": "manual_reference",
+      "registeredAsBaseline": false,
+      "replaceable": true,
+      "note": "Not stored or read by this Skill implementation; may be replaced only by a source-complete deterministic fixture."
+    }
+  ]
+}

@@ -18,6 +18,7 @@ import json
 import os
 import re
 import sys
+from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any
 
@@ -88,6 +89,22 @@ DYNAMIC_ONESHOT_CONTRACTS = {
         ("case-page", "case-scroll", "case-footer"),
     ),
 }
+VISUAL_FIXED_TEMPLATE_CONTRACTS = {
+    "course_intro": {"variable": "COURSE_INTRO_VARIABLES", "contract": "RunS-CourseIntro-VisualEnhanced-OneShot-v1.1", "oneshot_sha256": "27fad071461415610848acfbf0c82a0c81ad5f25772f7c4c91669845925637fc", "template_sha256": "2e99eb9d7b4374d8ba8d0309df157ef43d4f68c40e0a9c35e7fce52c1bfc75d1", "non_variable_sha256": "6b2482e401f36e8178e5d38861e8ada2dd1ae26cd0253de13e23ee9a16e8c1e9"},
+    "scene_intro": {"variable": "SCENE_INTRO_VARIABLES", "contract": "RunS-SceneIntro-VisualEnhanced-OneShot-v1.1", "oneshot_sha256": "ec635077f50001a342b1113966ba7d3a9b8603ea53b6bc5bf9cdf8a3090fcc2e", "template_sha256": "e48c478b2c952b59e8d1a6f320ac7ec9efe4aaa51ae6da15abc90fa34fffe3b3", "non_variable_sha256": "03861baad2455a482d77820464ee3d85a937efe2fca85c89ace6d4f2d5d56447"},
+    "course_summary": {"variable": "COURSE_SUMMARY_VARIABLES", "contract": "RunS-CourseSummary-VisualEnhanced-OneShot-v1.1", "oneshot_sha256": "a28f94cde053f681f06787190f4d299abb8f253880846a4ccb708c2ecf7f5a8d", "template_sha256": "08a4d61d14e6669019b1dc64c7c2a8e0fcc0ea770d8ebcb581273fd440fe56e0", "non_variable_sha256": "5d8297a61af841da5e943e71ed246434083edf21dd66c4dbf16166a944e07502"},
+}
+VISUAL_DYNAMIC_ONESHOT_CONTRACTS = {
+    "knowledge_explanation": ("RunS-Knowledge-VisualEnhanced-OneShot-v1.2", "4f8662b08570ec69ec77eb43c5598f04882fd5a378ee096a1079cc1a2b78d3f7", ("knowledge-page", "knowledge-scroll", "knowledge-footer")),
+    "case_analysis": ("RunS-CaseAnalysis-VisualEnhanced-OneShot-v1.2", "ddee8287fa0c930ab4733150f275f872d1fc859ed050fc462a8729e675244b7b", ("case-page", "case-scroll", "case-footer")),
+}
+VISUAL_POST_CLASS_TASK_ONESHOT_CONTRACT = "RunS-PostClassTask-VisualEnhanced-OneShot-v1.1"
+VISUAL_POST_CLASS_TASK_ASSET_SHA256 = "c9f78ed240270a0b6ecfa457a5c5cba6673d4d8e6cd82d3a5e30f2b895cd3e02"
+
+
+def is_visual_page(page: dict[str, Any]) -> bool:
+    page_data = page.get("page_data") if isinstance(page.get("page_data"), dict) else {}
+    return "visualAsset" in page_data or "planVisualAssets" in page_data
 
 # 已生成的 R10 课件保持历史可读；新课件必须走上方 R11 合同。
 DYNAMIC_ONESHOT_LEGACY_CONTRACTS = {
@@ -134,6 +151,54 @@ CHROME68_PROMPT_JS_PATTERNS = {
     "unsupported DOM API": re.compile(r"\.(?:replaceChildren|toggleAttribute|getAnimations)\s*\(|\b(?:queueMicrotask|structuredClone)\s*\(|crypto\.randomUUID\s*\("),
     "unsupported builtin": re.compile(r"\.(?:flat|flatMap|at|matchAll|replaceAll)\s*\(|Object\.(?:fromEntries|hasOwn)\s*\(|Promise\.(?:allSettled|any)\s*\(|\bglobalThis\b"),
 }
+DIFF_MARKER_RE = re.compile(
+    r"^\+\s*(?:[.#@]|</?|const\b|let\b|var\b|function\b)",
+    re.I | re.M,
+)
+VISUAL_FIXED_SCROLL_CONTAINERS = {
+    "runs-intro-page": "intro-scroll",
+    "scene-page": "scene-scroll",
+    "summary-page": "summary-scroll",
+}
+
+
+class VisualGalleryPlacementParser(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.stack: list[tuple[str, set[str]]] = []
+        self.page_classes: set[str] = set()
+        self.gallery_ancestor_classes: set[str] | None = None
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        values = {key: value or "" for key, value in attrs}
+        classes = set(values.get("class", "").split())
+        self.page_classes.update(classes)
+        if values.get("id") == "visualGallery":
+            self.gallery_ancestor_classes = {
+                class_name
+                for _, ancestor_classes in self.stack
+                for class_name in ancestor_classes
+            }
+        self.stack.append((tag, classes))
+
+    def handle_endtag(self, tag: str) -> None:
+        for index in range(len(self.stack) - 1, -1, -1):
+            if self.stack[index][0] == tag:
+                del self.stack[index:]
+                return
+
+
+def visual_gallery_placement_incompatibilities(prompt: str) -> list[str]:
+    parser = VisualGalleryPlacementParser()
+    parser.feed(prompt)
+    if parser.gallery_ancestor_classes is None:
+        return []
+    return [
+        f"visual gallery outside {scroll_class}"
+        for page_class, scroll_class in VISUAL_FIXED_SCROLL_CONTAINERS.items()
+        if page_class in parser.page_classes
+        and scroll_class not in parser.gallery_ancestor_classes
+    ]
 
 
 def chrome68_prompt_incompatibilities(prompt: str) -> list[str]:
@@ -145,6 +210,9 @@ def chrome68_prompt_incompatibilities(prompt: str) -> list[str]:
             found.append("flex gap")
             break
     found.extend(name for name, pattern in CHROME68_PROMPT_JS_PATTERNS.items() if pattern.search(scripts))
+    if DIFF_MARKER_RE.search(prompt):
+        found.append("diff marker")
+    found.extend(visual_gallery_placement_incompatibilities(prompt))
     return sorted(set(found))
 
 
@@ -184,15 +252,17 @@ def check_asset_bound_prompt_version(
     page_no = str(page.get("page_no") or "")
     contract = ""
     asset_sha256 = ""
-    if kind in FIXED_TEMPLATE_CONTRACTS:
-        registered = FIXED_TEMPLATE_CONTRACTS[kind]
+    fixed_contracts = VISUAL_FIXED_TEMPLATE_CONTRACTS if is_visual_page(page) else FIXED_TEMPLATE_CONTRACTS
+    dynamic_contracts = VISUAL_DYNAMIC_ONESHOT_CONTRACTS if is_visual_page(page) else DYNAMIC_ONESHOT_CONTRACTS
+    if kind in fixed_contracts:
+        registered = fixed_contracts[kind]
         contract = registered["contract"]
         asset_sha256 = registered["oneshot_sha256"]
-    elif kind in DYNAMIC_ONESHOT_CONTRACTS:
-        contract, asset_sha256, _ = DYNAMIC_ONESHOT_CONTRACTS[kind]
+    elif kind in dynamic_contracts:
+        contract, asset_sha256, _ = dynamic_contracts[kind]
     elif kind == "post_class_task":
-        contract = POST_CLASS_TASK_ONESHOT_CONTRACT
-        asset_sha256 = POST_CLASS_TASK_ASSET_SHA256
+        contract = VISUAL_POST_CLASS_TASK_ONESHOT_CONTRACT if is_visual_page(page) else POST_CLASS_TASK_ONESHOT_CONTRACT
+        asset_sha256 = VISUAL_POST_CLASS_TASK_ASSET_SHA256 if is_visual_page(page) else POST_CLASS_TASK_ASSET_SHA256
     else:
         return
 
@@ -243,7 +313,8 @@ def tag_has_class(value: str, tag: str, class_name: str) -> bool:
 
 def uses_current_dynamic_contract(page: dict[str, Any]) -> bool:
     page_kind = str(page.get("page_kind"))
-    current = DYNAMIC_ONESHOT_CONTRACTS.get(page_kind)
+    contracts = VISUAL_DYNAMIC_ONESHOT_CONTRACTS if is_visual_page(page) else DYNAMIC_ONESHOT_CONTRACTS
+    current = contracts.get(page_kind)
     page_data = page.get("page_data") if isinstance(page.get("page_data"), dict) else {}
     return bool(current) and page_data.get("oneshot_contract_version") == current[0]
 
@@ -464,7 +535,13 @@ def fixed_prompt_variables(prompt: str, variable: str) -> dict[str, Any] | None:
 
 
 def task_section_visible_tokens(section: dict[str, Any]) -> list[str]:
-    if section.get("role") == "checklist":
+    if section.get("role") == "composite" and isinstance(section.get("segments"), list):
+        values = [
+            segment.get("text", "")
+            for segment in section["segments"]
+            if isinstance(segment, dict)
+        ]
+    elif section.get("role") == "checklist":
         values = []
         for raw_line in str(section.get("text") or "").splitlines():
             line = raw_line.strip()
@@ -524,6 +601,7 @@ def task_semantic_structure_matches_static_dom(
         "condition",
         "correctivePrompt",
         "decision",
+        "composite",
     }
     if any(role in action_roles for role in roles):
         if payload.count('class="action-section"') != 1:
@@ -549,6 +627,21 @@ def task_semantic_structure_matches_static_dom(
                 f'data-source-section-index="{index}"'
             )
             if marker not in payload:
+                return False
+        if role == "composite":
+            marker = (
+                'class="step-lead" data-section-role="composite" '
+                f'data-source-section-index="{index}"'
+            )
+            if marker not in payload:
+                return False
+            step_start = payload.rfind('<article class="step-group"', 0, payload.index(marker))
+            step_end = payload.find("</article>", payload.index(marker))
+            completion = payload.find('class="completion-check"', payload.index(marker))
+            support = payload.find('class="support-note"', payload.index(marker))
+            if min(step_start, step_end, completion, support) < 0:
+                return False
+            if not (step_end < completion < support):
                 return False
             segment = payload.split(marker, 1)[1].split("</section>", 1)[0]
             if 'class="prompt-label"' in segment:
@@ -607,6 +700,10 @@ def compare_stage6_to_effective_content(
             )
         ]
 
+    effective_mode = effective_payload.get("visualMode", "text_only")
+    stage6_mode = stage6_payload.get("visualMode", "text_only")
+    if effective_mode != stage6_mode:
+        problems.append(issue("VISUAL_MODE_DRIFT", "BLOCKER", "S6 visualMode 与唯一 S5 输入不一致"))
     page_total = max(len(effective_pages), len(stage6_pages))
     for index in range(page_total):
         differences: list[str] = []
@@ -659,6 +756,118 @@ def compare_stage6_to_effective_content(
                 differences.append("components 未原样投影 effective_content")
             if effective_page_type == "互动题目" and stage6_page.get("prompt") != "":
                 differences.append("互动页 prompt 不是空字符串")
+            effective_visual = effective_page.get("visual")
+            actual_visual = {}
+            if isinstance(page_data, dict):
+                if "visualAsset" in page_data:
+                    actual_visual["visualAsset"] = page_data.get("visualAsset")
+                if "planVisualAssets" in page_data:
+                    actual_visual["planVisualAssets"] = page_data.get("planVisualAssets")
+                if "visualPresentation" in page_data:
+                    actual_visual["visualPresentation"] = page_data.get("visualPresentation")
+            if effective_mode == "text_only":
+                if effective_visual is not None or actual_visual:
+                    differences.append("text_only 路径出现配图字段")
+            elif effective_page_type == "互动题目":
+                if effective_visual is not None or actual_visual:
+                    differences.append("互动页出现配图字段")
+            elif isinstance(effective_visual, dict):
+                assets = effective_visual.get("assets")
+                image_type = effective_visual.get("imageType")
+                projected = []
+                for asset in assets if isinstance(assets, list) else []:
+                    if not isinstance(asset, dict):
+                        continue
+                    row = {
+                        "assetId": asset.get("assetId"),
+                        "imageType": image_type,
+                        "url": asset.get("url"),
+                        "width": asset.get("width"),
+                        "height": asset.get("height"),
+                        "alt": asset.get("alt") if isinstance(asset.get("alt"), str) else "",
+                        "placement": asset.get("placement"),
+                        "visualReview": asset.get("visualReview"),
+                    }
+                    if asset.get("displayLabel") is not None:
+                        row["displayLabel"] = asset.get("displayLabel")
+                    if asset.get("order") is not None:
+                        row["order"] = asset.get("order")
+                    if asset.get("pairedStudentText") is not None:
+                        row["pairedStudentText"] = asset.get("pairedStudentText")
+                    if asset.get("pairedSource") is not None:
+                        row["pairedSource"] = asset.get("pairedSource")
+                    projected.append(row)
+                expected_visual = (
+                    {"visualAsset": projected[0], "visualPresentation": effective_visual.get("presentation")}
+                    if effective_visual.get("displayMode") == "single" and len(projected) == 1
+                    else {"planVisualAssets": projected, "visualPresentation": effective_visual.get("presentation")}
+                )
+                if actual_visual != expected_visual:
+                    differences.append("S5 visual 未原样投影到 PAGE_DATA")
+                prompt = stage6_page.get("prompt") if isinstance(stage6_page.get("prompt"), str) else ""
+                required_visual_markers = (
+                    "visual-lightbox",
+                    "visual-lightbox-close",
+                    "Escape",
+                    "object-fit: contain",
+                    "正文主配图",
+                    "禁止缩略图",
+                    "vertical_stack",
+                    "positionVisualClose",
+                    "getBoundingClientRect",
+                )
+                if effective_page_type == "课程开篇":
+                    required_visual_markers += (
+                        "hero-image-button",
+                        "course-overview",
+                        "visual-lightbox-stage",
+                        "touchstart",
+                        "touchmove",
+                        "resetVisualTransform",
+                    )
+                else:
+                    required_visual_markers += (
+                        "image-zoom-trigger",
+                        "visual-lightbox-dialog",
+                        "visual-lightbox-stage",
+                        "touchstart",
+                        "touchmove",
+                        "resetVisualTransform",
+                        "--runs-type-h1-size",
+                        "--runs-type-h2-size",
+                        "--runs-type-body-size",
+                        "--runs-type-list-size",
+                        "--runs-type-caption-size",
+                    )
+                if any("pairedStudentText" in asset for asset in projected):
+                    required_visual_markers += (
+                        "pairedStudentText",
+                        "visual-paired-list",
+                        "visual-paired-item",
+                        "visual-paired-copy",
+                    )
+                if any(marker not in prompt for marker in required_visual_markers):
+                    differences.append("配图同页灯箱合同缺失")
+                if not any(
+                    marker in prompt
+                    for marker in (
+                        "terminalPlacementForbidden",
+                        'data-visual-placement-terminal="forbidden"',
+                    )
+                ):
+                    differences.append("配图禁止正文末尾插入合同缺失")
+                if "window.open" in prompt or 'target=\"_blank\"' in prompt:
+                    differences.append("配图提示词包含外部预览或新窗口行为")
+                for asset in projected:
+                    if prompt.count(str(asset.get("url") or "")) != 1:
+                        differences.append(f"配图 URL 未单次投影：{asset.get('assetId')}")
+                    if str(asset.get("alt") or "") not in prompt:
+                        differences.append(f"配图 alt 缺失：{asset.get('assetId')}")
+                    label = asset.get("displayLabel")
+                    if isinstance(label, str) and label and label not in prompt:
+                        differences.append(f"配图标签缺失：{asset.get('assetId')}")
+            else:
+                differences.append("visual_enhanced 非互动页缺少 S5 visual")
             if effective_page_type in {"知识讲解", "案例分析"}:
                 expected_brief = effective_page.get("design_brief")
                 actual_brief = page_data.get("design_brief") if isinstance(page_data, dict) else None
@@ -697,6 +906,7 @@ def compare_stage6_to_effective_content(
                 points = expected_intro.get("knowledgePoints") if isinstance(expected_intro, dict) else None
                 prompt = stage6_page.get("prompt") if isinstance(stage6_page.get("prompt"), str) else ""
                 compact_prompt = re.sub(r"\s+", "", prompt)
+                expected_unlock_height = 44
                 if actual_intro != expected_intro:
                     differences.append("课程开篇变量未原样消费 S5 content（含知识点 list cardinality）")
                 if (
@@ -705,9 +915,10 @@ def compare_stage6_to_effective_content(
                     or not isinstance(density, dict)
                     or density.get("knowledgePointCount") != len(points)
                     or density.get("oneUnlockRowPerSourceItem") is not True
+                    or density.get("minimumUnlockRowHeightPx") != expected_unlock_height
                     or density.get("visualStatus") != "STATIC_LAYOUT_CONTRACT_ONLY"
                     or '#knowledgeListli{' not in compact_prompt
-                    or "min-height:44px" not in compact_prompt
+                    or f"min-height:{expected_unlock_height}px" not in compact_prompt
                     or ".knowledgePoints.map" not in compact_prompt
                 ):
                     differences.append("课程开篇知识点列表静态密度合同缺失或与 S5 cardinality 不一致")
@@ -1469,7 +1680,9 @@ def check_governed_oneshot_asset_contract(
         if page_data.get(key) != expected
     ]
 
-    fixed = FIXED_TEMPLATE_CONTRACTS.get(str(page_kind))
+    fixed_contracts = VISUAL_FIXED_TEMPLATE_CONTRACTS if is_visual_page(page) else FIXED_TEMPLATE_CONTRACTS
+    dynamic_contracts = VISUAL_DYNAMIC_ONESHOT_CONTRACTS if is_visual_page(page) else DYNAMIC_ONESHOT_CONTRACTS
+    fixed = fixed_contracts.get(str(page_kind))
     if fixed:
         fixed_expected = {
             "route": "fixed_template",
@@ -1508,7 +1721,7 @@ def check_governed_oneshot_asset_contract(
             )
         return
 
-    dynamic = DYNAMIC_ONESHOT_CONTRACTS.get(str(page_kind))
+    dynamic = dynamic_contracts.get(str(page_kind))
     if dynamic:
         contract, oneshot_sha256, class_markers = dynamic
         is_legacy_dynamic = (
@@ -1570,7 +1783,6 @@ def check_course_intro_image_contract(
     issues: list[dict[str, str]],
 ) -> None:
     prompt = page.get("prompt") if isinstance(page.get("prompt"), str) else ""
-    image_url = "https://res.xrunda.com/xruns/static/image/20270724/1.png"
     actual_data_image = re.search(
         r"""(?ix)
         (?:
@@ -1582,12 +1794,30 @@ def check_course_intro_image_contract(
         """,
         prompt,
     )
-    if image_url not in prompt or actual_data_image:
+    page_data = page.get("page_data") if isinstance(page.get("page_data"), dict) else {}
+    visual_asset = page_data.get("visualAsset") if isinstance(page_data, dict) else None
+    if isinstance(visual_asset, dict):
+        image_url = visual_asset.get("url")
+        invalid = (
+            not isinstance(image_url, str)
+            or not image_url.startswith("https://")
+            or image_url not in prompt
+            or 'class="course-overview"' not in prompt
+            or 'class="hero-image-button"' not in prompt
+            or 'id="visualGallery"' in prompt
+            or actual_data_image is not None
+        )
+        message = f"pages[{index}] 配图开篇必须把登记 HTTPS 图片渲染为顶部课程主视觉，禁止 data:image / Base64"
+    else:
+        image_url = "https://res.xrunda.com/xruns/static/image/20270724/1.png"
+        invalid = image_url not in prompt or actual_data_image is not None
+        message = f"pages[{index}] 纯文字开篇插画必须使用当前登记 HTTPS 资产，禁止 data:image / Base64"
+    if invalid:
         issues.append(
             issue(
                 "COURSE_INTRO_IMAGE_ASSET_INVALID",
                 "BLOCKER",
-                f"pages[{index}] 开篇插画必须使用当前登记 HTTPS 资产，禁止 data:image / Base64",
+                message,
                 str(path),
             )
         )
@@ -1950,10 +2180,15 @@ def check_post_class_task_compact_oneshot(
     prompt = page.get("prompt") if isinstance(page.get("prompt"), str) else ""
     compact = re.sub(r"\s+", "", prompt).lower()
     expected_action = "complete" if page.get("sdk_action") == "complete" else "next"
+    task_contract = (
+        VISUAL_POST_CLASS_TASK_ONESHOT_CONTRACT
+        if is_visual_page(page)
+        else POST_CLASS_TASK_ONESHOT_CONTRACT
+    )
     required_markers = {
         "runs-postclasstask-": "Compact 拓展练习提示词版本",
         "compact-oneshot": "登记的 Compact OneShot 路线",
-        POST_CLASS_TASK_ONESHOT_CONTRACT.lower(): "当前 v1.11 正式合同",
+        task_contract.lower(): "当前登记正式合同",
         "https://res.xrunda.com/runs/plugin/creator/creator-review-sdk.js": "正式 CreatorReview SDK",
         'class="post-task-page"': "正式拓展练习页面外层",
         'class="task-hero"': "正式拓展练习头部",
@@ -1962,6 +2197,26 @@ def check_post_class_task_compact_oneshot(
         'class="task-content"': "阶段 6 预编译的静态任务正文",
         "syncfooterreserve": "footer 高度同步",
     }
+    if is_visual_page(page):
+        required_markers.update(
+            {
+                'class="image-zoom-trigger"': "同页灯箱触发按钮",
+                'class="visual-lightbox"': "同页灯箱遮罩",
+                'class="visual-lightbox-close"': "灯箱关闭按钮",
+                'object-fit:contain': "自然比例 contain 图片",
+                'event.key==="escape"': "Escape 关闭灯箱",
+                'class="visual-lightbox-dialog"': "灯箱纵向布局",
+                'class="visual-lightbox-stage"': "图片手势区域",
+                'data-visual-group-layout="vertical_stack"': "组图纵向全宽布局",
+                'data-visual-placement-terminal="forbidden"': "禁止正文末尾插图",
+                'touchstart': "两指缩放起点",
+                'touchmove': "两指缩放与单指平移",
+                'resetvisualtransform': "关闭复位图片变换",
+                'positionvisualclose': "关闭按钮纵向中点定位",
+                'getboundingclientrect': "按实际图片位置计算关闭按钮",
+                '--runs-type-h1-size': "非开篇共享标题字号",
+            }
+        )
     forbidden_markers = {
         "fixedtemplate-oneshot": "旧 FixedTemplate 分支",
         "```": "Markdown 代码围栏",
@@ -2420,6 +2675,7 @@ def run_s6_contract(lesson_id: str, effective_path: Path, whole_path: Path) -> i
     if not whole_path.is_file():
         issues.append(issue("S6_WHOLE_COURSE_JSON_MISSING", "BLOCKER", "S6 整课 JSON 不存在", str(whole_path)))
     effective_pages = effective.get("pages") if isinstance(effective, dict) else None
+    whole_payload: dict[str, Any] = {}
     whole_pages = []
     if whole_path.is_file():
         try:
@@ -2429,7 +2685,7 @@ def run_s6_contract(lesson_id: str, effective_path: Path, whole_path: Path) -> i
             pass
     page_diffs, diff_issues = compare_stage6_to_effective_content(
         effective if isinstance(effective_pages, list) else {"pages": []},
-        {"pages": whole_pages} if isinstance(whole_pages, list) else {"pages": []},
+        whole_payload if isinstance(whole_pages, list) else {"pages": []},
     )
     issues.extend(diff_issues)
     blocked = any(item["severity"] == "BLOCKER" for item in issues)

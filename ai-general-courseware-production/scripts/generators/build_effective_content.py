@@ -5,17 +5,21 @@ from __future__ import annotations
 
 import argparse
 import copy
+import hashlib
 import json
 import re
 import sys
+import unicodedata
 from pathlib import Path
 from typing import Any
 
+SCRIPT_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(SCRIPT_ROOT))
+from visual_placement_contract import courseware_page_requires_review, visual_presentation  # noqa: E402
+
 
 CONTRACT = "RunS_V3.5.0-S1-S6-R36-20260731"
-SCRIPT_ROOT = Path(__file__).resolve().parents[1]
 VALIDATORS = SCRIPT_ROOT / "validators"
-sys.path.insert(0, str(SCRIPT_ROOT))
 sys.path.insert(0, str(VALIDATORS))
 
 from page_type_contract import (  # noqa: E402
@@ -38,6 +42,196 @@ from validate_v35_effective_content import (  # noqa: E402
 
 def blocked(code: str) -> "NoReturn":
     raise SystemExit(f"BLOCKED:{code}")
+
+
+def sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def load_resolved_visual_manifest(
+    lesson_id: str,
+    page_plan: Path,
+    visual_manifest: Path | None,
+) -> tuple[dict[str, Any], Path]:
+    if visual_manifest is None:
+        blocked("VISUAL_MANIFEST_MISSING")
+    resolved = visual_manifest.resolve()
+    try:
+        payload = json.loads(resolved.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError):
+        blocked("VISUAL_MANIFEST_INVALID")
+    if not isinstance(payload, dict) or payload.get("lifecycleState") != "resolved":
+        blocked("VISUAL_MANIFEST_NOT_RESOLVED")
+    if payload.get("lessonId") != lesson_id:
+        blocked("VISUAL_MANIFEST_LESSON_MISMATCH")
+    if payload.get("visualMode") != "visual_enhanced":
+        blocked("VISUAL_MODE_DRIFT")
+    source_plan = payload.get("sourcePagePlan")
+    if not isinstance(source_plan, dict):
+        blocked("VISUAL_MANIFEST_PAGE_PLAN_MISSING")
+    if source_plan.get("path") != str(page_plan.resolve()):
+        blocked("VISUAL_MANIFEST_PAGE_PLAN_PATH_MISMATCH")
+    if source_plan.get("sha256") != sha256(page_plan):
+        blocked("VISUAL_MANIFEST_PAGE_PLAN_HASH_MISMATCH")
+    # externalReturn is provenance only. Deliberately never open its path.
+    return payload, resolved
+
+
+def normalized_visual_label(value: str) -> str:
+    normalized = unicodedata.normalize("NFKC", value)
+    return re.sub(r"\s+", "", normalized).rstrip("：:")
+
+
+def bind_group_asset_text(
+    page: dict[str, Any],
+    projected_assets: list[dict[str, Any]],
+) -> None:
+    """Bind exact labelled list items to their matching group images.
+
+    This is intentionally best-effort and non-blocking.  S5 freezes a binding
+    only when one source unordered-list block supplies one unique item for
+    every displayed asset label.  It never invents or rewrites copy.
+    """
+    if len(projected_assets) < 2:
+        return
+    labels = [asset.get("displayLabel") for asset in projected_assets]
+    if not all(isinstance(label, str) and label.strip() for label in labels):
+        return
+    normalized_labels = [normalized_visual_label(str(label)) for label in labels]
+    if len(set(normalized_labels)) != len(normalized_labels):
+        return
+    sections = page.get("sections")
+    if not isinstance(sections, list):
+        return
+    candidates: list[tuple[int, dict[str, tuple[int, str]]]] = []
+    for block_index, block in enumerate(sections):
+        if not isinstance(block, dict) or block.get("type") != "unordered_list":
+            continue
+        items = block.get("items")
+        if not isinstance(items, list):
+            continue
+        indexed: dict[str, tuple[int, str]] = {}
+        ambiguous = False
+        for item_index, item in enumerate(items):
+            if not isinstance(item, str):
+                continue
+            match = re.match(r"^\s*([^：:]{1,24})[：:]", item)
+            if not match:
+                continue
+            key = normalized_visual_label(match.group(1))
+            if key in normalized_labels:
+                if key in indexed:
+                    ambiguous = True
+                    break
+                indexed[key] = (item_index, item)
+        if not ambiguous and all(label in indexed for label in normalized_labels):
+            candidates.append((block_index, indexed))
+    if len(candidates) != 1:
+        return
+    block_index, indexed = candidates[0]
+    for asset, label in zip(projected_assets, normalized_labels):
+        item_index, item = indexed[label]
+        asset["pairedStudentText"] = item
+        asset["pairedSource"] = {
+            "blockIndex": block_index,
+            "itemIndex": item_index,
+            "blockType": "unordered_list",
+        }
+
+
+def project_visuals(
+    pages: list[dict[str, Any]],
+    manifest: dict[str, Any],
+) -> None:
+    assets = manifest.get("assets") or []
+    placements = manifest.get("placements") or []
+    decisions = manifest.get("pageDecisions") or []
+    if not isinstance(assets, list) or not isinstance(placements, list) or not isinstance(decisions, list):
+        blocked("VISUAL_MANIFEST_COLLECTIONS_INVALID")
+    assets_by_id = {
+        str(item.get("assetId")): item
+        for item in assets
+        if isinstance(item, dict) and item.get("assetId")
+    }
+    decisions_by_page = {
+        str(item.get("pageNo")): item
+        for item in decisions
+        if isinstance(item, dict) and item.get("pageNo")
+    }
+    if len(decisions_by_page) != len(pages):
+        blocked("VISUAL_PAGE_DECISION_SET_MISMATCH")
+
+    for page in pages:
+        page_no = str(page.get("page_no") or "")
+        decision = decisions_by_page.get(page_no)
+        if not isinstance(decision, dict):
+            blocked("VISUAL_PAGE_DECISION_SET_MISMATCH")
+        choice = decision.get("decision")
+        decision_asset_ids = decision.get("assetIds") or []
+        page_placements = [
+            item
+            for item in placements
+            if (
+                isinstance(item, dict)
+                and item.get("pageNo") == page_no
+                and item.get("placementStatus") != "suppressed_on_interaction_page"
+            )
+        ]
+        if page.get("page_type") == "互动题目":
+            if choice != "interaction_no_image" or decision_asset_ids or page_placements:
+                blocked("V35_S5_INTERACTION_IMAGE_FORBIDDEN")
+            continue
+        if choice not in {"lesson_plan_image", "courseware_image"}:
+            blocked("VISUAL_PAGE_DECISION_INVALID")
+        if not isinstance(decision_asset_ids, list) or not decision_asset_ids:
+            blocked("VISUAL_PAGE_ASSETS_MISSING")
+        projected_assets: list[dict[str, Any]] = []
+        for asset_id in decision_asset_ids:
+            asset = assets_by_id.get(str(asset_id))
+            matching = [item for item in page_placements if item.get("assetId") == asset_id]
+            if not isinstance(asset, dict) or len(matching) != 1:
+                blocked("VISUAL_PAGE_ASSETS_MISMATCH")
+            placement = matching[0]
+            render_placement = placement.get("renderPlacement")
+            if not isinstance(render_placement, dict):
+                blocked("VISUAL_RENDER_PLACEMENT_MISSING")
+            if asset.get("imageType") != choice:
+                blocked("LESSON_PLAN_AND_COURSEWARE_IMAGE_CONFLICT")
+            visual_review = placement.get("visualReview")
+            if choice == "courseware_image" and courseware_page_requires_review(str(page.get("page_type") or "")):
+                if (
+                    placement.get("placementStatus") != "reviewed"
+                    or not isinstance(visual_review, dict)
+                    or visual_review.get("imageReviewed") is not True
+                    or render_placement.get("authority") != "model_visual_review"
+                    or render_placement.get("terminalPlacementForbidden") is not True
+                ):
+                    blocked("COURSEWARE_IMAGE_PLACEMENT_REVIEW_MISSING")
+            url = str(asset.get("url") or "")
+            if not url.startswith("https://"):
+                blocked("COURSEWARE_IMAGE_URL_MISSING" if choice == "courseware_image" else "LESSON_PLAN_IMAGE_URL_MISSING")
+            projected_assets.append(
+                {
+                    "assetId": str(asset_id),
+                    "url": url,
+                    "width": asset.get("width"),
+                    "height": asset.get("height"),
+                    "alt": asset.get("alt"),
+                    "order": placement.get("order"),
+                    "displayLabel": placement.get("displayLabel"),
+                    "placement": copy.deepcopy(render_placement),
+                    "visualReview": copy.deepcopy(visual_review) if isinstance(visual_review, dict) else None,
+                }
+            )
+        projected_assets.sort(key=lambda item: (item.get("order") is None, item.get("order") or 0, item["assetId"]))
+        bind_group_asset_text(page, projected_assets)
+        page["visual"] = {
+            "imageType": choice,
+            "displayMode": "group" if len(projected_assets) > 1 else "single",
+            "assets": projected_assets,
+            "placementMode": "per_asset",
+            "presentation": visual_presentation(),
+        }
 
 
 def strip_status(value: str) -> str:
@@ -89,6 +283,36 @@ def project_post_class_task(raw_markdown: str) -> tuple[str, list[dict[str, Any]
     fallback_prefix = re.compile(r"^(?:如果|若|暂时|无法|没有合适)")
     body_blocks = blocks[1:]
 
+    def composite_segments(value: str) -> list[dict[str, str]] | None:
+        """Split one exact source paragraph without changing any character."""
+        sentence_spans = list(
+            re.finditer(r"[^。！？；]*[。！？；](?:\s*)|[^。！？；]+$", value)
+        )
+        check_start = None
+        support_start = None
+        for match in sentence_spans:
+            sentence = match.group(0).lstrip()
+            if check_start is None and match.start() > 0 and sentence.startswith(
+                ("检查", "核对", "确认", "复核")
+            ):
+                check_start = match.start()
+                continue
+            if check_start is not None and sentence.startswith(
+                ("如果", "若", "暂时", "无法", "没有")
+            ):
+                support_start = match.start()
+                break
+        if check_start is None or support_start is None:
+            return None
+        segments = [
+            {"role": "action", "text": value[:check_start]},
+            {"role": "completionCheck", "text": value[check_start:support_start]},
+            {"role": "supportNote", "text": value[support_start:]},
+        ]
+        if any(not segment["text"] for segment in segments):
+            return None
+        return segments
+
     def is_checklist_prompt(value: str) -> bool:
         lines = [line.strip() for line in value.splitlines() if line.strip()]
         field_lines = sum(
@@ -135,11 +359,15 @@ def project_post_class_task(raw_markdown: str) -> tuple[str, list[dict[str, Any]
             first_body = False
             continue
         if block_type in {"ordered_list", "unordered_list"}:
+            story_sequence = bool(
+                projected
+                and projected[-1].get("role") == "storySequenceHeading"
+            )
             projected.append(
                 {
                     "type": "facts",
-                    "role": "preflight",
-                    "label": "任务要点",
+                    "role": "storySequence" if story_sequence else "preflight",
+                    "label": "故事顺序" if story_sequence else "任务要点",
                     "items": list(block.get("items") or []),
                     "sourceMarkdown": source_markdown,
                 }
@@ -150,7 +378,32 @@ def project_post_class_task(raw_markdown: str) -> tuple[str, list[dict[str, Any]
         text = str(block.get("text") or source_markdown)
         following_code = next_code_text(block_index)
         fact_match = fact_prefix.fullmatch(text)
-        if fact_match:
+        if (
+            text.strip().replace("**", "").replace("__", "")
+            in {"故事顺序：", "故事顺序:"}
+            and block_index + 1 < len(body_blocks)
+            and body_blocks[block_index + 1].get("type")
+            in {"ordered_list", "unordered_list"}
+        ):
+            projected.append(
+                {
+                    "type": "section_heading",
+                    "role": "storySequenceHeading",
+                    "text": text,
+                    "sourceMarkdown": source_markdown,
+                }
+            )
+        elif composite_segments(text):
+            projected.append(
+                {
+                    "type": "composite",
+                    "role": "composite",
+                    "text": text,
+                    "segments": composite_segments(text),
+                    "sourceMarkdown": source_markdown,
+                }
+            )
+        elif fact_match:
             projected.append(
                 {
                     "type": "facts",
@@ -868,17 +1121,33 @@ def protected_page(plan: dict[str, str]) -> dict[str, Any]:
 def build(
     lesson_id: str,
     page_plan: Path,
+    visual_mode: str = "text_only",
+    visual_manifest: Path | None = None,
 ) -> dict[str, Any]:
     plans = parse_pages(page_plan.read_text(encoding="utf-8"))
     if not plans:
         blocked("S4_PAGE_PLAN_EMPTY")
 
-    return {
+    payload = {
         "lesson_id": lesson_id,
         "sop_version": CONTRACT,
         "source_page_plan": str(page_plan.resolve()),
         "pages": [protected_page(plan) for plan in plans],
     }
+    if visual_mode == "text_only":
+        if visual_manifest is not None:
+            blocked("VISUAL_MANIFEST_FORBIDDEN_IN_TEXT_ONLY")
+        return payload
+    if visual_mode != "visual_enhanced":
+        blocked("VISUAL_MODE_INVALID")
+    manifest, resolved_manifest = load_resolved_visual_manifest(
+        lesson_id, page_plan, visual_manifest
+    )
+    project_visuals(payload["pages"], manifest)
+    payload["visualMode"] = "visual_enhanced"
+    payload["sourceVisualManifest"] = str(resolved_manifest)
+    payload["sourceVisualManifestSha256"] = sha256(resolved_manifest)
+    return payload
 
 
 def main() -> int:
@@ -886,12 +1155,16 @@ def main() -> int:
         description="从冻结 S4 确定性生成完整 S5 effective_content_full.json"
     )
     parser.add_argument("--lesson-id", required=True)
+    parser.add_argument("--visual-mode", default="text_only")
     parser.add_argument("--page-plan", required=True, type=Path)
+    parser.add_argument("--visual-manifest", type=Path)
     parser.add_argument("--output", required=True, type=Path)
     args = parser.parse_args()
     payload = build(
         args.lesson_id,
         args.page_plan.resolve(),
+        args.visual_mode,
+        args.visual_manifest.resolve() if args.visual_manifest else None,
     )
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(

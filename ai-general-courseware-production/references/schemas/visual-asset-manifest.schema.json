@@ -1,0 +1,140 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "RunS R36 Visual Asset Manifest",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "lessonId",
+    "visualMode",
+    "ownerStage",
+    "lifecycleState",
+    "sourceTeacherFinal",
+    "sourceTeacherVisualScript",
+    "sourcePagePlan",
+    "externalReturn",
+    "policy",
+    "assets",
+    "placements",
+    "pageDecisions",
+    "checks",
+    "blockingPoints"
+  ],
+  "properties": {
+    "schemaVersion": {"const": "1.1"},
+    "lessonId": {"type": "string", "pattern": "^lesson[0-9]{3,}$"},
+    "visualMode": {"const": "visual_enhanced"},
+    "ownerStage": {"const": "S1"},
+    "lifecycleState": {"enum": ["initial", "request", "resolved"]},
+    "sourceTeacherFinal": {"$ref": "#/$defs/sourceFile"},
+    "sourceTeacherVisualScript": {"$ref": "#/$defs/sourceFile"},
+    "sourcePagePlan": {"anyOf": [{"type": "null"}, {"$ref": "#/$defs/sourceFile"}]},
+    "externalReturn": {"anyOf": [{"type": "null"}, {"$ref": "#/$defs/externalReturnSource"}]},
+    "placementReview": {"anyOf": [{"type": "null"}, {"$ref": "#/$defs/sourceFile"}]},
+    "assets": {"type": "array", "items": {"$ref": "#/$defs/asset"}},
+    "placements": {"type": "array", "items": {"$ref": "#/$defs/placement"}},
+    "pageDecisions": {"type": "array", "items": {"$ref": "#/$defs/pageDecision"}},
+    "checks": {"type": "object"},
+    "blockingPoints": {"type": "array", "items": {"type": "string"}}
+  },
+  "$defs": {
+    "sourceFile": {
+      "type": "object",
+      "required": ["path", "sha256"],
+      "properties": {
+        "path": {"type": "string", "minLength": 1},
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    },
+    "externalReturnSource": {
+      "type": "object",
+      "required": ["path", "sha256"],
+      "properties": {
+        "path": {"type": "string", "minLength": 1},
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "bindingMode": {"enum": ["exact_page_plan", "cross_chain_page_metadata"]},
+        "sourceBasePagePlanSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "targetPagePlanSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "ignoredCoursewarePages": {
+          "type": "array",
+          "items": {"type": "string", "pattern": "^P[0-9]{2,}$"},
+          "uniqueItems": true
+        }
+      }
+    },
+    "asset": {
+      "type": "object",
+      "required": ["assetId", "imageType", "url", "width", "height", "alt", "teachingPurpose", "sourceAuthority", "assetStatus"],
+      "properties": {
+        "assetId": {"type": "string", "minLength": 1},
+        "imageType": {"enum": ["lesson_plan_image", "courseware_image"]},
+        "url": {"type": ["string", "null"]},
+        "width": {"type": ["integer", "null"], "minimum": 1},
+        "height": {"type": ["integer", "null"], "minimum": 1},
+        "alt": {"type": ["string", "null"]},
+        "teachingPurpose": {"type": ["string", "null"]},
+        "sourceAuthority": {"enum": ["teacher_visual_script", "external_courseware_return"]},
+        "assetStatus": {"enum": ["ready", "awaiting_external_return"]}
+      }
+    },
+    "placement": {
+      "type": "object",
+      "required": ["placementId", "assetId", "sourceAnchor", "sourceLocationText", "sourceLocationDetail", "renderPlacement", "pageNo", "displayMode", "groupId", "order", "displayLabel"],
+      "properties": {
+        "placementId": {"type": "string", "minLength": 1},
+        "assetId": {"type": "string", "minLength": 1},
+        "sourceAnchor": {"type": ["object", "null"]},
+        "sourceLocationText": {"type": ["string", "null"]},
+        "sourceLocationDetail": {"type": ["string", "null"]},
+        "renderPlacement": {
+          "type": "object",
+          "required": ["authority", "anchorType", "fallback"],
+          "properties": {
+            "authority": {"enum": ["teacher_visual_script", "page_type_contract", "model_visual_review"]},
+            "anchorType": {"enum": ["teacher_source_anchor", "page_type_rule", "reviewed_semantic_anchor"]},
+            "rule": {"type": "string", "minLength": 1},
+            "insertAfterText": {"type": "string", "minLength": 1},
+            "insertBeforeText": {"type": "string", "minLength": 1},
+            "inside": {"type": "string", "minLength": 1},
+            "insertAfter": {"type": "string", "minLength": 1},
+            "insertBefore": {"type": "string", "minLength": 1},
+            "replaces": {"type": "string", "minLength": 1},
+            "fallback": {"type": "string", "minLength": 1},
+            "decisionStatus": {"enum": ["candidate_only", "final_fixed"]},
+            "terminalPlacementForbidden": {"type": "boolean"}
+          }
+        },
+        "pageNo": {"type": ["string", "null"], "pattern": "^P[0-9]{2,}$"},
+        "displayMode": {"enum": ["single", "group_item", "reuse"]},
+        "groupId": {"type": ["string", "null"]},
+        "order": {"type": ["integer", "null"], "minimum": 1},
+        "displayLabel": {"type": ["string", "null"]},
+        "placementStatus": {"enum": ["active", "pending_visual_review", "reviewed", "suppressed_on_interaction_page"]},
+        "suppressionReason": {"type": "string", "minLength": 1},
+        "visualReview": {
+          "type": "object",
+          "properties": {
+            "imageReviewed": {"type": "boolean"},
+            "reviewNotRequiredReason": {"type": "string", "minLength": 1},
+            "semanticRelation": {"type": "string", "minLength": 1},
+            "embeddedTextOverlapDetected": {"type": "boolean"},
+            "embeddedTextConflict": {"type": "boolean"},
+            "fallbackUsed": {"type": "boolean"}
+          }
+        }
+      }
+    },
+    "pageDecision": {
+      "type": "object",
+      "required": ["pageNo", "pageType", "decision", "reason", "requiredAssetCount", "assetIds", "status"],
+      "properties": {
+        "pageNo": {"type": "string", "pattern": "^P[0-9]{2,}$"},
+        "pageType": {"type": "string", "minLength": 1},
+        "decision": {"enum": ["lesson_plan_image", "courseware_image", "interaction_no_image"]},
+        "reason": {"type": "string", "minLength": 1},
+        "requiredAssetCount": {"type": "integer", "minimum": 0},
+        "assetIds": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "status": {"enum": ["ready", "awaiting_external_return", "resolved", "not_applicable"]}
+      }
+    }
+  }
+}

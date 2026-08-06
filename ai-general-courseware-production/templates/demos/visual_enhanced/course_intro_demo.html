@@ -1,0 +1,713 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>课程开篇页固定模板</title>
+  <script src="https://res.xrunda.com/runs/plugin/creator/creator-review-sdk.js"></script>
+  <style>
+    /* FIXED_LAYOUT_CONTRACT: 顶部/两侧/底部留白、底栏和主按钮均为固定代码；每课只替换 VISUAL_DATA 与 COURSE_INTRO_VARIABLES。 */
+
+    :root {
+      --purple: #9260fe;
+      --ink: #242331;
+      --safe-bottom: 0px;
+      --page-bottom-rgb: 213, 245, 254;
+      --page-bottom-bg: rgb(var(--page-bottom-rgb));
+      --footer-h: calc(80px + var(--safe-bottom));
+      --button-height: 60px;
+      --content-max: 480px;
+      --card-radius: 30px;
+    }
+
+    * {
+      box-sizing: border-box;
+      min-width: 0;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: var(--page-bottom-bg);
+    }
+
+    .runs-intro-page {
+      position: relative;
+      width: 100%;
+      max-width: 480px;
+      height: 100%;
+      margin: 0 auto;
+      overflow: hidden;
+      border-radius: 0;
+      color: var(--ink);
+      background: linear-gradient(180deg, #d7c4ff 0%, var(--page-bottom-bg) 66.667%, var(--page-bottom-bg) 100%);
+      font-family: Inter, -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+
+    .top-safe-area {
+      display: none;
+      height: 0;
+    }
+
+    .intro-scroll {
+      width: 100%;
+      height: 100%;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: 0 0 calc(var(--footer-h) + 24px);
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .intro-inner {
+      width: 100%;
+      max-width: var(--content-max);
+      margin: 0 auto;
+    }
+
+    .course-overview {
+      margin: 10px 18px 18px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.92);
+      border-radius: var(--card-radius);
+      background: rgba(255, 255, 255, 0.76);
+      box-shadow: 0 14px 30px rgba(93, 80, 161, 0.1);
+    }
+
+    .intro-hero {
+      position: relative;
+      width: 100%;
+      min-height: 180px;
+      overflow: hidden;
+      background: #d8d8ff;
+    }
+
+    .hero-image-button {
+      display: block;
+      width: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      border: 0;
+      background: transparent;
+      cursor: zoom-in;
+    }
+
+    .hero-image {
+      display: block;
+      width: 100%;
+      max-width: 100%;
+      height: auto;
+      object-fit: contain;
+    }
+
+    .intro-hero::after {
+      position: absolute;
+      right: 0;
+      bottom: 0;
+      left: 0;
+      height: 38px;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.72));
+      content: "";
+      pointer-events: none;
+    }
+
+    .course-info-panel {
+      position: relative;
+      padding: 38px 20px 24px;
+      text-align: center;
+    }
+
+    .lesson-chip {
+      position: absolute;
+      z-index: 3;
+      top: -16px;
+      left: 50%;
+      display: grid;
+      place-items: center;
+      width: 82px;
+      min-height: 30px;
+      padding: 4px 12px;
+      transform: translateX(-50%);
+      border: 1px solid #b8ed55;
+      border-radius: 999px;
+      color: #242331;
+      background: #d9f99d;
+      font-size: 13px;
+      line-height: 20px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    #courseTitle {
+      width: 100%;
+      margin: 0;
+      color: var(--purple);
+      text-align: center;
+      font-size: 24px;
+      line-height: 1.3;
+      font-weight: 800;
+      letter-spacing: 0.2px;
+      overflow-wrap: break-word;
+    }
+
+    .content-card {
+      position: relative;
+      margin-right: 20px;
+      margin-left: 20px;
+      padding: 19px 22px 21px;
+      border: 1px solid rgba(255, 255, 255, 0.92);
+      border-radius: var(--card-radius);
+      background: rgba(255, 255, 255, 0.72);
+      box-shadow: 0 12px 28px rgba(81, 57, 137, 0.06);
+    }
+
+    .content-card h3 {
+      margin: 0 0 8px;
+      color: var(--purple);
+      font-size: 13px;
+      line-height: 21px;
+      font-weight: 700;
+      text-align: center;
+    }
+
+    .core-question-panel {
+      position: relative;
+      min-height: 134px;
+      background: rgba(255, 255, 255, 0.88);
+    }
+
+    .learning-goal-heading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .core-question-icon {
+      position: static;
+      width: 28px;
+      height: 28px;
+      margin: 0 8px 8px 0;
+      object-fit: contain;
+      flex: none;
+      pointer-events: none;
+    }
+
+    .core-question-panel h3 {
+      margin: 0 0 8px;
+      color: var(--purple);
+      font-size: 13px;
+      line-height: 21px;
+      font-weight: 700;
+      text-align: center;
+    }
+
+    #learningGoal {
+      margin: 0;
+      text-align: left;
+      font-size: 14px;
+      line-height: 23px;
+      overflow-wrap: break-word;
+    }
+
+    .unlock-card {
+      margin-top: 18px;
+      padding: 19px 17px 17px;
+      border-radius: 27px;
+      background: rgba(255, 255, 255, 0.62);
+    }
+
+    #knowledgeList {
+      display: grid;
+      gap: 10px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    #knowledgeList li {
+      display: grid;
+      grid-template-columns: 30px minmax(0, 1fr);
+      gap: 10px;
+      align-items: center;
+      min-height: 44px;
+      padding: 8px 12px;
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.78);
+      font-size: 14px;
+      line-height: 21px;
+      overflow-wrap: break-word;
+    }
+
+    .knowledge-index {
+      display: grid;
+      place-items: center;
+      width: 30px;
+      height: 30px;
+      border-radius: 11px;
+      color: var(--purple);
+      background: rgba(146, 96, 254, 0.12);
+      font-size: 12px;
+      line-height: 1;
+      font-weight: 900;
+    }
+
+    .intro-footer {
+      position: absolute;
+      z-index: 5;
+      right: 0;
+      bottom: 0;
+      left: 0;
+      display: flex;
+      justify-content: center;
+      padding: 10px 0 calc(10px + var(--safe-bottom));
+      background: var(--page-bottom-bg);
+    }
+
+    #primaryButton {
+      width: calc(100% - 64px);
+      max-width: 260px;
+      min-height: var(--button-height);
+      border: 2px solid transparent;
+      border-radius: 40px;
+      color: #fff;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0)) padding-box,
+        linear-gradient(180deg, #9260fe, #9260fe) padding-box,
+        linear-gradient(180deg, #f2eef8, #8f5df3) border-box;
+      font: inherit;
+      font-size: 16px;
+      font-weight: 800;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    #primaryButton:active {
+      transform: translateY(1px);
+    }
+
+    .intro-error {
+      width: calc(100% - 36px);
+      max-width: 480px;
+      margin: 80px auto;
+      padding: 20px;
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.82);
+      text-align: center;
+      font-size: 16px;
+      line-height: 1.6;
+    }
+
+    @media (orientation: landscape) and (max-height: 720px) {
+      .content-card {
+        padding: 15px;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      * {
+        scroll-behavior: auto !important;
+        transition: none !important;
+      }
+    }
+  </style>
+  <style>
+    .visual-lightbox[hidden] { display: none; }
+    .visual-lightbox {
+      position: fixed;
+      z-index: 9999;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      left: 0;
+      background: rgba(20, 16, 46, 0.9);
+    }
+    .visual-lightbox-stage {
+      position: absolute;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      left: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    .visual-lightbox-image-wrap {
+      width: 92%;
+      max-width: 720px;
+      max-height: 72%;
+      overflow: hidden;
+      border-radius: 18px;
+      touch-action: none;
+    }
+    .visual-lightbox-image {
+      display: block;
+      width: 100%;
+      height: auto;
+      max-height: 72vh;
+      margin: 0 auto;
+      object-fit: contain;
+      border-radius: 18px;
+      transform-origin: center center;
+    }
+    .visual-lightbox-close {
+      position: fixed;
+      z-index: 2;
+      top: 82%;
+      left: 50%;
+      width: 46px;
+      height: 46px;
+      margin: 0;
+      padding: 0;
+      border: 0;
+      border-radius: 50%;
+      color: #fff;
+      background: rgba(102, 100, 111, 0.94);
+      font-size: 31px;
+      line-height: 43px;
+      font-weight: 800;
+      transform: translateX(-50%);
+    }
+  </style>
+</head>
+<body>
+  <main class="runs-intro-page">
+    <div class="top-safe-area" aria-hidden="true"></div>
+
+    <div class="intro-scroll" id="introScroll">
+      <div class="intro-inner">
+        <section class="course-overview" aria-label="本课开篇信息">
+          <section class="intro-hero" id="visualHero" aria-label="课程主视觉">
+            <button class="hero-image-button" id="heroImageButton" type="button" aria-label="放大查看课程主视觉">
+              <img class="hero-image" id="heroImage" alt="">
+            </button>
+          </section>
+          <div class="course-info-panel">
+            <span class="lesson-chip" id="lessonChip"></span>
+            <h1 id="courseTitle"></h1>
+          </div>
+        </section>
+
+        <section class="content-card core-question-panel" aria-labelledby="learningGoalTitle">
+          <div class="learning-goal-heading">
+            <img class="core-question-icon" src="https://res.xrunda.com/xruns/static/image/course_intro_icon.png" alt="" aria-hidden="true">
+            <h3 id="learningGoalTitle">学习目标</h3>
+          </div>
+          <p id="learningGoal"></p>
+        </section>
+
+        <section class="content-card unlock-card" aria-labelledby="unlockTitle">
+          <h3 id="unlockTitle">本课将解锁</h3>
+          <ul id="knowledgeList"></ul>
+        </section>
+      </div>
+    </div>
+
+    <div class="visual-lightbox" id="visualLightbox" hidden aria-hidden="true">
+      <div class="visual-lightbox-stage">
+        <div class="visual-lightbox-image-wrap" id="visualZoomArea">
+          <img class="visual-lightbox-image" id="visualLightboxImage" alt="">
+        </div>
+        <button type="button" class="visual-lightbox-close" id="visualLightboxClose" aria-label="关闭大图"><span aria-hidden="true">×</span></button>
+      </div>
+    </div>
+
+    <footer class="intro-footer" id="introFooter">
+      <button id="primaryButton" type="button">开始探索</button>
+    </footer>
+  </main>
+
+  <script>
+    /* ============================================================
+       每课只允许替换 VISUAL_DATA 与本内容变量区。变量名、结构、HTML、CSS、交互均不得修改。
+       ============================================================ */
+    const VISUAL_DATA = Object.freeze({
+      visualAsset: Object.freeze({
+        assetId: "L001-P01-C01",
+        imageType: "courseware_image",
+        url: "https://res.xrunda.com/ai-test/Galaxy/knowledge/20260804/72/1785848574637-62cf93816f772a4e.webp",
+        width: 1200,
+        height: 800,
+        alt: "AI 创想家课程主视觉",
+        placement: Object.freeze({
+          authority: "page_type_contract",
+          anchorType: "page_type_rule",
+          rule: "course_intro_primary_image",
+          inside: "course_overview",
+          insertBefore: "course_identity",
+          replaces: "existing_intro_decorative_image_slot",
+          fallback: "before_course_title"
+        })
+      }),
+      visualPresentation: Object.freeze({
+        sizeRole: "primary_content_image",
+        widthPolicy: "content_width",
+        heightPolicy: "natural_ratio",
+        objectFit: "contain",
+        borderRadiusPx: 16,
+        verticalSpacingPx: 16,
+        thumbnailForbidden: true,
+        standaloneCard: false,
+        lightboxRequired: true
+      })
+    });
+
+    function renderVisualAssets() {
+      var hero = document.getElementById("visualHero");
+      var trigger = document.getElementById("heroImageButton");
+      var image = document.getElementById("heroImage");
+      var lightbox = document.getElementById("visualLightbox");
+      var lightboxImage = document.getElementById("visualLightboxImage");
+      var closeButton = document.getElementById("visualLightboxClose");
+      var zoomArea = document.getElementById("visualZoomArea");
+      var stage = lightbox.querySelector(".visual-lightbox-stage");
+      var assets = VISUAL_DATA.visualAsset ? [VISUAL_DATA.visualAsset] : (VISUAL_DATA.planVisualAssets || []);
+      var scale = 1;
+      var translateX = 0;
+      var translateY = 0;
+      var startDistance = 0;
+      var startScale = 1;
+      var startX = 0;
+      var startY = 0;
+      var bodyOverflow = "";
+      var asset = assets[0];
+
+      function applyVisualTransform() {
+        lightboxImage.style.transform = "translate(" + translateX + "px," + translateY + "px) scale(" + scale + ")";
+      }
+
+      function resetVisualTransform() {
+        scale = 1;
+        translateX = 0;
+        translateY = 0;
+        applyVisualTransform();
+      }
+
+      function touchDistance(touches) {
+        var dx = touches[0].clientX - touches[1].clientX;
+        var dy = touches[0].clientY - touches[1].clientY;
+        return Math.sqrt(dx * dx + dy * dy);
+      }
+
+      function positionVisualClose() {
+        var viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+        var imageRect = lightboxImage.getBoundingClientRect();
+        var lowerSpace = Math.max(0, viewportHeight - imageRect.bottom);
+        closeButton.style.top = Math.round(imageRect.bottom + lowerSpace / 2 - 23) + "px";
+      }
+
+      function closeVisualLightbox() {
+        resetVisualTransform();
+        lightbox.hidden = true;
+        lightbox.setAttribute("aria-hidden", "true");
+        document.body.style.overflow = bodyOverflow;
+      }
+
+      if (!asset) {
+        hero.hidden = true;
+      } else {
+        image.src = asset.url;
+        image.alt = asset.alt || "";
+        trigger.addEventListener("click", function () {
+          lightboxImage.src = asset.url;
+          lightboxImage.alt = asset.alt || "";
+          resetVisualTransform();
+          bodyOverflow = document.body.style.overflow;
+          document.body.style.overflow = "hidden";
+          lightbox.hidden = false;
+          lightbox.setAttribute("aria-hidden", "false");
+          window.requestAnimationFrame(positionVisualClose);
+        });
+      }
+
+      lightboxImage.onload = positionVisualClose;
+
+      zoomArea.addEventListener("touchstart", function (event) {
+        if (event.touches.length === 2) {
+          startDistance = touchDistance(event.touches);
+          startScale = scale;
+          event.preventDefault();
+        } else if (event.touches.length === 1 && scale > 1) {
+          startX = event.touches[0].clientX - translateX;
+          startY = event.touches[0].clientY - translateY;
+        }
+      }, false);
+      zoomArea.addEventListener("touchmove", function (event) {
+        if (event.touches.length === 2 && startDistance > 0) {
+          scale = Math.max(1, Math.min(4, startScale * touchDistance(event.touches) / startDistance));
+          if (scale <= 1) {
+            translateX = 0;
+            translateY = 0;
+          }
+          applyVisualTransform();
+          event.preventDefault();
+        } else if (event.touches.length === 1 && scale > 1) {
+          translateX = event.touches[0].clientX - startX;
+          translateY = event.touches[0].clientY - startY;
+          applyVisualTransform();
+          event.preventDefault();
+        }
+      }, false);
+      zoomArea.addEventListener("touchend", function () {
+        startDistance = 0;
+        if (scale <= 1) resetVisualTransform();
+      }, false);
+      closeButton.addEventListener("click", closeVisualLightbox);
+      lightbox.addEventListener("click", function (event) {
+        if (event.target === lightbox) closeVisualLightbox();
+      });
+      stage.addEventListener("click", function (event) {
+        if (event.target === stage) closeVisualLightbox();
+      });
+      document.addEventListener("keydown", function (event) {
+        if (event.key === "Escape" || event.keyCode === 27) closeVisualLightbox();
+      });
+      window.addEventListener("resize", function () {
+        if (!lightbox.hidden) positionVisualClose();
+      });
+    }
+
+    const COURSE_INTRO_VARIABLES = Object.freeze({
+      packageName: "课包1：AI 创想家（AI Creator）",
+      unitName: "单元1：认识 AI：问题发现与任务表达",
+      lessonNumber: 1,
+      courseName: "Workflow 和 SOP 分别解决什么问题",
+      courseIntroduction: "理解 Workflow 与 SOP 的区别，能根据任务选择合适的方法，并知道何时需要建立可复用的执行标准。",
+      knowledgePoints: Object.freeze([
+        "Workflow 解决任务推进问题",
+        "SOP 解决执行一致性问题",
+        "根据任务选择合适的方法",
+        "先明确任务目标，再拆解执行步骤",
+        "把重复出现的步骤整理成稳定流程",
+        "为关键节点补充可检查的完成标准",
+        "区分需要灵活判断的环节与必须统一的环节",
+        "记录流程中的输入、处理动作和输出结果",
+        "用复盘结果持续更新 Workflow 和 SOP",
+        "在执行前确认版本、角色和交付边界"
+      ])
+    });
+    /* ======================= 变量区结束 ======================= */
+
+    function escapeHtml(value) {
+      return String(value == null ? "" : value).replace(/[&<>"']/g, character => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        "\"": "&quot;",
+        "'": "&#39;"
+      }[character]));
+    }
+
+    function assertVariables(data) {
+      const textFields = ["packageName", "unitName", "courseName", "courseIntroduction"];
+      const missingFields = textFields.filter(field => typeof data[field] !== "string" || !data[field].trim());
+      if (!Number.isInteger(data.lessonNumber) || data.lessonNumber < 1) missingFields.push("lessonNumber");
+      if (!Array.isArray(data.knowledgePoints) || data.knowledgePoints.length < 1) missingFields.push("knowledgePoints");
+      if (missingFields.length) throw new Error(`INTRO_FIELD_MISSING: ${missingFields.join(", ")}`);
+    }
+
+    function safeNextPage() {
+      if (window.CreatorReviewSDK && typeof window.CreatorReviewSDK.nextPage === "function") {
+        window.CreatorReviewSDK.nextPage();
+        return;
+      }
+      if (window.parent) window.parent.postMessage({ type: "nextpage" }, "*");
+    }
+
+    function safeComplete() {
+      if (window.CreatorReviewSDK && typeof window.CreatorReviewSDK.complete === "function") {
+        window.CreatorReviewSDK.complete();
+        return;
+      }
+      if (window.parent) window.parent.postMessage({ type: "complete" }, "*");
+    }
+
+    function renderIntroPage() {
+      const data = COURSE_INTRO_VARIABLES;
+      assertVariables(data);
+      document.title = data.courseName;
+      document.getElementById("lessonChip").textContent = `第${data.lessonNumber}课`;
+      document.getElementById("courseTitle").textContent = data.courseName;
+      document.getElementById("learningGoal").textContent = data.courseIntroduction;
+      document.getElementById("knowledgeList").innerHTML = data.knowledgePoints
+        .map((item, index) => `
+          <li>
+            <span class="knowledge-index" aria-hidden="true">${String(index + 1).padStart(2, "0")}</span>
+            <span>${escapeHtml(item)}</span>
+          </li>`)
+        .join("");
+
+      document.getElementById("primaryButton").addEventListener("click", safeNextPage);
+    }
+
+
+    function fitCourseTitle() {
+      const title = document.getElementById("courseTitle");
+      const maximumSize = 24;
+      const minimumSingleLineSize = 20;
+      const minimumTwoLineSize = 18;
+      const step = 0.5;
+
+      let size = maximumSize;
+      title.style.fontSize = size + "px";
+      title.style.whiteSpace = "nowrap";
+      title.style.overflowWrap = "normal";
+
+      while (size > minimumSingleLineSize && title.scrollWidth > title.clientWidth + 1) {
+        size -= step;
+        title.style.fontSize = size + "px";
+      }
+
+      if (title.scrollWidth <= title.clientWidth + 1) {
+        title.dataset.titleMode = "single-line";
+        return;
+      }
+
+      title.style.whiteSpace = "normal";
+      title.style.overflowWrap = "anywhere";
+      size = maximumSize;
+      title.style.fontSize = size + "px";
+
+      const lineCount = () => {
+        const range = document.createRange();
+        range.selectNodeContents(title);
+        const lineHeight = Number.parseFloat(getComputedStyle(title).lineHeight) || size * 1.3;
+        return Math.round(range.getBoundingClientRect().height / lineHeight);
+      };
+
+      while (size > minimumTwoLineSize && lineCount() > 2) {
+        size -= step;
+        title.style.fontSize = size + "px";
+      }
+
+      title.dataset.titleMode = "two-line-fallback";
+    }
+
+    function syncLayoutMetrics() {
+      fitCourseTitle();
+      const footer = document.getElementById("introFooter");
+      const height = Math.ceil(footer.getBoundingClientRect().height || 80);
+      document.documentElement.style.setProperty("--footer-h", `${height}px`);
+    }
+
+    try {
+      renderVisualAssets();
+      renderIntroPage();
+      syncLayoutMetrics();
+      if ("ResizeObserver" in window) {
+        new ResizeObserver(syncLayoutMetrics).observe(document.getElementById("introFooter"));
+      }
+      window.addEventListener("resize", syncLayoutMetrics, { passive: true });
+      window.addEventListener("orientationchange", () => setTimeout(syncLayoutMetrics, 120), { passive: true });
+    } catch (error) {
+      document.documentElement.dataset.introError = "INTRO_FIELD_MISSING";
+      document.body.innerHTML = '<main class="intro-error" role="alert">页面内容暂不可用</main>';
+      throw error;
+    }
+  </script>
+</body>
+</html>

@@ -9,9 +9,12 @@ earlier lesson artifacts. It does not generate or repair JSON.
 from __future__ import annotations
 
 import argparse
+import copy
+import hashlib
 import json
 import re
 import sys
+import unicodedata
 from pathlib import Path
 from typing import Any
 
@@ -23,6 +26,7 @@ from page_type_contract import (  # noqa: E402
     canonical_capsule,
     canonical_page_type,
 )
+from visual_placement_contract import courseware_page_requires_review, visual_presentation  # noqa: E402
 
 from validate_v35_page_plan_question_boundaries import JSON_FENCE_RE, parse_pages
 
@@ -60,6 +64,8 @@ POST_CLASS_SECTION_TYPES = {
     "decision",
     "safety",
     "fallback",
+    "section_heading",
+    "composite",
 }
 POST_CLASS_SECTION_ROLES = {
     "lead",
@@ -74,6 +80,9 @@ POST_CLASS_SECTION_ROLES = {
     "safetyFallback",
     "fallback",
     "note",
+    "storySequenceHeading",
+    "storySequence",
+    "composite",
 }
 FORBIDDEN_DOWNSTREAM_FIELDS = {"prompt", "components", "sdk_action", "is_last_page"}
 LESSON_NUMBER_RE = re.compile(r"(\d+)")
@@ -239,6 +248,106 @@ def ordered_equal(left: Any, right: Any) -> bool:
     return left == right
 
 
+def visual_without_pair_bindings(value: Any) -> Any:
+    """Return the manifest projection after removing S5-derived text bindings."""
+
+    projected = copy.deepcopy(value)
+    if not isinstance(projected, dict):
+        return projected
+    assets = projected.get("assets")
+    if isinstance(assets, list):
+        for asset in assets:
+            if isinstance(asset, dict):
+                asset.pop("pairedStudentText", None)
+                asset.pop("pairedSource", None)
+    return projected
+
+
+def normalized_visual_label(value: str) -> str:
+    normalized = unicodedata.normalize("NFKC", value)
+    return re.sub(r"\s+", "", normalized).rstrip("：:")
+
+
+def validate_visual_pair_bindings(
+    page: dict[str, Any],
+    issues: list[dict[str, str]],
+    page_no: str,
+) -> None:
+    """Validate optional exact source bindings for a multi-image group.
+
+    Missing bindings remain compatible and non-blocking.  Once S5 emits any
+    binding, however, the complete group must be an exact, one-to-one
+    projection of one labelled unordered-list item per asset.
+    """
+
+    visual = page.get("visual")
+    assets = visual.get("assets") if isinstance(visual, dict) else None
+    if not isinstance(assets, list) or len(assets) < 2:
+        return
+    has_binding = [
+        isinstance(asset, dict)
+        and ("pairedStudentText" in asset or "pairedSource" in asset)
+        for asset in assets
+    ]
+    if not any(has_binding):
+        return
+    sections = page.get("sections")
+    invalid = not isinstance(sections, list) or not all(has_binding)
+    seen_sources: set[tuple[int, int]] = set()
+    for asset in assets:
+        if not isinstance(asset, dict):
+            invalid = True
+            continue
+        text = asset.get("pairedStudentText")
+        source = asset.get("pairedSource")
+        label = asset.get("displayLabel")
+        if (
+            not isinstance(text, str)
+            or not text
+            or not isinstance(source, dict)
+            or not isinstance(label, str)
+            or source.get("blockType") != "unordered_list"
+        ):
+            invalid = True
+            continue
+        block_index = source.get("blockIndex")
+        item_index = source.get("itemIndex")
+        coordinate = (block_index, item_index)
+        if (
+            not isinstance(block_index, int)
+            or isinstance(block_index, bool)
+            or not isinstance(item_index, int)
+            or isinstance(item_index, bool)
+            or coordinate in seen_sources
+            or not isinstance(sections, list)
+            or not (0 <= block_index < len(sections))
+        ):
+            invalid = True
+            continue
+        seen_sources.add(coordinate)
+        block = sections[block_index]
+        items = block.get("items") if isinstance(block, dict) else None
+        if (
+            not isinstance(block, dict)
+            or block.get("type") != "unordered_list"
+            or not isinstance(items, list)
+            or not (0 <= item_index < len(items))
+            or items[item_index] != text
+        ):
+            invalid = True
+            continue
+        match = re.match(r"^\s*([^：:]{1,24})[：:]", text)
+        if not match or normalized_visual_label(match.group(1)) != normalized_visual_label(label):
+            invalid = True
+    if invalid:
+        add_issue(
+            issues,
+            "V35_S5_VISUAL_TEXT_PAIRING_INVALID",
+            "多图 pairedStudentText 必须完整、一一对应且逐字引用同一 unordered_list 中与 displayLabel 匹配的原文项；缺少绑定本身不阻断。",
+            page_no,
+        )
+
+
 def source_block_ids(source_block: str) -> list[str]:
     return [item.strip() for item in re.split(r"[,，、]", source_block) if item.strip()]
 
@@ -356,6 +465,95 @@ def add_issue(
     if page_no:
         issue["page_no"] = page_no
     issues.append(issue)
+
+
+def sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def expected_visuals(
+    lesson_id: str,
+    page_plan: Path,
+    visual_manifest: Path | None,
+    issues: list[dict[str, str]],
+) -> dict[str, dict[str, Any]]:
+    if visual_manifest is None or not visual_manifest.is_file():
+        add_issue(issues, "V35_S5_VISUAL_MANIFEST_MISSING", "visual_enhanced S5 缺少 resolved visual manifest。")
+        return {}
+    try:
+        manifest = json.loads(visual_manifest.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError):
+        add_issue(issues, "V35_S5_VISUAL_MANIFEST_INVALID", "resolved visual manifest 无法解析。")
+        return {}
+    if not isinstance(manifest, dict) or manifest.get("lifecycleState") != "resolved":
+        add_issue(issues, "V35_S5_VISUAL_MANIFEST_INVALID", "S5 只接受 resolved visual manifest。")
+        return {}
+    if manifest.get("lessonId") != lesson_id or manifest.get("visualMode") != "visual_enhanced":
+        add_issue(issues, "VISUAL_MODE_DRIFT", "resolved manifest 的课程或 visualMode 与 S5 不一致。")
+    source_plan = manifest.get("sourcePagePlan")
+    if not isinstance(source_plan, dict) or source_plan.get("path") != str(page_plan.resolve()) or source_plan.get("sha256") != sha256(page_plan):
+        add_issue(issues, "V35_S5_VISUAL_PAGE_PLAN_MISMATCH", "resolved manifest 未绑定当前原始 S4 路径与 SHA。")
+
+    assets = manifest.get("assets") or []
+    placements = manifest.get("placements") or []
+    decisions = manifest.get("pageDecisions") or []
+    assets_by_id = {str(item.get("assetId")): item for item in assets if isinstance(item, dict) and item.get("assetId")}
+    expected: dict[str, dict[str, Any]] = {}
+    for decision in decisions:
+        if not isinstance(decision, dict):
+            continue
+        page_no = str(decision.get("pageNo") or "")
+        choice = decision.get("decision")
+        asset_ids = decision.get("assetIds") or []
+        if choice == "interaction_no_image":
+            expected[page_no] = {"interaction": True}
+            continue
+        projected_assets: list[dict[str, Any]] = []
+        for asset_id in asset_ids:
+            asset = assets_by_id.get(str(asset_id))
+            matches = [item for item in placements if isinstance(item, dict) and item.get("pageNo") == page_no and item.get("assetId") == asset_id]
+            if not isinstance(asset, dict) or len(matches) != 1 or asset.get("imageType") != choice:
+                add_issue(issues, "V35_S5_VISUAL_MANIFEST_INVALID", "图片资产、分类与 placement 不一致。", page_no)
+                continue
+            placement = matches[0]
+            visual_review = placement.get("visualReview")
+            if choice == "courseware_image" and courseware_page_requires_review(str(decision.get("pageType") or "")):
+                render_placement = placement.get("renderPlacement")
+                if (
+                    placement.get("placementStatus") != "reviewed"
+                    or not isinstance(visual_review, dict)
+                    or visual_review.get("imageReviewed") is not True
+                    or not isinstance(render_placement, dict)
+                    or render_placement.get("terminalPlacementForbidden") is not True
+                ):
+                    add_issue(
+                        issues,
+                        "COURSEWARE_IMAGE_PLACEMENT_REVIEW_MISSING",
+                        "需看图的课件配图未冻结模型审阅与最终 placement。",
+                        page_no,
+                    )
+            projected_assets.append(
+                {
+                    "assetId": str(asset_id),
+                    "url": asset.get("url"),
+                    "width": asset.get("width"),
+                    "height": asset.get("height"),
+                    "alt": asset.get("alt"),
+                    "order": placement.get("order"),
+                    "displayLabel": placement.get("displayLabel"),
+                    "placement": placement.get("renderPlacement"),
+                    "visualReview": visual_review if isinstance(visual_review, dict) else None,
+                }
+            )
+        projected_assets.sort(key=lambda item: (item.get("order") is None, item.get("order") or 0, item["assetId"]))
+        expected[page_no] = {
+            "imageType": choice,
+            "displayMode": "group" if len(projected_assets) > 1 else "single",
+            "assets": projected_assets,
+            "placementMode": "per_asset",
+            "presentation": visual_presentation(),
+        }
+    return expected
 
 
 def split_course_intro_knowledge_points(raw_value: str) -> list[str]:
@@ -865,7 +1063,7 @@ def validate_template_preflight(
             add_issue(
                 issues,
                 "V35_S2E_POST_CLASS_TASK_SECTION_INVALID",
-                "拓展练习 sections 只允许八类受控块：" + "、".join(sorted(POST_CLASS_SECTION_TYPES)),
+                "拓展练习 sections 只允许登记的受控块：" + "、".join(sorted(POST_CLASS_SECTION_TYPES)),
                 page_no,
             )
         invalid_roles = sorted(
@@ -884,6 +1082,31 @@ def validate_template_preflight(
                 + "、".join(sorted(POST_CLASS_SECTION_ROLES)),
                 page_no,
             )
+        for section in sections:
+            if not isinstance(section, dict) or section.get("role") != "composite":
+                continue
+            segments = section.get("segments")
+            segment_roles = (
+                [segment.get("role") for segment in segments]
+                if isinstance(segments, list)
+                and all(isinstance(segment, dict) for segment in segments)
+                else []
+            )
+            segment_text = (
+                "".join(str(segment.get("text") or "") for segment in segments)
+                if isinstance(segments, list)
+                else ""
+            )
+            if (
+                segment_roles != ["action", "completionCheck", "supportNote"]
+                or segment_text != section.get("text")
+            ):
+                add_issue(
+                    issues,
+                    "V35_S2E_POST_CLASS_TASK_COMPOSITE_INVALID",
+                    "复合任务段必须逐字拆为 action、completionCheck、supportNote，拼接后与原文完全一致。",
+                    page_no,
+                )
         raw_markdown = source.get("rawMarkdown") if isinstance(source, dict) else None
         source_blocks = (
             parse_dynamic_source_blocks(raw_markdown)
@@ -1057,7 +1280,12 @@ def validate_template_preflight(
                 )
 
 
-def validate_effective_content(path: Path, page_plan: Path | None = None) -> dict[str, Any]:
+def validate_effective_content(
+    path: Path,
+    page_plan: Path | None = None,
+    visual_mode: str = "text_only",
+    visual_manifest: Path | None = None,
+) -> dict[str, Any]:
     issues: list[dict[str, str]] = []
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
@@ -1115,6 +1343,23 @@ def validate_effective_content(path: Path, page_plan: Path | None = None) -> dic
                 "page_plan_full.md 未解析出页面。",
             )
 
+    lesson_id = str(payload.get("lesson_id") or "")
+    visual_expectations: dict[str, dict[str, Any]] = {}
+    if visual_mode == "text_only":
+        if any(key in payload for key in ("visualMode", "sourceVisualManifest", "sourceVisualManifestSha256")):
+            add_issue(issues, "V35_S5_TEXT_ONLY_VISUAL_FIELD_FORBIDDEN", "text_only S5 顶层不得出现视觉字段。")
+    elif visual_mode == "visual_enhanced":
+        resolved_visual = visual_manifest.resolve() if visual_manifest else None
+        if payload.get("visualMode") != "visual_enhanced":
+            add_issue(issues, "V35_S5_VISUAL_MODE_INVALID", "visual_enhanced S5 顶层必须登记 visualMode。")
+        if resolved_visual is None or payload.get("sourceVisualManifest") != str(resolved_visual):
+            add_issue(issues, "V35_S5_VISUAL_MANIFEST_SOURCE_INVALID", "S5 未登记唯一 resolved manifest 绝对路径。")
+        elif payload.get("sourceVisualManifestSha256") != sha256(resolved_visual):
+            add_issue(issues, "V35_S5_VISUAL_MANIFEST_SOURCE_INVALID", "S5 resolved manifest SHA 不一致。")
+        visual_expectations = expected_visuals(lesson_id, plan_path, resolved_visual, issues)
+    else:
+        add_issue(issues, "VISUAL_MODE_INVALID", "visualMode 只允许 text_only 或 visual_enhanced。")
+
     if len(pages) != len(plan_pages):
         add_issue(
             issues,
@@ -1139,6 +1384,23 @@ def validate_effective_content(path: Path, page_plan: Path | None = None) -> dic
             )
             continue
         page_no = str(page.get("page_no") or expected_no)
+        if visual_mode == "text_only":
+            if any(key in page for key in ("visual", "visualAsset", "planVisualAssets")):
+                add_issue(issues, "V35_S5_TEXT_ONLY_VISUAL_FIELD_FORBIDDEN", "text_only 页面不得出现图片字段。", page_no)
+        elif visual_mode == "visual_enhanced":
+            expected_visual = visual_expectations.get(page_no)
+            if page.get("page_type") == "互动题目":
+                if any(key in page for key in ("visual", "visualAsset", "planVisualAssets")):
+                    add_issue(issues, "V35_S5_INTERACTION_IMAGE_FORBIDDEN", "互动组件页禁止图片投影。", page_no)
+                if expected_visual != {"interaction": True}:
+                    add_issue(issues, "V35_S5_INTERACTION_IMAGE_FORBIDDEN", "resolved manifest 的互动页决策必须为 interaction_no_image。", page_no)
+            elif not ordered_equal(
+                visual_without_pair_bindings(page.get("visual")),
+                expected_visual,
+            ):
+                add_issue(issues, "V35_S5_VISUAL_PROJECTION_INVALID", "S5 visual 不是 resolved manifest 的有序无损投影。", page_no)
+            else:
+                validate_visual_pair_bindings(page, issues, page_no)
         missing = [field for field in PAGE_BASE_FIELDS if field not in page]
         if missing:
             add_issue(
@@ -1301,13 +1563,18 @@ def main() -> int:
         type=Path,
         help="显式指定唯一冻结的 S4 page_plan_full.md；省略时兼容同目录旧结构。",
     )
+    parser.add_argument("--visual-mode", default="text_only")
+    parser.add_argument("--visual-manifest", type=Path)
     parser.add_argument("files", nargs="+", type=Path)
     args = parser.parse_args()
     reports: list[dict[str, Any]] = []
     for path in args.files:
         reports.append(
             validate_effective_content(
-                path.resolve(), args.page_plan.resolve() if args.page_plan else None
+                path.resolve(),
+                args.page_plan.resolve() if args.page_plan else None,
+                args.visual_mode,
+                args.visual_manifest.resolve() if args.visual_manifest else None,
             )
         )
     blocked = any(report["status"] == "BLOCKED" for report in reports)

@@ -1,0 +1,58 @@
+{
+  "schemaVersion": "1.1",
+  "lessonId": "lesson022",
+  "visualMode": "visual_enhanced",
+  "ownerStage": "S1",
+  "lifecycleState": "resolved",
+  "sourceTeacherFinal": {
+    "path": "/test-owned/lesson022/final.md",
+    "sha256": "1111111111111111111111111111111111111111111111111111111111111111"
+  },
+  "sourceTeacherVisualScript": {
+    "path": "/test-owned/lesson022/teacher_visual_script.md",
+    "sha256": "2222222222222222222222222222222222222222222222222222222222222222"
+  },
+  "sourcePagePlan": {
+    "path": "/Users/dq/Documents/润思/runs-ai-monorepo/skills/ai-general-courseware-production/scripts/tests/fixtures/whole-course-baselines/source_page_plan.md",
+    "sha256": "a5580b7906e57625672e1fd89b9bfb75a870397b2e2c6df164714c38eb27fefa"
+  },
+  "externalReturn": {
+    "path": "/test-owned/lesson022/external_return.md",
+    "sha256": "3333333333333333333333333333333333333333333333333333333333333333"
+  },
+  "policy": {
+    "lessonPlanImagePriority": true,
+    "coursewareImageOnlyWithoutLessonPlanImage": true,
+    "coursewareImageOnInteractionPage": false,
+    "maximumCoursewareImagesPerPage": 1,
+    "missingUrlFallbackAllowed": false
+  },
+  "assets": [
+    {"assetId": "L022-P01-C01", "imageType": "courseware_image", "url": "https://res.xrunda.com/test/baseline/p01.webp", "width": 1200, "height": 800, "alt": "课程开篇图", "teachingPurpose": null, "sourceAuthority": "external_courseware_return", "assetStatus": "ready"},
+    {"assetId": "L022-P02-C01", "imageType": "courseware_image", "url": "https://res.xrunda.com/test/baseline/p02.webp", "width": 1200, "height": 800, "alt": "机器人整理资料", "teachingPurpose": null, "sourceAuthority": "external_courseware_return", "assetStatus": "ready"},
+    {"assetId": "L022-V01", "imageType": "lesson_plan_image", "url": "https://res.xrunda.com/test/baseline/v01.webp", "width": 1000, "height": 750, "alt": "人物与位置线索", "teachingPurpose": "观察画面中的可见线索", "sourceAuthority": "teacher_visual_script", "assetStatus": "ready"},
+    {"assetId": "L022-V02", "imageType": "lesson_plan_image", "url": "https://res.xrunda.com/test/baseline/v02.webp", "width": 750, "height": 1000, "alt": "文字补充信息", "teachingPurpose": "比较图片与文字分工", "sourceAuthority": "teacher_visual_script", "assetStatus": "ready"},
+    {"assetId": "L022-P06-C01", "imageType": "courseware_image", "url": "https://res.xrunda.com/test/baseline/p06.webp", "width": 1200, "height": 800, "alt": "图文说明卡示例", "teachingPurpose": null, "sourceAuthority": "external_courseware_return", "assetStatus": "ready"},
+    {"assetId": "L022-P07-C01", "imageType": "courseware_image", "url": "https://res.xrunda.com/test/baseline/p07.webp", "width": 1200, "height": 800, "alt": "图片与文字分工小结", "teachingPurpose": null, "sourceAuthority": "external_courseware_return", "assetStatus": "ready"}
+  ],
+  "placements": [
+    {"placementId": "P01-C", "assetId": "L022-P01-C01", "sourceAnchor": null, "sourceLocationText": null, "sourceLocationDetail": null, "renderPlacement": {"authority": "page_type_contract", "anchorType": "page_type_rule", "rule": "course_intro_primary_image", "inside": "course_overview", "insertBefore": "lesson_chip", "replaces": "existing_intro_decorative_image_slot", "fallback": "before_course_title"}, "pageNo": "P01", "displayMode": "single", "groupId": null, "order": null, "displayLabel": null},
+    {"placementId": "P02-C", "assetId": "L022-P02-C01", "sourceAnchor": null, "sourceLocationText": null, "sourceLocationDetail": null, "renderPlacement": {"authority": "page_type_contract", "anchorType": "page_type_rule", "rule": "scene_context_image", "inside": "scene_script_paper", "insertAfter": "scene_context_paragraphs", "insertBefore": "director_cue", "fallback": "before_director_cue"}, "pageNo": "P02", "displayMode": "single", "groupId": null, "order": null, "displayLabel": null},
+    {"placementId": "P03-V1", "assetId": "L022-V01", "sourceAnchor": {"teacherLineAfter": 1, "beforeText": "图片呈现人物、位置和动作。", "afterText": "文字补充原因、顺序和判断。"}, "sourceLocationText": "第1行后与下一张图并列", "sourceLocationDetail": "与下一张图并列", "renderPlacement": {"authority": "teacher_visual_script", "anchorType": "teacher_source_anchor", "insertAfterText": "图片呈现人物、位置和动作。", "insertBeforeText": "文字补充原因、顺序和判断。", "fallback": "none"}, "pageNo": "P03", "displayMode": "group_item", "groupId": "L022-G01", "order": 1, "displayLabel": "画面 A"},
+    {"placementId": "P03-V2", "assetId": "L022-V02", "sourceAnchor": {"teacherLineAfter": 1, "beforeText": "图片呈现人物、位置和动作。", "afterText": "文字补充原因、顺序和判断。"}, "sourceLocationText": "第1行后与上一张图并列", "sourceLocationDetail": "与上一张图并列", "renderPlacement": {"authority": "teacher_visual_script", "anchorType": "teacher_source_anchor", "insertAfterText": "图片呈现人物、位置和动作。", "insertBeforeText": "文字补充原因、顺序和判断。", "fallback": "none"}, "pageNo": "P03", "displayMode": "group_item", "groupId": "L022-G01", "order": 2, "displayLabel": "画面 B"},
+    {"placementId": "P04-V1", "assetId": "L022-V01", "sourceAnchor": {"teacherLineAfter": 1, "beforeText": "同一张图可以复用。", "afterText": "保持图片不变。"}, "sourceLocationText": "第1行后复用", "sourceLocationDetail": "复用", "renderPlacement": {"authority": "teacher_visual_script", "anchorType": "teacher_source_anchor", "insertAfterText": "同一张图可以复用。", "insertBeforeText": "保持图片不变。", "fallback": "none"}, "pageNo": "P04", "displayMode": "reuse", "groupId": null, "order": null, "displayLabel": null},
+    {"placementId": "P06-C", "assetId": "L022-P06-C01", "sourceAnchor": null, "sourceLocationText": null, "sourceLocationDetail": null, "renderPlacement": {"authority": "page_type_contract", "anchorType": "page_type_rule", "rule": "extension_contextual_image", "insertAfter": "story_sequence_or_task_goal", "insertBefore": "prompt_instructions", "fallback": "after_first_text_block"}, "pageNo": "P06", "displayMode": "single", "groupId": null, "order": null, "displayLabel": null},
+    {"placementId": "P07-C", "assetId": "L022-P07-C01", "sourceAnchor": null, "sourceLocationText": null, "sourceLocationDetail": null, "renderPlacement": {"authority": "page_type_contract", "anchorType": "page_type_rule", "rule": "summary_card_image", "inside": "summary_card", "insertAfter": "summary_title", "insertBefore": "summary_body", "fallback": "before_summary_body"}, "pageNo": "P07", "displayMode": "single", "groupId": null, "order": null, "displayLabel": null}
+  ],
+  "pageDecisions": [
+    {"pageNo": "P01", "pageType": "课程开篇", "decision": "courseware_image", "reason": "non_interactive_without_lesson_plan_image", "requiredAssetCount": 1, "assetIds": ["L022-P01-C01"], "status": "resolved"},
+    {"pageNo": "P02", "pageType": "场景引入", "decision": "courseware_image", "reason": "non_interactive_without_lesson_plan_image", "requiredAssetCount": 1, "assetIds": ["L022-P02-C01"], "status": "resolved"},
+    {"pageNo": "P03", "pageType": "知识讲解", "decision": "lesson_plan_image", "reason": "teacher_visual_script_anchor_bound_to_page", "requiredAssetCount": 2, "assetIds": ["L022-V01", "L022-V02"], "status": "ready"},
+    {"pageNo": "P04", "pageType": "案例分析", "decision": "lesson_plan_image", "reason": "teacher_visual_script_reuse_bound_to_page", "requiredAssetCount": 1, "assetIds": ["L022-V01"], "status": "ready"},
+    {"pageNo": "P05", "pageType": "互动题目", "decision": "interaction_no_image", "reason": "interaction_component_contract_forbids_course_images", "requiredAssetCount": 0, "assetIds": [], "status": "not_applicable"},
+    {"pageNo": "P06", "pageType": "拓展练习", "decision": "courseware_image", "reason": "non_interactive_without_lesson_plan_image", "requiredAssetCount": 1, "assetIds": ["L022-P06-C01"], "status": "resolved"},
+    {"pageNo": "P07", "pageType": "课程小结", "decision": "courseware_image", "reason": "non_interactive_without_lesson_plan_image", "requiredAssetCount": 1, "assetIds": ["L022-P07-C01"], "status": "resolved"}
+  ],
+  "checks": {},
+  "blockingPoints": []
+}

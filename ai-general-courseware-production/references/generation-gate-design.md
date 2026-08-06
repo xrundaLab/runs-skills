@@ -21,9 +21,28 @@ prevent S6 assembly unless the immediately preceding Gate actually passed.
   page with its approved S3 component JSON.
 - S5 deterministically projects frozen S4 into structured JSON. It preserves
   `source.rawMarkdown` verbatim while applying only the registered student
-  projection rules.
+  projection rules. In `visual_enhanced`, its only additional content input is
+  the hash-bound resolved visual manifest; the external return remains
+  provenance and is never opened by S5.
 - S6 consumes only an S5 artifact whose Gate receipt records `PASS` for the
   same path and SHA-256.
+
+An independent stage may explicitly consume a passed upstream artifact and
+receipt from another output root. Directory proximity is never input
+authority. The selected S4 remains the complete content source. A resolved
+visual manifest may rebind allowlisted metadata from an older external return
+when the ordered page set and canonical page types match; S5 still reads only
+that selected S4 and the newly resolved visual manifest, never the external
+return body.
+
+Every newly generated stage receipt also records the explicit `visualMode`. S2 freezes it;
+S3-S6 compare it with the immediately preceding receipt and stop with
+`VISUAL_MODE_DRIFT` on any mismatch. This receipt field does not give S2, S3,
+or S4 a visual input or change their business artifacts. For request binding
+only, an older S4 PASS receipt without that key is accepted when its contract,
+lesson, stage, output path, and output hash match and the initial visual
+manifest explicitly freezes `visual_enhanced`; an explicit mismatch remains a
+drift blocker.
 
 ## S4 invariants
 
@@ -134,6 +153,7 @@ Each Gate execution writes one JSON receipt containing:
 - SHA-256 fingerprints;
 - issue codes and blocker text;
 - previous receipt path and SHA-256 when a previous stage is required.
+- the explicit `visualMode`, identical across the stage chain.
 
 The official runner must verify the preceding receipt, referenced artifact path,
 and SHA-256 before invoking the next stage. A missing receipt, non-`PASS`
@@ -157,19 +177,42 @@ are first written to a temporary sibling file and moved into the final path only
 after every command passes. A blocker therefore leaves a receipt but no new
 stage artifact.
 
+The separate S1-owned visual lifecycle uses
+`scripts/orchestrator/run_visual_manifest_gate.py`. It preserves
+`visual_manifest_gate_receipt_attempt-NNN.json` plus a latest receipt. In
+`text_only` the receipt status is `SKIPPED_BY_VISUAL_MODE` and no visual
+manifest exists. In `visual_enhanced`, the Gate creates one non-overwriting
+`initial`, `request`, or `resolved` snapshot, validates it, and records every
+input/output path and SHA. The request phase verifies a same-lesson,
+same-mode S4 PASS receipt. The resolved phase validates the external return
+once and records it only as provenance; knowledge, case, and task courseware
+images additionally require a request/return hash-bound model visual-placement
+review before resolved may pass. See `visual-return-contract.md`.
+
+The initial snapshot freezes the teacher image URL together with the exact
+`教案位置` text, before/after source anchor, and teacher-authoritative render
+placement. Request preserves those fields while binding the final page number.
+Intro, scene, and summary courseware pages receive fixed page-type placement;
+knowledge, case, and task pages retain only a candidate until the returned
+image is inspected. The reviewed placement freezes exact S4 neighboring text
+or uses the page-type fallback (title for knowledge/case, first text block for
+task). S5 projects the resolved placement and visual-review evidence unchanged.
+It must never replace all positions with a generic after-content or page-bottom
+insertion.
+
 ```bash
 # S2: validate and receipt the frozen working plan
-python3 scripts/orchestrator/run_stage_gate.py --stage S2 --lesson-id <lesson_id> \
+python3 scripts/orchestrator/run_stage_gate.py --stage S2 --lesson-id <lesson_id> --visual-mode text_only \
   --receipt-dir <receipts> --working-plan <S2/page_plan_working_full.md>
 
 # S3: validate the approved question artifact against the S2 receipt
-python3 scripts/orchestrator/run_stage_gate.py --stage S3 --lesson-id <lesson_id> \
+python3 scripts/orchestrator/run_stage_gate.py --stage S3 --lesson-id <lesson_id> --visual-mode text_only \
   --receipt-dir <receipts> --prior-receipt <receipts/s2_gate_receipt.json> \
   --working-plan <S2/page_plan_working_full.md> \
   --question-processed <S3/question_processed_full.md>
 
 # S6: assemble and statically check only after the S5 receipt passes
-python3 scripts/orchestrator/run_stage_gate.py --stage S6 --lesson-id <lesson_id> \
+python3 scripts/orchestrator/run_stage_gate.py --stage S6 --lesson-id <lesson_id> --visual-mode text_only \
   --receipt-dir <receipts> --prior-receipt <receipts/s5_gate_receipt.json> \
   --effective-content <S5/effective_content_full.json> \
   --output <S6/whole_course.json>
@@ -180,6 +223,8 @@ Use the S4 and S5 invocations in `s1-s6-contract.md` between these commands.
 S6 may report `IMPORT_READY_STATIC` only after assembly and static checking.
 That status remains narrower than import, create, rendering, acceptance, or
 release authority.
+
+The S6 process receives no visual-manifest, placement-review, or external-return argument. It derives mode and the complete image projection from the passed S5 JSON. `visual_enhanced` selects bundled OneShots `09`–`14`, maps `single` to `page_data.visualAsset` and ordered `group` to `page_data.planVisualAssets[]`, projects `visualPresentation`, `visualReview`, and optional exact-source `pairedStudentText` / `pairedSource`, and content-addresses URL, placement, alt, optional label, order, and pairing. S5 only emits a complete group pairing when every frozen label uniquely matches one item in the same unordered list; ambiguity is a compatible no-pair result, not a Gate stop. For paired groups, the dynamic DOM Gate requires one ordered `visual-paired-list` whose items keep image, caption, and corresponding source copy adjacent before the next image, with no detached duplicate list item. The static Gate also rejects any interaction image, S5/S6 projection drift, missing or duplicate URL, placement/review loss, thumbnail/tiny-decoration treatment, non-contain sizing, external preview behavior, terminal-content insertion, horizontal multi-image groups, or a lightbox without a real trigger button, centered image, round × close button positioned from the actual image rectangle, backdrop, and Escape handling. `text_only` continues through the pre-existing OneShot registry without image fields.
 
 ## Independent Skill version Gate
 

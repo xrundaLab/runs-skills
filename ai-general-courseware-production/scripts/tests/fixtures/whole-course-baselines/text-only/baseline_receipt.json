@@ -1,0 +1,10 @@
+{
+  "baselineId": "lesson022-text-only-v1",
+  "visualMode": "text_only",
+  "status": "PASS",
+  "formedVersion": "0.2.22-r36",
+  "purpose": "Test-owned deterministic S5-to-S6 regression fixture; not a production input or release authorization.",
+  "effectiveContentSha256": "32b15cc1eeeb09d14a55ca2c646dbb6918bab3b17444ddba3a3527de1230c434",
+  "expectedWholeCourseSha256": "99552e5471b1cf1eb734adc6d93be35c8fef6f729b752b19574d51b48acf0001",
+  "staticStatus": "IMPORT_READY_STATIC"
+}

@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>知识页统一固定底栏与题前过渡样式预览</title>
+    <style>
+      :root {
+        --runs-muted: rgba(39, 39, 52, 0.58);
+        --runs-ink: #252431;
+        --runs-purple: #9260fe;
+        --safe-bottom: 0px;
+        --page-bottom-rgb: 213, 245, 254;
+        --page-bottom-bg: rgb(var(--page-bottom-rgb));
+        --footer-h: calc(80px + var(--safe-bottom));
+      }
+
+      * { box-sizing: border-box; }
+
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        overflow: hidden;
+        color: var(--runs-ink);
+        font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+        background: var(--page-bottom-bg);
+      }
+
+      .knowledge-page {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        margin: 0 auto;
+        background: linear-gradient(180deg, #d7c4ff 0%, #dce4ff 42%, var(--page-bottom-bg) 66.667%, var(--page-bottom-bg) 100%);
+      }
+
+      .knowledge-scroll {
+        width: 100%;
+        height: 100%;
+        overflow-x: hidden;
+        overflow-y: auto;
+        padding: 8px 0 calc(var(--footer-h) + 24px);
+        -webkit-overflow-scrolling: touch;
+      }
+
+      .knowledge-content {
+        box-sizing: border-box;
+        width: 100%;
+        max-width: 680px;
+        margin: 0 auto;
+        padding: 0 24px;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 31px;
+        line-height: 1.22;
+        letter-spacing: -0.03em;
+        text-align: center;
+      }
+
+      .knowledge-card {
+        margin-top: 24px;
+        padding: 20px;
+        border-radius: 22px;
+        background: rgba(255, 255, 255, 0.82);
+        box-shadow: 0 12px 30px rgba(111, 105, 177, 0.06);
+      }
+
+      .knowledge-card p {
+        margin: 0;
+        font-size: 16px;
+        line-height: 1.75;
+      }
+
+      .knowledge-card p + p { margin-top: 16px; }
+
+      /* 与知识页控制资产 11.5 完全相同的固定弱化样式 */
+      .knowledge-transition {
+        display: block;
+        margin: 16px 0 0;
+        padding: 6px 0;
+        color: var(--runs-muted, rgba(39, 39, 52, 0.58));
+        font-size: 14px;
+        font-weight: 400;
+        line-height: 1.65;
+        letter-spacing: 0.01em;
+        text-align: left;
+        background: transparent;
+        border: 0;
+        border-radius: 0;
+        box-shadow: none;
+      }
+
+      .knowledge-transition::before,
+      .knowledge-transition::after {
+        content: none;
+      }
+
+      .knowledge-footer {
+        position: absolute;
+        z-index: 5;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        display: flex;
+        justify-content: center;
+        padding: 10px 0 calc(10px + var(--safe-bottom));
+        background: var(--page-bottom-bg);
+      }
+
+      .knowledge-primary-button {
+        position: static;
+        display: block;
+        width: calc(100% - 64px);
+        max-width: 260px;
+        margin: 0;
+        min-height: 60px;
+        border: 2px solid transparent;
+        border-radius: 40px;
+        color: #fff;
+        background:
+          linear-gradient(180deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0)) padding-box,
+          linear-gradient(180deg, #9260fe, #9260fe) padding-box,
+          linear-gradient(180deg, #f2eef8, #8f5df3) border-box;
+        font: inherit;
+        font-size: 16px;
+        font-weight: 800;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+      }
+    </style>
+  <style>
+    :root { --runs-type-h1-size: 28px; --runs-type-h1-line: 1.3; --runs-type-h1-weight: 800; --runs-type-h2-size: 20px; --runs-type-h2-line: 1.4; --runs-type-h2-weight: 700; --runs-type-body-size: 17px; --runs-type-body-line: 1.7; --runs-type-body-weight: 500; --runs-type-list-size: 16px; --runs-type-list-line: 1.6; --runs-type-list-weight: 600; --runs-type-caption-size: 14px; --runs-type-caption-line: 1.55; --runs-type-caption-weight: 500; }
+    h1 { font-size: var(--runs-type-h1-size); line-height: var(--runs-type-h1-line); font-weight: var(--runs-type-h1-weight); }
+    h2 { font-size: var(--runs-type-h2-size); line-height: var(--runs-type-h2-line); font-weight: var(--runs-type-h2-weight); }
+    p { font-size: var(--runs-type-body-size); line-height: var(--runs-type-body-line); font-weight: var(--runs-type-body-weight); }
+    li { font-size: var(--runs-type-list-size); line-height: var(--runs-type-list-line); font-weight: var(--runs-type-list-weight); }
+    /* 组图严格使用 S5 冻结顺序；每张图、图注和对应原文组成一个不可拆散的纵向单元。 */
+    .visual-gallery { width: 100%; max-width: 920px; margin: 16px auto; }
+    .visual-paired-list { margin: 0; padding: 0; list-style: none; }
+    .visual-paired-item { width: 100%; margin: 0 0 24px; padding: 0; }
+    .visual-paired-item:last-child { margin-bottom: 0; }
+    .image-zoom-trigger { display: block; width: 100%; padding: 0; overflow: hidden; border: 0; border-radius: 16px; background: transparent; cursor: zoom-in; }
+    .visual-demo-image { display: block; width: 100%; max-width: 920px; height: auto; object-fit: contain; }
+    .visual-caption { display: block; margin: 8px 0 0; color: rgba(57, 55, 75, .62); text-align: center; font-size: var(--runs-type-caption-size); line-height: var(--runs-type-caption-line); font-weight: var(--runs-type-caption-weight); }
+    .visual-paired-copy { position: relative; margin: 12px 0 0; padding-left: 20px; text-align: left; }
+    .visual-paired-copy::before { position: absolute; left: 2px; top: .72em; width: 8px; height: 8px; border-radius: 50%; background: #9260fe; content: ""; }
+    .visual-lightbox[hidden] { display: none; }
+    .visual-lightbox { position: fixed; left: 0; top: 0; right: 0; bottom: 0; z-index: 9999; background: rgba(10, 18, 30, .88); }
+    .visual-lightbox-dialog { position: relative; width: 100%; height: 100%; margin: 0; }
+    .visual-lightbox-stage { position: absolute; left: 0; top: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; touch-action: none; }
+    .visual-lightbox-image { display: block; width: 92%; height: auto; max-height: 72%; object-fit: contain; transform-origin: center center; }
+    /* 圆形 ×：脚本定位在图片底部与视口底部之间的纵向中点。 */
+    .visual-lightbox-close { position: fixed; top: 82%; left: 50%; z-index: 2; width: 46px; height: 46px; margin: 0; padding: 0; border: 0; border-radius: 50%; color: #fff; background: rgba(102,100,111,.94); font-size: 31px; line-height: 43px; font-weight: 800; transform: translateX(-50%); }
+  </style>
+</head>
+  <body>
+    <main class="knowledge-page">
+      <div class="knowledge-scroll">
+        <article class="knowledge-content">
+          <h1>核查要把说法逐项对照材料</h1>
+          <section class="knowledge-card" aria-label="知识正文示例">
+            <p>核查时，不是只看回答听起来是否顺，而是把其中每一条具体说法，逐项回到通知、材料或原始信息中核对。</p>
+            <section class="visual-gallery" data-visual-group-layout="vertical_stack" data-visual-placement-terminal="forbidden" aria-label="组图与对应文案相邻示例">
+              <ul class="visual-paired-list">
+                <li class="visual-paired-item" data-visual-pair-asset-id="L012-V01">
+                  <button type="button" class="image-zoom-trigger" aria-label="放大查看画面 A">
+                    <img class="visual-demo-image" src="https://res.xrunda.com/ai-test/Galaxy/knowledge/visual-assets/12/l012-v01.webp" alt="小狐狸在窗边画生日卡">
+                  </button>
+                  <span class="visual-caption">画面 A</span>
+                  <p class="visual-paired-copy">画面A：小狐狸在窗边画生日卡，窗外风很大。</p>
+                </li>
+                <li class="visual-paired-item" data-visual-pair-asset-id="L012-V02">
+                  <button type="button" class="image-zoom-trigger" aria-label="放大查看画面 B">
+                    <img class="visual-demo-image" src="https://res.xrunda.com/ai-test/Galaxy/knowledge/visual-assets/12/l012-v02.webp" alt="小狐狸站在树下寻找生日卡">
+                  </button>
+                  <span class="visual-caption">画面 B</span>
+                  <p class="visual-paired-copy">画面B：生日卡被风吹到树枝上，小狐狸站在树下抬头看。</p>
+                </li>
+                <li class="visual-paired-item" data-visual-pair-asset-id="L012-V03">
+                  <button type="button" class="image-zoom-trigger" aria-label="放大查看画面 C">
+                    <img class="visual-demo-image" src="https://res.xrunda.com/ai-test/Galaxy/knowledge/visual-assets/12/l012-v03.webp" alt="小鸟把生日卡衔回窗边">
+                  </button>
+                  <span class="visual-caption">画面 C</span>
+                  <p class="visual-paired-copy">画面C：小鸟衔着生日卡飞回窗边，小狐狸伸手接住。</p>
+                </li>
+              </ul>
+            </section>
+            <p>例如时间、地点、是否需要报名、要带什么物品，都是可以分别核查的信息。</p>
+          </section>
+          <p class="knowledge-transition">现在用回答B里的三句话练一次。</p>
+        </article>
+      </div>
+      <footer class="knowledge-footer">
+        <button class="knowledge-primary-button" type="button">继续学习</button>
+      </footer>
+    </main>
+    <script>
+      function syncFooterReserve() {
+        const footer = document.querySelector(".knowledge-footer");
+        if (!footer) return;
+        document.documentElement.style.setProperty(
+          "--footer-h",
+          `${Math.ceil(footer.getBoundingClientRect().height)}px`
+        );
+      }
+
+      window.addEventListener("load", syncFooterReserve);
+      window.addEventListener("resize", syncFooterReserve);
+      window.addEventListener("orientationchange", syncFooterReserve);
+      if ("ResizeObserver" in window) {
+        new ResizeObserver(syncFooterReserve).observe(
+          document.querySelector(".knowledge-footer")
+        );
+      }
+    </script>
+  <div class="visual-lightbox" hidden aria-hidden="true">
+    <div class="visual-lightbox-dialog">
+      <div class="visual-lightbox-stage"><img class="visual-lightbox-image" alt=""></div>
+      <button type="button" class="visual-lightbox-close" aria-label="关闭大图"><span aria-hidden="true">×</span></button>
+    </div>
+  </div>
+  <script>
+  (function () {
+    var lightbox = document.querySelector(".visual-lightbox");
+    var lightboxImage = document.querySelector(".visual-lightbox-image");
+    var triggers = document.querySelectorAll(".image-zoom-trigger");
+    var closeButton = document.querySelector(".visual-lightbox-close");
+    var stage = document.querySelector(".visual-lightbox-stage");
+    var scale = 1, translateX = 0, translateY = 0, startDistance = 0, startScale = 1, startX = 0, startY = 0;
+    var bodyOverflow = "";
+    function applyVisualTransform() { lightboxImage.style.transform = "translate(" + translateX + "px," + translateY + "px) scale(" + scale + ")"; }
+    function resetVisualTransform() { scale = 1; translateX = 0; translateY = 0; applyVisualTransform(); }
+    function touchDistance(touches) { var dx = touches[0].clientX - touches[1].clientX; var dy = touches[0].clientY - touches[1].clientY; return Math.sqrt(dx * dx + dy * dy); }
+    function positionVisualClose() { var viewportHeight = window.innerHeight || document.documentElement.clientHeight; var imageRect = lightboxImage.getBoundingClientRect(); var lowerSpace = Math.max(0, viewportHeight - imageRect.bottom); closeButton.style.top = Math.round(imageRect.bottom + lowerSpace / 2 - 23) + "px"; }
+    function closeVisualLightbox() { resetVisualTransform(); lightbox.hidden = true; lightbox.setAttribute("aria-hidden", "true"); document.body.style.overflow = bodyOverflow; }
+    for (var i = 0; i < triggers.length; i += 1) {
+      triggers[i].addEventListener("click", function () { var source = this.querySelector("img"); lightboxImage.src = source.src; lightboxImage.alt = source.alt; resetVisualTransform(); bodyOverflow = document.body.style.overflow; document.body.style.overflow = "hidden"; lightbox.hidden = false; lightbox.setAttribute("aria-hidden", "false"); window.requestAnimationFrame(positionVisualClose); });
+    }
+    lightboxImage.onload = positionVisualClose;
+    stage.addEventListener("touchstart", function (event) { if (event.touches.length === 2) { startDistance = touchDistance(event.touches); startScale = scale; event.preventDefault(); } else if (event.touches.length === 1 && scale > 1) { startX = event.touches[0].clientX - translateX; startY = event.touches[0].clientY - translateY; } }, { passive: false });
+    stage.addEventListener("touchmove", function (event) { if (event.touches.length === 2 && startDistance > 0) { scale = Math.max(1, Math.min(4, startScale * touchDistance(event.touches) / startDistance)); if (scale <= 1) { translateX = 0; translateY = 0; } applyVisualTransform(); event.preventDefault(); } else if (event.touches.length === 1 && scale > 1) { translateX = event.touches[0].clientX - startX; translateY = event.touches[0].clientY - startY; applyVisualTransform(); event.preventDefault(); } }, { passive: false });
+    stage.addEventListener("touchend", function () { startDistance = 0; if (scale <= 1) resetVisualTransform(); });
+    closeButton.addEventListener("click", closeVisualLightbox);
+    lightbox.addEventListener("click", function (event) { if (event.target === lightbox) closeVisualLightbox(); });
+    document.addEventListener("keydown", function (event) { if (event.key === "Escape") closeVisualLightbox(); });
+    window.addEventListener("resize", function () { if (!lightbox.hidden) positionVisualClose(); });
+  }());
+  </script>
+</body>
+</html>

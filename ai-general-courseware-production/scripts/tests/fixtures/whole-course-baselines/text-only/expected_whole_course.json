@@ -1,0 +1,1116 @@
+{
+  "version": "V3.5.0-R36",
+  "course_id": "lesson022",
+  "title": "第22课｜图片与文字如何协作｜RunS_V3.5.0-S1-S6-R36-20260731",
+  "description": "S6 static assembly from frozen S5",
+  "source": {
+    "effective_content": "__FIXTURE_EFFECTIVE_PATH__",
+    "whole_course_oneshot": "__SKILL_ROOT__/templates/oneshots/02_整课JSON_完整外层OneShot.md"
+  },
+  "workflow": "S1-S6-R36",
+  "pages": [
+    {
+      "page_no": "P01",
+      "tag": "课程开篇",
+      "title": "课程开篇",
+      "summary": "S5 frozen effective-content projection",
+      "sdk_action": "nextpage",
+      "is_last_page": false,
+      "page_data": {
+        "source_block_ids": [
+          "course_info_header"
+        ],
+        "effective_content_sha256": "aae89f3b8a2f5150c064e9c779e5674444f3d059276493dd43802e258340aa6e",
+        "assembly_mode": "model_oneshot_prompt_control",
+        "expected_model_output": "pure_complete_html",
+        "model_output_status": "NOT_GENERATED",
+        "whole_course_oneshot": "02_整课JSON_完整外层OneShot.md",
+        "introDensityContract": {
+          "required": true,
+          "source": "S5.content.knowledgePoints",
+          "knowledgePointCount": 3,
+          "oneUnlockRowPerSourceItem": true,
+          "forbidMergedDelimitedString": true,
+          "minimumUnlockRowHeightPx": 44,
+          "visualStatus": "STATIC_LAYOUT_CONTRACT_ONLY"
+        },
+        "route": "fixed_template",
+        "template": "COURSE_INTRO_VARIABLES",
+        "oneshot_contract_version": "RunS-CourseIntro-FixedTemplate-OneShot-v1.9",
+        "oneshot_asset_sha256": "9cf6b757e7bc635189c89d585ea65b54efbc6605c57d061726d0aac45ca6b1b8",
+        "template_sha256": "48b56b0fcb700da149078b7ef95b412081bb14937334a31ef24d375d79045090",
+        "non_variable_sha256": "2ad388fffc2fea884354b32429cf648ffc189cd39402c5c849b190636f463012",
+        "template_outside_variable_region_unchanged": true,
+        "prompt_version": "RunS-CourseIntro-FixedTemplate-OneShot-v1.9-asset-9cf6b757e7bc-prompt-c7712dab9244-lesson022-P01-R36-20260731",
+        "prompt_instance_sha256": "c7712dab92446bf9af1505a8e2f6e026fc54401d02f55f8688f65e8a7b3ab611"
+      },
+      "page_kind": "course_intro",
+      "runtime_type": "html",
+      "components": [],
+      "prompt": "提示词版本号：RunS-CourseIntro-FixedTemplate-OneShot-v1.9-asset-9cf6b757e7bc-prompt-c7712dab9244-lesson022-P01-R36-20260731\n\n适用页面：lesson022｜P01｜第 1/7 页｜课程开篇页。\n\n请输出一个完整、可运行的移动端 HTML 网页。\n\n这是一次性提示词，没有任何外部上下文。不得读取文件、路径、Demo、SOP、历史模板或其他对话。网页所需的课程内容、HTML、CSS、JavaScript、图片元素和 SDK 行为已经全部包含在本提示词中。\n\n最终回复必须且只能包含下方完整 HTML：\n\n- 第一个非空白字符必须属于 <!doctype html>。\n- 最后一个标签必须是 </html>。\n- 不得输出解释、Markdown 围栏、版本说明、调试信息或提示词正文。\n- 不得重排、改写、删减或补写学生可见内容。\n- 不得修改 COURSE_INTRO_VARIABLES 之外的任何 HTML、CSS、JavaScript、图片地址、固定文案、模块顺序、按钮或 SDK 行为。\n- 不得把已登记 HTTPS 图片地址改成 Base64、`data:image`、其他 URL 或空值。\n- 必须保留课程路径、课次胶囊、标题、学习目标、知识点列表、固定插画、长内容滚动、统一底栏和唯一课程动作按钮。\n- 不得生成平台顶部壳层、页面类型胶囊、音频、播放器、TTS、字幕、CUE、输入框、Powered by RunS 或来源中不存在的模块。\n- 底部“开始探索”按钮必须调用 CreatorReviewSDK.nextPage()。\n\n请原样输出下方完整代码：\n\n<!doctype html>\n<html lang=\"zh-CN\">\n<head>\n  <meta charset=\"utf-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1, viewport-fit=cover\">\n  <title>课程开篇页固定模板</title>\n  <script src=\"https://res.xrunda.com/runs/plugin/creator/creator-review-sdk.js\"></script>\n  <style>\n    /* FIXED_LAYOUT_CONTRACT: 顶部/两侧/底部留白、底栏和主按钮均为固定代码；每课只替换 COURSE_INTRO_VARIABLES。 */\n\n    :root {\n      --purple: #9260fe;\n      --ink: #242331;\n      --safe-bottom: 0px;\n      --page-bottom-rgb: 213, 245, 254;\n      --page-bottom-bg: rgb(var(--page-bottom-rgb));\n      --footer-h: calc(80px + var(--safe-bottom));\n      --button-height: 60px;\n      --content-max: 360px;\n      --card-radius: 30px;\n    }\n\n    * {\n      box-sizing: border-box;\n      min-width: 0;\n    }\n\n    html,\n    body {\n      width: 100%;\n      height: 100%;\n      margin: 0;\n      overflow: hidden;\n      background: var(--page-bottom-bg);\n    }\n\n    .runs-intro-page {\n      position: relative;\n      width: 100%;\n      max-width: 538px;\n      height: 100%;\n      margin: 0 auto;\n      overflow: hidden;\n      border-radius: 0;\n      color: var(--ink);\n      background: linear-gradient(180deg, #d7c4ff 0%, var(--page-bottom-bg) 66.667%, var(--page-bottom-bg) 100%);\n      font-family: Inter, -apple-system, BlinkMacSystemFont, \"PingFang SC\", \"Microsoft YaHei\", sans-serif;\n    }\n\n    .top-safe-area {\n      display: none;\n      height: 0;\n    }\n\n    .intro-scroll {\n      width: 100%;\n      height: 100%;\n      overflow-y: auto;\n      overflow-x: hidden;\n      padding: 28px 0 calc(var(--footer-h) + 24px);\n      overscroll-behavior: contain;\n      -webkit-overflow-scrolling: touch;\n    }\n\n    .intro-inner {\n      width: calc(100% - 48px);\n      max-width: var(--content-max);\n      margin: 0 auto;\n      display: grid;\n      gap: 16px;\n    }\n\n    .intro-header {\n      text-align: center;\n    }\n\n    .intro-illustration {\n      width: 180px;\n      height: 134px;\n      margin: 0 auto;\n      background: url(\"https://res.xrunda.com/xruns/static/image/20270724/1.png\") center / contain no-repeat;\n    }\n\n    .intro-header h2 {\n      margin: 0;\n      font-size: 12px;\n      line-height: 21px;\n      font-weight: 600;\n      overflow-wrap: break-word;\n    }\n\n    .intro-header p {\n      margin: 0;\n      color: rgba(36, 35, 49, 0.72);\n      font-size: 12px;\n      line-height: 21px;\n      overflow-wrap: break-word;\n    }\n\n    .intro-focus-card {\n      position: relative;\n      margin-top: 20px;\n      padding-top: 0;\n    }\n\n    .lesson-chip {\n      position: absolute;\n      z-index: 3;\n      top: -15px;\n      left: 50%;\n      display: grid;\n      place-items: center;\n      width: 82px;\n      min-height: 30px;\n      padding: 4px 12px;\n      transform: translateX(-50%);\n      border: 1px solid #b8ed55;\n      border-radius: 999px;\n      color: #242331;\n      background: #d9f99d;\n      font-size: 13px;\n      line-height: 20px;\n      font-weight: 700;\n      white-space: nowrap;\n    }\n\n    .intro-focus-surface {\n      overflow: hidden;\n      border: 1px solid rgba(255, 255, 255, 0.92);\n      border-radius: var(--card-radius);\n      background: rgba(255, 255, 255, 0.72);\n      box-shadow: 0 12px 28px rgba(81, 57, 137, 0.06);\n    }\n\n    .title-panel {\n      display: flex;\n      min-height: 108px;\n      align-items: center;\n      justify-content: center;\n      padding: 28px 12px 20px;\n      background: rgba(255, 255, 255, 0.72);\n    }\n\n    #courseTitle {\n      width: 100%;\n      margin: 0;\n      color: var(--purple);\n      text-align: center;\n      font-size: 24px;\n      line-height: 1.3;\n      font-weight: 800;\n      letter-spacing: 0.2px;\n      overflow-wrap: break-word;\n    }\n\n    .content-card {\n      position: relative;\n      padding: 18px;\n      border: 1px solid rgba(255, 255, 255, 0.92);\n      border-radius: var(--card-radius);\n      background: rgba(255, 255, 255, 0.72);\n      box-shadow: 0 12px 28px rgba(81, 57, 137, 0.06);\n    }\n\n    .content-card h3 {\n      margin: 0 0 8px;\n      color: var(--purple);\n      font-size: 13px;\n      line-height: 21px;\n      font-weight: 700;\n      text-align: center;\n    }\n\n    .core-question-panel {\n      position: relative;\n      padding: 18px 18px;\n      background:\n        linear-gradient(180deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0)),\n        rgba(146, 96, 254, 0.2);\n    }\n\n    .core-question-icon {\n      position: absolute;\n      z-index: 2;\n      top: -24px;\n      left: 24px;\n      width: 48px;\n      height: 48px;\n      object-fit: contain;\n      pointer-events: none;\n    }\n\n    .core-question-panel h3 {\n      margin: 0 0 8px;\n      color: var(--purple);\n      font-size: 13px;\n      line-height: 21px;\n      font-weight: 700;\n      text-align: center;\n    }\n\n    #learningGoal {\n      margin: 0;\n      text-align: center;\n      font-size: 14px;\n      line-height: 23px;\n      overflow-wrap: break-word;\n    }\n\n    .unlock-card {\n      padding: 16px 16px 18px;\n    }\n\n    #knowledgeList {\n      display: grid;\n      gap: 8px;\n      margin: 0;\n      padding: 0;\n      list-style: none;\n    }\n\n    #knowledgeList li {\n      display: grid;\n      grid-template-columns: 30px minmax(0, 1fr);\n      gap: 10px;\n      align-items: center;\n      min-height: 44px;\n      padding: 8px 12px;\n      border-radius: 18px;\n      background: rgba(255, 255, 255, 0.78);\n      font-size: 14px;\n      line-height: 21px;\n      overflow-wrap: break-word;\n    }\n\n    .knowledge-index {\n      display: grid;\n      place-items: center;\n      width: 30px;\n      height: 30px;\n      border-radius: 11px;\n      color: var(--purple);\n      background: rgba(146, 96, 254, 0.12);\n      font-size: 12px;\n      line-height: 1;\n      font-weight: 900;\n    }\n\n    .intro-footer {\n      position: absolute;\n      z-index: 5;\n      right: 0;\n      bottom: 0;\n      left: 0;\n      display: flex;\n      justify-content: center;\n      padding: 10px 0 calc(10px + var(--safe-bottom));\n      background: var(--page-bottom-bg);\n    }\n\n    #primaryButton {\n      width: calc(100% - 64px);\n      max-width: 260px;\n      min-height: var(--button-height);\n      border: 2px solid transparent;\n      border-radius: 40px;\n      color: #fff;\n      background:\n        linear-gradient(180deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0)) padding-box,\n        linear-gradient(180deg, #9260fe, #9260fe) padding-box,\n        linear-gradient(180deg, #f2eef8, #8f5df3) border-box;\n      font: inherit;\n      font-size: 16px;\n      font-weight: 800;\n      cursor: pointer;\n      -webkit-tap-highlight-color: transparent;\n    }\n\n    #primaryButton:active {\n      transform: translateY(1px);\n    }\n\n    .intro-error {\n      width: calc(100% - 36px);\n      max-width: 480px;\n      margin: 80px auto;\n      padding: 20px;\n      border-radius: 20px;\n      background: rgba(255, 255, 255, 0.82);\n      text-align: center;\n      font-size: 16px;\n      line-height: 1.6;\n    }\n\n    @media (max-width: 359px) {\n      .intro-inner {\n        width: calc(100% - 40px);\n        max-width: var(--content-max);\n      }\n    }\n\n    @media (orientation: landscape) and (max-height: 720px) {\n      .intro-illustration {\n        width: 130px;\n        height: 92px;\n      }\n\n      .intro-character {\n        top: 16px;\n        width: 62px;\n        height: 75px;\n      }\n\n      .content-card {\n        padding: 15px;\n      }\n\n      .intro-inner {\n        gap: 9px;\n      }\n    }\n\n    @media (prefers-reduced-motion: reduce) {\n      * {\n        scroll-behavior: auto !important;\n        transition: none !important;\n      }\n    }\n  </style>\n</head>\n<body>\n  <main class=\"runs-intro-page\">\n    <div class=\"top-safe-area\" aria-hidden=\"true\"></div>\n\n    <div class=\"intro-scroll\" id=\"introScroll\">\n      <div class=\"intro-inner\">\n        <header class=\"intro-header\">\n          <div class=\"intro-illustration\" aria-hidden=\"true\"></div>\n          <h2 id=\"packageName\"></h2>\n          <p id=\"unitName\"></p>\n        </header>\n\n        <section class=\"intro-focus-card\" aria-label=\"本课开篇信息\">\n          <span class=\"lesson-chip\" id=\"lessonChip\"></span>\n          <div class=\"intro-focus-surface\">\n            <div class=\"title-panel\">\n              <h1 id=\"courseTitle\"></h1>\n            </div>\n            <div class=\"core-question-panel\" aria-labelledby=\"learningGoalTitle\">\n              <img class=\"core-question-icon\" src=\"https://res.xrunda.com/xruns/static/image/course_intro_icon.png\" alt=\"\" aria-hidden=\"true\">\n              <h3 id=\"learningGoalTitle\">学习目标</h3>\n              <p id=\"learningGoal\"></p>\n            </div>\n          </div>\n        </section>\n\n        <section class=\"content-card unlock-card\" aria-labelledby=\"unlockTitle\">\n          <h3 id=\"unlockTitle\">本课将解锁</h3>\n          <ul id=\"knowledgeList\"></ul>\n        </section>\n      </div>\n    </div>\n\n    <footer class=\"intro-footer\" id=\"introFooter\">\n      <button id=\"primaryButton\" type=\"button\">开始探索</button>\n    </footer>\n  </main>\n\n  <script>\n    /* ============================================================\n       每课只允许替换本变量区。变量名、结构、HTML、CSS、交互均不得修改。\n       ============================================================ */\n    const COURSE_INTRO_VARIABLES = Object.freeze({\"courseIntroduction\":\"理解配图与正文各自承担的信息\",\"courseName\":\"图片与文字如何协作\",\"knowledgePoints\":[\"单图\",\"组图\",\"同页放大\"],\"lessonNumber\":22,\"packageName\":\"测试自有整课基线\",\"unitName\":\"双模式静态回归\"});\n    /* ======================= 变量区结束 ======================= */\n\n    function escapeHtml(value) {\n      return String(value == null ? \"\" : value).replace(/[&<>\"']/g, character => ({\n        \"&\": \"&amp;\",\n        \"<\": \"&lt;\",\n        \">\": \"&gt;\",\n        \"\\\"\": \"&quot;\",\n        \"'\": \"&#39;\"\n      }[character]));\n    }\n\n    function assertVariables(data) {\n      const textFields = [\"packageName\", \"unitName\", \"courseName\", \"courseIntroduction\"];\n      const missingFields = textFields.filter(field => typeof data[field] !== \"string\" || !data[field].trim());\n      if (!Number.isInteger(data.lessonNumber) || data.lessonNumber < 1) missingFields.push(\"lessonNumber\");\n      if (!Array.isArray(data.knowledgePoints) || data.knowledgePoints.length < 1) missingFields.push(\"knowledgePoints\");\n      if (missingFields.length) throw new Error(`INTRO_FIELD_MISSING: ${missingFields.join(\", \")}`);\n    }\n\n    function safeNextPage() {\n      if (window.CreatorReviewSDK && typeof window.CreatorReviewSDK.nextPage === \"function\") {\n        window.CreatorReviewSDK.nextPage();\n        return;\n      }\n      if (window.parent) window.parent.postMessage({ type: \"nextpage\" }, \"*\");\n    }\n\n    function safeComplete() {\n      if (window.CreatorReviewSDK && typeof window.CreatorReviewSDK.complete === \"function\") {\n        window.CreatorReviewSDK.complete();\n        return;\n      }\n      if (window.parent) window.parent.postMessage({ type: \"complete\" }, \"*\");\n    }\n\n    function renderIntroPage() {\n      const data = COURSE_INTRO_VARIABLES;\n      assertVariables(data);\n      document.title = data.courseName;\n      document.getElementById(\"packageName\").textContent = data.packageName;\n      document.getElementById(\"unitName\").textContent = data.unitName;\n      document.getElementById(\"lessonChip\").textContent = `第${data.lessonNumber}课`;\n      document.getElementById(\"courseTitle\").textContent = data.courseName;\n      document.getElementById(\"learningGoal\").textContent = data.courseIntroduction;\n      document.getElementById(\"knowledgeList\").innerHTML = data.knowledgePoints\n        .map((item, index) => `\n          <li>\n            <span class=\"knowledge-index\" aria-hidden=\"true\">${String(index + 1).padStart(2, \"0\")}</span>\n            <span>${escapeHtml(item)}</span>\n          </li>`)\n        .join(\"\");\n\n      document.getElementById(\"primaryButton\").addEventListener(\"click\", safeNextPage);\n    }\n\n\n    function fitCourseTitle() {\n      const title = document.getElementById(\"courseTitle\");\n      const maximumSize = 24;\n      const minimumSingleLineSize = 20;\n      const minimumTwoLineSize = 18;\n      const step = 0.5;\n\n      let size = maximumSize;\n      title.style.fontSize = size + \"px\";\n      title.style.whiteSpace = \"nowrap\";\n      title.style.overflowWrap = \"normal\";\n\n      while (size > minimumSingleLineSize && title.scrollWidth > title.clientWidth + 1) {\n        size -= step;\n        title.style.fontSize = size + \"px\";\n      }\n\n      if (title.scrollWidth <= title.clientWidth + 1) {\n        title.dataset.titleMode = \"single-line\";\n        return;\n      }\n\n      title.style.whiteSpace = \"normal\";\n      title.style.overflowWrap = \"anywhere\";\n      size = maximumSize;\n      title.style.fontSize = size + \"px\";\n\n      const lineCount = () => {\n        const range = document.createRange();\n        range.selectNodeContents(title);\n        const lineHeight = Number.parseFloat(getComputedStyle(title).lineHeight) || size * 1.3;\n        return Math.round(range.getBoundingClientRect().height / lineHeight);\n      };\n\n      while (size > minimumTwoLineSize && lineCount() > 2) {\n        size -= step;\n        title.style.fontSize = size + \"px\";\n      }\n\n      title.dataset.titleMode = \"two-line-fallback\";\n    }\n\n    function syncLayoutMetrics() {\n      fitCourseTitle();\n      const footer = document.getElementById(\"introFooter\");\n      const height = Math.ceil(footer.getBoundingClientRect().height || 80);\n      document.documentElement.style.setProperty(\"--footer-h\", `${height}px`);\n    }\n\n    try {\n      renderIntroPage();\n      syncLayoutMetrics();\n      if (\"ResizeObserver\" in window) {\n        new ResizeObserver(syncLayoutMetrics).observe(document.getElementById(\"introFooter\"));\n      }\n      window.addEventListener(\"resize\", syncLayoutMetrics, { passive: true });\n      window.addEventListener(\"orientationchange\", () => setTimeout(syncLayoutMetrics, 120), { passive: true });\n    } catch (error) {\n      document.documentElement.dataset.introError = \"INTRO_FIELD_MISSING\";\n      document.body.innerHTML = '<main class=\"intro-error\" role=\"alert\">页面内容暂不可用</main>';\n      throw error;\n    }\n  </script>\n</body>\n</html>\n\n"
+    },
+    {
+      "page_no": "P02",
+      "tag": "场景引入",
+      "title": "场景引入",
+      "summary": "S5 frozen effective-content projection",
+      "sdk_action": "nextpage",
+      "is_last_page": false,
+      "page_data": {
+        "source_block_ids": [
+          "B01"
+        ],
+        "effective_content_sha256": "f8882a07771ad02264f67454b54b3bc60d398204d772371847f464cc18cce677",
+        "assembly_mode": "model_oneshot_prompt_control",
+        "expected_model_output": "pure_complete_html",
+        "model_output_status": "NOT_GENERATED",
+        "whole_course_oneshot": "02_整课JSON_完整外层OneShot.md",
+        "route": "fixed_template",
+        "template": "SCENE_INTRO_VARIABLES",
+        "oneshot_contract_version": "RunS-SceneIntro-FixedTemplate-OneShot-v1.6",
+        "oneshot_asset_sha256": "e4c2ce909288b84c2fa3ab72a273e5b0f2979c0b149a0eed233a9d6c86fa67e9",
+        "template_sha256": "a5134a0e4dd526eca584009e0430372015a8fe9c0200bbbcbdc7b9772dd2876d",
+        "non_variable_sha256": "8315cf8d264b68a93e58a8d5f07c639f2a698dbfe626953e8033dddb7b9578fc",
+        "template_outside_variable_region_unchanged": true,
+        "prompt_version": "RunS-SceneIntro-FixedTemplate-OneShot-v1.6-asset-e4c2ce909288-prompt-5408308eaba0-lesson022-P02-R36-20260731",
+        "prompt_instance_sha256": "5408308eaba0c64c4665da09fba7b951b4ab961acbb6437d5fe4cf1e0da55f1e"
+      },
+      "page_kind": "scene_intro",
+      "runtime_type": "html",
+      "components": [],
+      "prompt": "提示词版本号：RunS-SceneIntro-FixedTemplate-OneShot-v1.6-asset-e4c2ce909288-prompt-5408308eaba0-lesson022-P02-R36-20260731\n\n适用页面：lesson022｜P02｜第 2/7 页｜场景引入页。\n\n请输出一个完整、可运行的移动端 HTML 网页。\n\n这是一次性提示词，没有任何外部上下文。不得读取文件、路径、Demo、SOP、历史模板或其他对话。网页所需的课程内容、HTML、CSS、JavaScript、图片元素和 SDK 行为已经全部包含在本提示词中。\n\n最终回复必须且只能包含下方完整 HTML：\n\n- 第一个非空白字符必须属于 <!doctype html>。\n- 最后一个标签必须是 </html>。\n- 不得输出解释、Markdown 围栏、版本说明、调试信息或提示词正文。\n- 不得重排、改写、删减或补写学生可见内容。\n- 不得修改 SCENE_INTRO_VARIABLES 之外的任何 HTML、CSS、JavaScript、图片地址、固定文案、模块顺序、按钮或 SDK 行为。\n- 必须保留固定情境文案、剧本纸、镜头拉近卡、长内容滚动、统一底栏和唯一课程动作按钮。\n- 不得生成平台顶部壳层、页面类型胶囊、音频、播放器、TTS、字幕、CUE、输入框、Powered by RunS 或来源中不存在的模块。\n- 底部按钮必须按 pageAction=\"next\" 调用 CreatorReviewSDK.nextPage()。\n\n请原样输出下方完整代码：\n\n<!doctype html>\n<html lang=\"zh-CN\">\n<head>\n  <meta charset=\"utf-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1, viewport-fit=cover\">\n  <title>场景引入页固定模板</title>\n  <script src=\"https://res.xrunda.com/runs/plugin/creator/creator-review-sdk.js\"></script>\n  <style>\n    /* FIXED_LAYOUT_CONTRACT: 顶部/两侧/底部留白、底栏和主按钮均为固定代码；每课只替换 SCENE_INTRO_VARIABLES。 */\n    :root {\n      --purple: #9260fe;\n      --purple-deep: #7650d8;\n      --ink: #292735;\n      --muted: rgba(41, 39, 53, 0.62);\n      --paper: #fffdf8;\n      --safe-bottom: 0px;\n      --page-bottom-rgb: 212, 247, 255;\n      --page-bottom-bg: rgb(var(--page-bottom-rgb));\n      --footer-h: calc(80px + var(--safe-bottom));\n      font-family: -apple-system, BlinkMacSystemFont, \"SF Pro Text\", \"PingFang SC\", \"Noto Sans SC\", \"Microsoft YaHei\", sans-serif;\n      color: var(--ink);\n    }\n\n    * {\n      box-sizing: border-box;\n      min-width: 0;\n    }\n\n    html,\n    body {\n      width: 100%;\n      height: 100%;\n      margin: 0;\n      overflow: hidden;\n      background: var(--page-bottom-bg);\n    }\n\n    body {\n      letter-spacing: 0.01em;\n    }\n\n    .scene-page {\n      position: relative;\n      width: 100%;\n      max-width: 538px;\n      height: 100%;\n      min-height: 100%;\n      margin: 0 auto;\n      overflow: hidden;\n      background:\n        radial-gradient(circle at 48% 9%, rgba(255, 255, 255, 0.38) 0 9%, transparent 31%),\n        radial-gradient(circle at 106% 30%, rgba(255, 255, 255, 0.27) 0 13%, transparent 33%),\n        linear-gradient(180deg, #d5bfff 0%, #d3d7ff 42%, var(--page-bottom-bg) 66.667%, var(--page-bottom-bg) 100%);\n    }\n\n    .scene-page::before,\n    .scene-page::after {\n      position: absolute;\n      z-index: 0;\n      border: 1px solid rgba(255, 255, 255, 0.28);\n      border-radius: 50%;\n      content: \"\";\n      pointer-events: none;\n    }\n\n    .scene-page::before {\n      top: 54px;\n      left: -72px;\n      width: 176px;\n      height: 176px;\n    }\n\n    .scene-page::after {\n      right: -48px;\n      bottom: 124px;\n      width: 128px;\n      height: 128px;\n    }\n\n    .top-safe-area {\n      position: relative;\n      z-index: 1;\n      height: 0;\n    }\n\n    .scene-scroll {\n      position: relative;\n      z-index: 1;\n      height: 100%;\n      overflow-y: auto;\n      overflow-x: hidden;\n      padding: 28px 24px\n        calc(var(--footer-h) + 24px);\n      overscroll-behavior: contain;\n      -webkit-overflow-scrolling: touch;\n    }\n\n    .scene-inner {\n      width: 100%;\n      max-width: 360px;\n      margin: 0 auto;\n    }\n\n    .scene-header {\n      position: relative;\n      z-index: 2;\n      margin-bottom: 21px;\n      text-align: center;\n    }\n\n    .scene-emoji {\n      display: grid;\n      place-items: center;\n      width: 76px;\n      height: 92px;\n      margin: 0 auto 16px;\n      transform: rotate(-3deg);\n    }\n\n    .scene-kicker {\n      display: inline-flex;\n      align-items: center;\n      margin: 0;\n      color: var(--purple-deep);\n      font-size: 13px;\n      line-height: 1.4;\n      font-weight: 850;\n      letter-spacing: 0.16em;\n    }\n\n    .scene-kicker::before,\n    .scene-kicker::after {\n      width: 18px;\n      height: 1px;\n      background: rgba(118, 80, 216, 0.35);\n      content: \"\";\n    }\n\n    .scene-kicker::before { margin-right: 7px; }\n    .scene-kicker::after { margin-left: 7px; }\n\n    .scene-header h1 {\n      margin: 6px 0 0;\n      color: var(--ink);\n      font-size: 31px;\n      line-height: 1.28;\n      font-weight: 850;\n    }\n\n    .screenplay-wrap {\n      position: relative;\n      padding: 9px 0 0 8px;\n    }\n\n    .screenplay-shadow {\n      position: absolute;\n      z-index: 0;\n      top: 19px;\n      right: 8px;\n      bottom: -8px;\n      left: 18px;\n      border-radius: 12px 28px 24px 18px;\n      background: rgba(114, 82, 178, 0.13);\n      transform: rotate(1.5deg);\n      pointer-events: none;\n    }\n\n    .screenplay {\n      position: relative;\n      z-index: 1;\n      padding: 22px 21px 22px 34px;\n      border: 1px solid rgba(113, 90, 151, 0.12);\n      border-radius: 12px 28px 24px 18px;\n      background:\n        linear-gradient(90deg, transparent 0 25px, rgba(214, 112, 121, 0.13) 25px 26px, transparent 26px),\n        repeating-linear-gradient(180deg, transparent 0 30px, rgba(102, 113, 137, 0.07) 30px 31px),\n        linear-gradient(145deg, #fffefa, var(--paper));\n      box-shadow:\n        inset 0 1px 0 rgba(255, 255, 255, 0.92),\n        0 18px 36px rgba(78, 59, 115, 0.14);\n      transform: rotate(-0.45deg);\n    }\n\n    .screenplay::after {\n      position: absolute;\n      top: 0;\n      right: 0;\n      width: 36px;\n      height: 36px;\n      border-radius: 0 27px 0 9px;\n      background:\n        linear-gradient(225deg, rgba(210, 196, 232, 0.58) 0 49%, rgba(255, 255, 255, 0.92) 50% 100%);\n      box-shadow: -4px 4px 9px rgba(72, 55, 104, 0.05);\n      content: \"\";\n      pointer-events: none;\n    }\n\n    .binding-holes {\n      position: absolute;\n      z-index: 2;\n      top: 34px;\n      left: -5px;\n      display: grid;\n      gap: 43px;\n      pointer-events: none;\n    }\n\n    .binding-holes span {\n      position: relative;\n      width: 15px;\n      height: 15px;\n      border: 3px solid rgba(114, 90, 151, 0.26);\n      border-radius: 50%;\n      background: #d5cefc;\n      box-shadow: inset 0 1px 2px rgba(77, 58, 115, 0.16);\n    }\n\n    .binding-holes span::before {\n      position: absolute;\n      top: 3px;\n      right: 8px;\n      width: 13px;\n      height: 3px;\n      border-radius: 99px;\n      background: rgba(114, 90, 151, 0.38);\n      content: \"\";\n    }\n\n    .script-heading {\n      display: flex;\n      align-items: center;\n      justify-content: space-between;\n      margin-bottom: 17px;\n      padding-bottom: 11px;\n      border-bottom: 1px dashed rgba(118, 80, 216, 0.22);\n    }\n\n    .script-heading strong {\n      color: var(--purple-deep);\n      font-size: 13px;\n      line-height: 1.4;\n      font-weight: 900;\n      letter-spacing: 0.1em;\n    }\n\n    .script-heading span {\n      margin-left: 12px;\n      color: rgba(41, 39, 53, 0.42);\n      font-family: ui-monospace, \"SFMono-Regular\", Menlo, Monaco, Consolas, monospace;\n      font-size: 10px;\n      line-height: 1;\n      font-weight: 800;\n      letter-spacing: 0.08em;\n    }\n\n    .scene-content {\n      display: grid;\n      gap: 13px;\n    }\n\n    .scene-paragraph {\n      margin: 0;\n      color: #363340;\n      font-size: 18px;\n      line-height: 1.78;\n      font-weight: 400;\n      overflow-wrap: break-word;\n    }\n\n    .scene-paragraph:first-child {\n      color: var(--ink);\n    }\n\n    .director-cue {\n      position: relative;\n      margin-top: 20px;\n      padding: 17px 17px 17px 19px;\n      border: 1px solid rgba(146, 96, 254, 0.14);\n      border-radius: 18px;\n      background:\n        radial-gradient(circle at 92% 12%, rgba(255, 255, 255, 0.8), transparent 34%),\n        linear-gradient(145deg, rgba(239, 232, 255, 0.9), rgba(246, 242, 255, 0.76));\n      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.88);\n    }\n\n    .director-cue::before {\n      position: absolute;\n      top: -10px;\n      left: 16px;\n      display: grid;\n      place-items: center;\n      width: 28px;\n      height: 28px;\n      border: 2px solid var(--paper);\n      border-radius: 10px;\n      background: var(--purple);\n      box-shadow: 0 7px 14px rgba(108, 72, 185, 0.18);\n      color: #fff;\n      content: \"✦\";\n      font-size: 13px;\n      line-height: 1;\n      font-weight: 900;\n    }\n\n    .director-cue-label {\n      display: block;\n      margin: 0 0 5px 30px;\n      color: var(--purple-deep);\n      font-size: 12px;\n      line-height: 1.4;\n      font-weight: 850;\n      letter-spacing: 0.08em;\n    }\n\n    .director-cue p {\n      margin: 0;\n      color: #44375d;\n      font-size: 18px;\n      line-height: 1.72;\n      font-weight: 680;\n      overflow-wrap: break-word;\n    }\n\n    .scene-footer {\n      position: absolute;\n      z-index: 5;\n      display: flex;\n      align-items: center;\n      justify-content: center;\n      right: 0;\n      bottom: 0;\n      left: 0;\n      padding: 10px 0 calc(10px + var(--safe-bottom));\n      background: var(--page-bottom-bg);\n    }\n\n    #primaryButton {\n      width: calc(100% - 64px);\n      max-width: 260px;\n      min-height: 60px;\n      border: 2px solid transparent;\n      border-radius: 40px;\n      color: #fff;\n      background:\n        linear-gradient(180deg, rgba(255, 255, 255, 0.18), transparent) padding-box,\n        linear-gradient(180deg, #9260fe, #9260fe) padding-box,\n        linear-gradient(180deg, #f2eef8, #8f5df3) border-box;\n      box-shadow: 0 10px 22px rgba(111, 70, 205, 0.14);\n      font: inherit;\n      font-size: 16px;\n      line-height: 1;\n      font-weight: 800;\n      cursor: pointer;\n      transition: transform 150ms ease-out, filter 150ms ease-out;\n      -webkit-tap-highlight-color: transparent;\n    }\n\n    #primaryButton:active {\n      transform: translateY(2px);\n      filter: brightness(0.98);\n    }\n\n    .scene-error {\n      width: calc(100% - 36px);\n      max-width: 480px;\n      margin: 96px auto 0;\n      padding: 22px;\n      border-radius: 24px;\n      background: rgba(255, 255, 255, 0.78);\n      color: #792536;\n      text-align: center;\n      font-size: 15px;\n      line-height: 1.6;\n    }\n\n    @media (max-width: 390px) {\n      .scene-emoji {\n        width: 66px;\n        height: 66px;\n        border-radius: 22px;\n        font-size: 36px;\n      }\n\n      .scene-header {\n        margin-bottom: 17px;\n      }\n\n      .screenplay {\n        padding: 20px 17px 20px 30px;\n      }\n\n      .scene-content {\n        gap: 11px;\n      }\n    }\n\n    @media (orientation: landscape) and (max-height: 720px) {\n      .top-safe-area {\n        height: 0;\n      }\n\n      .scene-scroll {\n        height: 100%;\n      }\n\n      .scene-header {\n        display: grid;\n        grid-template-columns: 56px minmax(0, 1fr);\n        grid-template-rows: auto auto;\n        column-gap: 13px;\n        align-items: center;\n        margin-bottom: 13px;\n        text-align: left;\n      }\n\n      .scene-emoji {\n        grid-row: 1 / 3;\n        width: 56px;\n        height: 56px;\n        margin: 0;\n        border-radius: 18px;\n        font-size: 31px;\n      }\n\n      .scene-kicker {\n        align-self: end;\n        justify-self: start;\n        font-size: 11px;\n      }\n\n      .scene-kicker::before,\n      .scene-kicker::after {\n        display: none;\n      }\n\n      .scene-header h1 {\n        align-self: start;\n        margin-top: 1px;\n        font-size: 22px;\n      }\n\n      .screenplay-wrap {\n        padding-top: 4px;\n      }\n\n      .screenplay {\n        padding-top: 17px;\n        padding-bottom: 17px;\n      }\n\n      .scene-paragraph,\n      .director-cue p {\n        font-size: 15px;\n        line-height: 1.66;\n      }\n\n      .scene-content {\n        gap: 9px;\n      }\n\n      .director-cue {\n        margin-top: 15px;\n        padding-top: 15px;\n        padding-bottom: 15px;\n      }\n\n      .scene-footer {\n        padding-top: 10px;\n        padding-bottom: calc(10px + var(--safe-bottom));\n      }\n\n      #primaryButton {\n        min-height: 60px;\n      }\n    }\n\n    @media (prefers-reduced-motion: reduce) {\n      * {\n        scroll-behavior: auto !important;\n        transition: none !important;\n      }\n    }\n  </style>\n</head>\n<body>\n  <main class=\"scene-page\">\n    <div class=\"top-safe-area\" aria-hidden=\"true\"></div>\n\n    <div class=\"scene-scroll\">\n      <div class=\"scene-inner\">\n        <header class=\"scene-header\">\n          <div class=\"scene-emoji\" aria-hidden=\"true\"><img src=\"https://res.xrunda.com/xruns/static/image/20270724/2.png\" width=\"92\" height=\"92\" alt=\"\"></div>\n          <p class=\"scene-kicker\">情境开场</p>\n          <h1>先看看发生了什么</h1>\n        </header>\n\n        <div class=\"screenplay-wrap\">\n          <div class=\"screenplay-shadow\" aria-hidden=\"true\"></div>\n          <div class=\"binding-holes\" aria-hidden=\"true\">\n            <span></span>\n            <span></span>\n            <span></span>\n            <span></span>\n          </div>\n\n          <article class=\"screenplay\" aria-labelledby=\"scriptHeading\">\n            <header class=\"script-heading\">\n              <strong id=\"scriptHeading\">事情是这样的……</strong>\n              <span>SCENE 01</span>\n            </header>\n\n            <div class=\"scene-content\" id=\"sceneContent\"></div>\n\n            <aside class=\"director-cue\" aria-labelledby=\"directorCueLabel\">\n              <span class=\"director-cue-label\" id=\"directorCueLabel\">镜头拉近</span>\n              <p id=\"lessonLead\"></p>\n            </aside>\n          </article>\n        </div>\n      </div>\n    </div>\n\n    <footer class=\"scene-footer\" id=\"sceneFooter\">\n      <button id=\"primaryButton\" type=\"button\">继续看看</button>\n    </footer>\n  </main>\n\n  <script>\n    /* ============================================================\n       每课只允许替换本变量区中的原文内容与 pageAction。\n       变量名、结构、HTML、CSS、固定文案和交互均不得修改。\n       ============================================================ */\n    const SCENE_INTRO_VARIABLES = Object.freeze({\"lessonLead\":\"接下来看看图片和文字怎样配合。\",\"pageAction\":\"next\",\"sceneParagraphs\":[\"你看到一张机器人整理资料的图片。\"]});\n    /* ======================= 变量区结束 ======================= */\n\n    function validateSceneVariables(data) {\n      const invalid = [];\n\n      if (!Array.isArray(data.sceneParagraphs) || data.sceneParagraphs.length < 1) {\n        invalid.push(\"sceneParagraphs\");\n      } else {\n        data.sceneParagraphs.forEach((paragraph, index) => {\n          if (typeof paragraph !== \"string\" || !paragraph.trim()) {\n            invalid.push(`sceneParagraphs[${index}]`);\n          }\n        });\n      }\n\n      if (typeof data.lessonLead !== \"string\" || !data.lessonLead.trim()) {\n        invalid.push(\"lessonLead\");\n      }\n\n      if (!new Set([\"next\", \"complete\"]).has(data.pageAction)) {\n        invalid.push(\"pageAction\");\n      }\n\n      if (invalid.length) {\n        throw new Error(`SCENE_FIELD_INVALID: ${invalid.join(\", \")}`);\n      }\n    }\n\n    function safeNextPage() {\n      if (\n        window.CreatorReviewSDK &&\n        (!window.CreatorReviewSDK.isAvailable || window.CreatorReviewSDK.isAvailable()) &&\n        typeof window.CreatorReviewSDK.nextPage === \"function\"\n      ) {\n        window.CreatorReviewSDK.nextPage();\n        return;\n      }\n      if (window.parent) window.parent.postMessage({ type: \"nextpage\" }, \"*\");\n    }\n\n    function safeComplete() {\n      if (\n        window.CreatorReviewSDK &&\n        (!window.CreatorReviewSDK.isAvailable || window.CreatorReviewSDK.isAvailable()) &&\n        typeof window.CreatorReviewSDK.complete === \"function\"\n      ) {\n        window.CreatorReviewSDK.complete();\n        return;\n      }\n      if (window.parent) window.parent.postMessage({ type: \"complete\" }, \"*\");\n    }\n\n    function renderScenePage() {\n      const data = SCENE_INTRO_VARIABLES;\n      validateSceneVariables(data);\n\n      const content = document.getElementById(\"sceneContent\");\n      const fragment = document.createDocumentFragment();\n\n      data.sceneParagraphs.forEach(text => {\n        const paragraph = document.createElement(\"p\");\n        paragraph.className = \"scene-paragraph\";\n        paragraph.textContent = text;\n        fragment.appendChild(paragraph);\n      });\n\n      content.textContent = \"\";\n      content.appendChild(fragment);\n      document.getElementById(\"lessonLead\").textContent = data.lessonLead;\n\n      const button = document.getElementById(\"primaryButton\");\n      const action = data.pageAction === \"complete\" ? safeComplete : safeNextPage;\n      button.textContent = data.pageAction === \"complete\" ? \"完成学习\" : \"继续看看\";\n      button.addEventListener(\"click\", action);\n    }\n\n    function syncLayoutMetrics() {\n      const footer = document.getElementById(\"sceneFooter\");\n      const height = Math.ceil(footer.getBoundingClientRect().height || 80);\n      document.documentElement.style.setProperty(\"--footer-h\", `${height}px`);\n    }\n\n    try {\n      renderScenePage();\n      syncLayoutMetrics();\n      if (\"ResizeObserver\" in window) {\n        new ResizeObserver(syncLayoutMetrics).observe(document.getElementById(\"sceneFooter\"));\n      }\n      window.addEventListener(\"resize\", syncLayoutMetrics, { passive: true });\n      window.addEventListener(\"orientationchange\", syncLayoutMetrics, { passive: true });\n    } catch (error) {\n      document.body.innerHTML = `<div class=\"scene-error\">场景引入页数据错误：${String(error.message || error)}</div>`;\n      throw error;\n    }\n  </script>\n</body>\n</html>\n\n"
+    },
+    {
+      "page_no": "P03",
+      "tag": "知识讲解",
+      "title": "知识讲解",
+      "summary": "S5 frozen effective-content projection",
+      "sdk_action": "nextpage",
+      "is_last_page": false,
+      "page_data": {
+        "source_block_ids": [
+          "B02"
+        ],
+        "effective_content_sha256": "cdf0178ec685cf765902458a90a417632e090d24ec148f7991983ea86a82d7db",
+        "assembly_mode": "model_oneshot_prompt_control",
+        "expected_model_output": "pure_complete_html",
+        "model_output_status": "NOT_GENERATED",
+        "whole_course_oneshot": "02_整课JSON_完整外层OneShot.md",
+        "route": "dynamic_oneshot",
+        "oneshot_contract_version": "RunS-Knowledge-Dynamic-OneShot-v1.19",
+        "oneshot_asset_sha256": "71ec5e5f3aefeb37c03102eb86a04f13e7177a21fb69b27006966fe0c4576fc1",
+        "design_brief": {
+          "nonRenderable": true,
+          "teachingAction": "按冻结原文的真实顺序组织阅读，并突出其中已有的概念、关系或判断。",
+          "density": "light",
+          "semanticGroups": [
+            {
+              "id": "intro",
+              "role": "intro",
+              "blockIndexes": [
+                1
+              ],
+              "purpose": "承接冻结原文的引入信息"
+            },
+            {
+              "id": "process",
+              "role": "process",
+              "blockIndexes": [
+                2
+              ],
+              "purpose": "呈现冻结原文中的步骤或先后关系"
+            }
+          ],
+          "hierarchyFocus": [
+            "intro",
+            "process"
+          ],
+          "contentShape": "process_or_sequence",
+          "rhythmRole": "structured",
+          "readingFlow": [
+            "按冻结原文顺序进入本页主题",
+            "用真实语义分组表达步骤、实例与判断关系",
+            "以冻结原文的结尾内容完成收束"
+          ],
+          "layoutFreedom": "必须把冻结原文中的步骤、实例与判断关系转化为不同阅读重量和空间组织；不得退化为等宽、等色、等间距的段落卡堆叠。",
+          "layoutArchetype": "left_aligned_process",
+          "groupPresentation": [
+            {
+              "groupId": "intro",
+              "geometry": "open_reading_band",
+              "surfaceRole": "open_background",
+              "visualWeight": "supporting"
+            },
+            {
+              "groupId": "process",
+              "geometry": "left_aligned_process",
+              "surfaceRole": "outlined_light_surface",
+              "visualWeight": "primary"
+            }
+          ],
+          "sourceProjectionPlan": [
+            {
+              "blockIndex": 1,
+              "mode": "single_region",
+              "region": "intro"
+            },
+            {
+              "blockIndex": 2,
+              "mode": "single_region",
+              "region": "process"
+            }
+          ],
+          "emphasisTargets": [],
+          "surfacePolicy": {
+            "lightDominant": true,
+            "allowLargeDarkSurface": false,
+            "nonCodeDarkSurfaceAreaPercentMax": 0,
+            "minimumOpenRegions": 1,
+            "maximumTopLevelVisualRegions": 4,
+            "nestedItemStyle": "flat_subregion",
+            "nestedItemsUseIndependentShadow": false,
+            "punctuatedClausesUseInlineFlow": true,
+            "maximumDecorativeGroups": 2,
+            "forbid": [
+              "largeNearBlackContentPanel",
+              "allContentInsideCards",
+              "uniformRoundedCardStack"
+            ]
+          },
+          "colorRoles": {
+            "primaryEmphasis": "runs_purple_inline",
+            "conflictEvidence": "warm_amber_inline",
+            "supportingInformation": "cool_blue_tint",
+            "conclusionSurface": "light_purple_tint",
+            "bodyText": "dark_neutral",
+            "inlineHighlightOnly": true
+          },
+          "spaceBalance": {
+            "readingAreaTarget": "60_to_75_percent",
+            "maximumUnusedLowerAreaPercent": 12,
+            "forbidTopHeavyComposition": true
+          },
+          "alignmentPolicy": {
+            "priority": [
+              "shared_left_edge",
+              "shared_top_edge",
+              "consistent_width",
+              "semantic_asymmetry"
+            ],
+            "sameSemanticLevelSharedLeftEdge": true,
+            "comparisonPeersTopAligned": true,
+            "comparisonPeersEqualWidth": true,
+            "sequenceItemsSharedLeftEdge": true,
+            "asymmetryOnlyForExplicitPrimarySupporting": true,
+            "forbid": [
+              "randomIndent",
+              "randomWidth",
+              "staggerForVariety"
+            ]
+          },
+          "comparisonLayoutPolicy": {
+            "sideBySideAllowed": true,
+            "sideBySideMaxCharsPerPeer": 80,
+            "sideBySideMaxCombinedChars": 150,
+            "withinLimitLayout": "aligned_equal_width_columns",
+            "overLimitLayout": "vertical_full_width_stack",
+            "verticalStackSharedLeftEdge": true
+          },
+          "highlightPolicy": {
+            "maximumSegmentsPerPage": 3,
+            "sameSemanticCategoryUsesSameStyle": true,
+            "shortHighlightNoWrapMaxChars": 12,
+            "shortHighlightMoveWholeToNextLine": true,
+            "forbidOrphanTailCharsMax": 2,
+            "forbid": [
+              "multicolorSameCategory",
+              "oneOrTwoCharacterHighlightedTail"
+            ]
+          },
+          "visualSystem": "浅色主导的RunS紫蓝系统；开放正文与柔和表面形成层级；非代码内容禁止大面积近黑背景；重点只在原句原位置使用语义色标记。",
+          "visibleCopyPolicy": "学生可见文字只来自冻结effective_content；按sourceProjectionPlan逐块单次投影，emphasisTargets仅在原句原位置标色，不抽取、不复制、不改写。"
+        },
+        "visualRecipePlan": {
+          "nonRenderable": true,
+          "recipeContract": "R36_REUSABLE_DYNAMIC_VISUAL_RECIPES",
+          "recipes": [
+            {
+              "recipe": "intro_observation_band",
+              "groupId": "intro",
+              "source": "s5_group_presentation",
+              "geometry": "open_reading_band",
+              "visualTreatment": "open_background",
+              "visualWeight": "supporting"
+            },
+            {
+              "recipe": "process_steps",
+              "groupId": "process",
+              "source": "s5_group_presentation",
+              "geometry": "left_aligned_process",
+              "visualTreatment": "outlined_light_surface",
+              "visualWeight": "primary"
+            },
+            {
+              "recipe": "list_or_option_compact",
+              "blockIndexes": [
+                2
+              ],
+              "source": "frozen_list_blocks",
+              "geometry": "compact_item_cluster",
+              "visualTreatment": "structured_compact_items"
+            },
+            {
+              "recipe": "analysis_conclusion_emphasis",
+              "groupId": "process",
+              "source": "last_real_reading_group",
+              "geometry": "single_weighted_anchor",
+              "visualTreatment": "light_accent_tint"
+            }
+          ],
+          "mediumReadingAreaBalance": {
+            "required": false,
+            "target": "60_to_75_percent_of_available_reading_area",
+            "method": "distributed_real_groups_card_density_and_spacing",
+            "forbidFillers": true
+          },
+          "orderedListOrdinalContract": {
+            "required": true,
+            "source": "items[]",
+            "startAt": 1,
+            "displayExpression": "itemIndex + 1",
+            "forbid": [
+              "contentBlockIndex",
+              "globalCounter",
+              "doubleNumbering"
+            ]
+          },
+          "unorderedListPresentationContract": {
+            "required": false,
+            "source": "items[]",
+            "preserveExistingLabels": true,
+            "forbid": [
+              "numericBadge",
+              "autoOrdinal",
+              "doubleNumbering"
+            ]
+          },
+          "semanticCompositionContract": {
+            "required": true,
+            "relationshipDriven": true,
+            "preserveContinuousExplanation": true,
+            "preserveListsAsLists": true,
+            "punctuatedClausesUseInlineFlow": true,
+            "forbid": [
+              "sameWhiteCardStack",
+              "positionOnlyDifferentiation",
+              "decorationFirstComposition",
+              "surfaceCountForRichness",
+              "splitContinuousSentenceForVariety"
+            ]
+          },
+          "alignmentContract": {
+            "priority": [
+              "shared_left_edge",
+              "shared_top_edge",
+              "consistent_width",
+              "semantic_asymmetry"
+            ],
+            "sameSemanticLevelSharedLeftEdge": true,
+            "comparisonPeersTopAligned": true,
+            "comparisonPeersEqualWidth": true,
+            "sequenceItemsSharedLeftEdge": true,
+            "asymmetryOnlyForExplicitPrimarySupporting": true,
+            "forbid": [
+              "randomIndent",
+              "randomWidth",
+              "staggerForVariety"
+            ]
+          },
+          "comparisonLayoutContract": {
+            "sideBySideAllowed": true,
+            "sideBySideMaxCharsPerPeer": 80,
+            "sideBySideMaxCombinedChars": 150,
+            "withinLimitLayout": "aligned_equal_width_columns",
+            "overLimitLayout": "vertical_full_width_stack",
+            "verticalStackSharedLeftEdge": true
+          },
+          "highlightContract": {
+            "maximumSegmentsPerPage": 3,
+            "sameSemanticCategoryUsesSameStyle": true,
+            "shortHighlightNoWrapMaxChars": 12,
+            "shortHighlightMoveWholeToNextLine": true,
+            "forbidOrphanTailCharsMax": 2,
+            "forbid": [
+              "multicolorSameCategory",
+              "oneOrTwoCharacterHighlightedTail"
+            ]
+          },
+          "webViewCompatibilityContract": {
+            "baseline": "Android System WebView Chrome 68",
+            "untranspiledSource": true,
+            "modernFeaturesEnhancementOnly": true,
+            "forbidJavaScriptSyntax": [
+              "nullishCoalescing",
+              "optionalChaining",
+              "logicalAssignment",
+              "classFields",
+              "topLevelAwait"
+            ],
+            "forbidDomApis": [
+              "replaceChildren",
+              "toggleAttribute",
+              "queueMicrotask",
+              "structuredClone",
+              "crypto.randomUUID"
+            ],
+            "forbidCssFeatures": [
+              "minFunction",
+              "maxFunction",
+              "clampFunction",
+              "dynamicViewportUnits",
+              "aspectRatio",
+              "insetShorthand",
+              "flexGap",
+              "textWrap",
+              "backdropFilter",
+              "logicalProperties",
+              "modernColorFunctions"
+            ],
+            "requiredFallbacks": [
+              "height100Percent",
+              "physicalSpacingProperties",
+              "widthPlusMaxWidth",
+              "guardedObservers",
+              "visibleStaticFirstScreen"
+            ]
+          },
+          "sourceTextProjectionContract": {
+            "required": true,
+            "visibleOccurrencesPerBlock": 1,
+            "allowContiguousDomFragments": true,
+            "concatenatedTextMustEqualSource": true,
+            "forbidFullBlockPlusDerivedFragments": true,
+            "forbidParaphrasedLabels": true
+          },
+          "visualHierarchyContract": {
+            "required": false,
+            "semanticHierarchyFirst": true,
+            "priorityOrder": [
+              "source_fidelity",
+              "semantic_relationship",
+              "reading_clarity",
+              "typographic_elegance",
+              "decoration"
+            ],
+            "minimumReadingAreaCoveragePercent": 45,
+            "requireOpenOrNonCardRegion": true,
+            "maximumIndependentContentSurfaces": 4,
+            "sourceSubstringHighlight": {
+              "allowed": true,
+              "exactSourceOnly": true,
+              "maximumSegments": 3,
+              "forbidDuplicateText": true,
+              "preferredStyles": [
+                "font_weight",
+                "underline",
+                "soft_background"
+              ]
+            },
+            "decorativeElements": {
+              "minimum": 0,
+              "maximum": 2,
+              "optional": true,
+              "cssOnly": true,
+              "ariaHidden": true,
+              "forbidText": true,
+              "forbidGeneratedEmoji": true
+            },
+            "forbid": [
+              "allWhiteCards",
+              "allEqualRadius",
+              "allEqualWidthVerticalStack",
+              "inventedBadgeCopy",
+              "decorationFirstComposition",
+              "surfaceCountForRichness",
+              "largeUnusedLowerArea",
+              "topHeavyComposition"
+            ]
+          },
+          "designExecutionContract": {
+            "required": true,
+            "source": "S5.design_brief",
+            "layoutArchetype": "left_aligned_process",
+            "groupPresentation": [
+              {
+                "groupId": "intro",
+                "geometry": "open_reading_band",
+                "surfaceRole": "open_background",
+                "visualWeight": "supporting"
+              },
+              {
+                "groupId": "process",
+                "geometry": "left_aligned_process",
+                "surfaceRole": "outlined_light_surface",
+                "visualWeight": "primary"
+              }
+            ],
+            "sourceProjectionPlan": [
+              {
+                "blockIndex": 1,
+                "mode": "single_region",
+                "region": "intro"
+              },
+              {
+                "blockIndex": 2,
+                "mode": "single_region",
+                "region": "process"
+              }
+            ],
+            "emphasisTargets": [],
+            "surfacePolicy": {
+              "lightDominant": true,
+              "allowLargeDarkSurface": false,
+              "nonCodeDarkSurfaceAreaPercentMax": 0,
+              "minimumOpenRegions": 1,
+              "maximumTopLevelVisualRegions": 4,
+              "nestedItemStyle": "flat_subregion",
+              "nestedItemsUseIndependentShadow": false,
+              "punctuatedClausesUseInlineFlow": true,
+              "maximumDecorativeGroups": 2,
+              "forbid": [
+                "largeNearBlackContentPanel",
+                "allContentInsideCards",
+                "uniformRoundedCardStack"
+              ]
+            },
+            "colorRoles": {
+              "primaryEmphasis": "runs_purple_inline",
+              "conflictEvidence": "warm_amber_inline",
+              "supportingInformation": "cool_blue_tint",
+              "conclusionSurface": "light_purple_tint",
+              "bodyText": "dark_neutral",
+              "inlineHighlightOnly": true
+            },
+            "spaceBalance": {
+              "readingAreaTarget": "60_to_75_percent",
+              "maximumUnusedLowerAreaPercent": 12,
+              "forbidTopHeavyComposition": true
+            },
+            "alignmentPolicy": {
+              "priority": [
+                "shared_left_edge",
+                "shared_top_edge",
+                "consistent_width",
+                "semantic_asymmetry"
+              ],
+              "sameSemanticLevelSharedLeftEdge": true,
+              "comparisonPeersTopAligned": true,
+              "comparisonPeersEqualWidth": true,
+              "sequenceItemsSharedLeftEdge": true,
+              "asymmetryOnlyForExplicitPrimarySupporting": true,
+              "forbid": [
+                "randomIndent",
+                "randomWidth",
+                "staggerForVariety"
+              ]
+            },
+            "comparisonLayoutPolicy": {
+              "sideBySideAllowed": true,
+              "sideBySideMaxCharsPerPeer": 80,
+              "sideBySideMaxCombinedChars": 150,
+              "withinLimitLayout": "aligned_equal_width_columns",
+              "overLimitLayout": "vertical_full_width_stack",
+              "verticalStackSharedLeftEdge": true
+            },
+            "highlightPolicy": {
+              "maximumSegmentsPerPage": 3,
+              "sameSemanticCategoryUsesSameStyle": true,
+              "shortHighlightNoWrapMaxChars": 12,
+              "shortHighlightMoveWholeToNextLine": true,
+              "forbidOrphanTailCharsMax": 2,
+              "forbid": [
+                "multicolorSameCategory",
+                "oneOrTwoCharacterHighlightedTail"
+              ]
+            }
+          }
+        },
+        "footerContract": {
+          "required": true,
+          "footerClass": "knowledge-footer",
+          "buttonClass": "knowledge-primary-button",
+          "buttonText": "继续学习"
+        },
+        "prompt_version": "RunS-Knowledge-Dynamic-OneShot-v1.19-asset-71ec5e5f3aef-prompt-5bee45c9aeb3-lesson022-P03-R36-20260731",
+        "prompt_instance_sha256": "5bee45c9aeb352ead6a670a8c93b2d5754faceb2d07dadce0e23cb562f3a36d1"
+      },
+      "page_kind": "knowledge_explanation",
+      "runtime_type": "html",
+      "components": [],
+      "prompt": "提示词版本号：RunS-Knowledge-Dynamic-OneShot-v1.19-asset-71ec5e5f3aef-prompt-5bee45c9aeb3-lesson022-P03-R36-20260731\n\n适用页面：lesson022｜P03｜第 3/7 页｜知识讲解页。\n\n请根据本提示词中的 PAGE_DATA 与 DESIGN_BRIEF，生成一个完整、可运行的移动端单文件 HTML 网页。\n\n这是一次性提示词，没有任何外部上下文。不得读取本地路径、SOP、模板、历史页面、上一轮对话或其他课程。PAGE_DATA 是唯一学生可见内容源；DESIGN_BRIEF 只指导构图，绝不渲染。\n\n最终回复必须且只能包含从 <!doctype html> 到 </html> 的纯完整 HTML。不得输出 Markdown 围栏、解释、版本号、PAGE_DATA、DESIGN_BRIEF、QA 报告或调试信息。\n\n<PAGE_DATA>\n{\n  \"lessonId\": \"lesson022\",\n  \"pageId\": \"P03\",\n  \"pageIndex\": 3,\n  \"pageCount\": 7,\n  \"pageType\": \"knowledge_explanation\",\n  \"contentBlocks\": [\n    {\n      \"type\": \"paragraph\",\n      \"text\": \"图片呈现人物、位置和动作，文字补充原因、顺序和判断。\",\n      \"markdown\": \"图片呈现人物、位置和动作，文字补充原因、顺序和判断。\"\n    },\n    {\n      \"type\": \"ordered_list\",\n      \"items\": [\n        \"先核对画面中的可见线索\",\n        \"再核对文字中的补充信息\"\n      ],\n      \"markdown\": \"1. 先核对画面中的可见线索\\n2. 再核对文字中的补充信息\"\n    }\n  ],\n  \"pageAction\": \"next\",\n  \"visualRecipePlan\": {\n    \"nonRenderable\": true,\n    \"recipeContract\": \"R36_REUSABLE_DYNAMIC_VISUAL_RECIPES\",\n    \"recipes\": [\n      {\n        \"recipe\": \"intro_observation_band\",\n        \"groupId\": \"intro\",\n        \"source\": \"s5_group_presentation\",\n        \"geometry\": \"open_reading_band\",\n        \"visualTreatment\": \"open_background\",\n        \"visualWeight\": \"supporting\"\n      },\n      {\n        \"recipe\": \"process_steps\",\n        \"groupId\": \"process\",\n        \"source\": \"s5_group_presentation\",\n        \"geometry\": \"left_aligned_process\",\n        \"visualTreatment\": \"outlined_light_surface\",\n        \"visualWeight\": \"primary\"\n      },\n      {\n        \"recipe\": \"list_or_option_compact\",\n        \"blockIndexes\": [\n          2\n        ],\n        \"source\": \"frozen_list_blocks\",\n        \"geometry\": \"compact_item_cluster\",\n        \"visualTreatment\": \"structured_compact_items\"\n      },\n      {\n        \"recipe\": \"analysis_conclusion_emphasis\",\n        \"groupId\": \"process\",\n        \"source\": \"last_real_reading_group\",\n        \"geometry\": \"single_weighted_anchor\",\n        \"visualTreatment\": \"light_accent_tint\"\n      }\n    ],\n    \"mediumReadingAreaBalance\": {\n      \"required\": false,\n      \"target\": \"60_to_75_percent_of_available_reading_area\",\n      \"method\": \"distributed_real_groups_card_density_and_spacing\",\n      \"forbidFillers\": true\n    },\n    \"orderedListOrdinalContract\": {\n      \"required\": true,\n      \"source\": \"items[]\",\n      \"startAt\": 1,\n      \"displayExpression\": \"itemIndex + 1\",\n      \"forbid\": [\n        \"contentBlockIndex\",\n        \"globalCounter\",\n        \"doubleNumbering\"\n      ]\n    },\n    \"unorderedListPresentationContract\": {\n      \"required\": false,\n      \"source\": \"items[]\",\n      \"preserveExistingLabels\": true,\n      \"forbid\": [\n        \"numericBadge\",\n        \"autoOrdinal\",\n        \"doubleNumbering\"\n      ]\n    },\n    \"semanticCompositionContract\": {\n      \"required\": true,\n      \"relationshipDriven\": true,\n      \"preserveContinuousExplanation\": true,\n      \"preserveListsAsLists\": true,\n      \"punctuatedClausesUseInlineFlow\": true,\n      \"forbid\": [\n        \"sameWhiteCardStack\",\n        \"positionOnlyDifferentiation\",\n        \"decorationFirstComposition\",\n        \"surfaceCountForRichness\",\n        \"splitContinuousSentenceForVariety\"\n      ]\n    },\n    \"alignmentContract\": {\n      \"priority\": [\n        \"shared_left_edge\",\n        \"shared_top_edge\",\n        \"consistent_width\",\n        \"semantic_asymmetry\"\n      ],\n      \"sameSemanticLevelSharedLeftEdge\": true,\n      \"comparisonPeersTopAligned\": true,\n      \"comparisonPeersEqualWidth\": true,\n      \"sequenceItemsSharedLeftEdge\": true,\n      \"asymmetryOnlyForExplicitPrimarySupporting\": true,\n      \"forbid\": [\n        \"randomIndent\",\n        \"randomWidth\",\n        \"staggerForVariety\"\n      ]\n    },\n    \"comparisonLayoutContract\": {\n      \"sideBySideAllowed\": true,\n      \"sideBySideMaxCharsPerPeer\": 80,\n      \"sideBySideMaxCombinedChars\": 150,\n      \"withinLimitLayout\": \"aligned_equal_width_columns\",\n      \"overLimitLayout\": \"vertical_full_width_stack\",\n      \"verticalStackSharedLeftEdge\": true\n    },\n    \"highlightContract\": {\n      \"maximumSegmentsPerPage\": 3,\n      \"sameSemanticCategoryUsesSameStyle\": true,\n      \"shortHighlightNoWrapMaxChars\": 12,\n      \"shortHighlightMoveWholeToNextLine\": true,\n      \"forbidOrphanTailCharsMax\": 2,\n      \"forbid\": [\n        \"multicolorSameCategory\",\n        \"oneOrTwoCharacterHighlightedTail\"\n      ]\n    },\n    \"webViewCompatibilityContract\": {\n      \"baseline\": \"Android System WebView Chrome 68\",\n      \"untranspiledSource\": true,\n      \"modernFeaturesEnhancementOnly\": true,\n      \"forbidJavaScriptSyntax\": [\n        \"nullishCoalescing\",\n        \"optionalChaining\",\n        \"logicalAssignment\",\n        \"classFields\",\n        \"topLevelAwait\"\n      ],\n      \"forbidDomApis\": [\n        \"replaceChildren\",\n        \"toggleAttribute\",\n        \"queueMicrotask\",\n        \"structuredClone\",\n        \"crypto.randomUUID\"\n      ],\n      \"forbidCssFeatures\": [\n        \"minFunction\",\n        \"maxFunction\",\n        \"clampFunction\",\n        \"dynamicViewportUnits\",\n        \"aspectRatio\",\n        \"insetShorthand\",\n        \"flexGap\",\n        \"textWrap\",\n        \"backdropFilter\",\n        \"logicalProperties\",\n        \"modernColorFunctions\"\n      ],\n      \"requiredFallbacks\": [\n        \"height100Percent\",\n        \"physicalSpacingProperties\",\n        \"widthPlusMaxWidth\",\n        \"guardedObservers\",\n        \"visibleStaticFirstScreen\"\n      ]\n    },\n    \"sourceTextProjectionContract\": {\n      \"required\": true,\n      \"visibleOccurrencesPerBlock\": 1,\n      \"allowContiguousDomFragments\": true,\n      \"concatenatedTextMustEqualSource\": true,\n      \"forbidFullBlockPlusDerivedFragments\": true,\n      \"forbidParaphrasedLabels\": true\n    },\n    \"visualHierarchyContract\": {\n      \"required\": false,\n      \"semanticHierarchyFirst\": true,\n      \"priorityOrder\": [\n        \"source_fidelity\",\n        \"semantic_relationship\",\n        \"reading_clarity\",\n        \"typographic_elegance\",\n        \"decoration\"\n      ],\n      \"minimumReadingAreaCoveragePercent\": 45,\n      \"requireOpenOrNonCardRegion\": true,\n      \"maximumIndependentContentSurfaces\": 4,\n      \"sourceSubstringHighlight\": {\n        \"allowed\": true,\n        \"exactSourceOnly\": true,\n        \"maximumSegments\": 3,\n        \"forbidDuplicateText\": true,\n        \"preferredStyles\": [\n          \"font_weight\",\n          \"underline\",\n          \"soft_background\"\n        ]\n      },\n      \"decorativeElements\": {\n        \"minimum\": 0,\n        \"maximum\": 2,\n        \"optional\": true,\n        \"cssOnly\": true,\n        \"ariaHidden\": true,\n        \"forbidText\": true,\n        \"forbidGeneratedEmoji\": true\n      },\n      \"forbid\": [\n        \"allWhiteCards\",\n        \"allEqualRadius\",\n        \"allEqualWidthVerticalStack\",\n        \"inventedBadgeCopy\",\n        \"decorationFirstComposition\",\n        \"surfaceCountForRichness\",\n        \"largeUnusedLowerArea\",\n        \"topHeavyComposition\"\n      ]\n    },\n    \"designExecutionContract\": {\n      \"required\": true,\n      \"source\": \"S5.design_brief\",\n      \"layoutArchetype\": \"left_aligned_process\",\n      \"groupPresentation\": [\n        {\n          \"groupId\": \"intro\",\n          \"geometry\": \"open_reading_band\",\n          \"surfaceRole\": \"open_background\",\n          \"visualWeight\": \"supporting\"\n        },\n        {\n          \"groupId\": \"process\",\n          \"geometry\": \"left_aligned_process\",\n          \"surfaceRole\": \"outlined_light_surface\",\n          \"visualWeight\": \"primary\"\n        }\n      ],\n      \"sourceProjectionPlan\": [\n        {\n          \"blockIndex\": 1,\n          \"mode\": \"single_region\",\n          \"region\": \"intro\"\n        },\n        {\n          \"blockIndex\": 2,\n          \"mode\": \"single_region\",\n          \"region\": \"process\"\n        }\n      ],\n      \"emphasisTargets\": [],\n      \"surfacePolicy\": {\n        \"lightDominant\": true,\n        \"allowLargeDarkSurface\": false,\n        \"nonCodeDarkSurfaceAreaPercentMax\": 0,\n        \"minimumOpenRegions\": 1,\n        \"maximumTopLevelVisualRegions\": 4,\n        \"nestedItemStyle\": \"flat_subregion\",\n        \"nestedItemsUseIndependentShadow\": false,\n        \"punctuatedClausesUseInlineFlow\": true,\n        \"maximumDecorativeGroups\": 2,\n        \"forbid\": [\n          \"largeNearBlackContentPanel\",\n          \"allContentInsideCards\",\n          \"uniformRoundedCardStack\"\n        ]\n      },\n      \"colorRoles\": {\n        \"primaryEmphasis\": \"runs_purple_inline\",\n        \"conflictEvidence\": \"warm_amber_inline\",\n        \"supportingInformation\": \"cool_blue_tint\",\n        \"conclusionSurface\": \"light_purple_tint\",\n        \"bodyText\": \"dark_neutral\",\n        \"inlineHighlightOnly\": true\n      },\n      \"spaceBalance\": {\n        \"readingAreaTarget\": \"60_to_75_percent\",\n        \"maximumUnusedLowerAreaPercent\": 12,\n        \"forbidTopHeavyComposition\": true\n      },\n      \"alignmentPolicy\": {\n        \"priority\": [\n          \"shared_left_edge\",\n          \"shared_top_edge\",\n          \"consistent_width\",\n          \"semantic_asymmetry\"\n        ],\n        \"sameSemanticLevelSharedLeftEdge\": true,\n        \"comparisonPeersTopAligned\": true,\n        \"comparisonPeersEqualWidth\": true,\n        \"sequenceItemsSharedLeftEdge\": true,\n        \"asymmetryOnlyForExplicitPrimarySupporting\": true,\n        \"forbid\": [\n          \"randomIndent\",\n          \"randomWidth\",\n          \"staggerForVariety\"\n        ]\n      },\n      \"comparisonLayoutPolicy\": {\n        \"sideBySideAllowed\": true,\n        \"sideBySideMaxCharsPerPeer\": 80,\n        \"sideBySideMaxCombinedChars\": 150,\n        \"withinLimitLayout\": \"aligned_equal_width_columns\",\n        \"overLimitLayout\": \"vertical_full_width_stack\",\n        \"verticalStackSharedLeftEdge\": true\n      },\n      \"highlightPolicy\": {\n        \"maximumSegmentsPerPage\": 3,\n        \"sameSemanticCategoryUsesSameStyle\": true,\n        \"shortHighlightNoWrapMaxChars\": 12,\n        \"shortHighlightMoveWholeToNextLine\": true,\n        \"forbidOrphanTailCharsMax\": 2,\n        \"forbid\": [\n          \"multicolorSameCategory\",\n          \"oneOrTwoCharacterHighlightedTail\"\n        ]\n      }\n    }\n  },\n  \"footerContract\": {\n    \"required\": true,\n    \"footerClass\": \"knowledge-footer\",\n    \"buttonClass\": \"knowledge-primary-button\",\n    \"buttonText\": \"继续学习\"\n  },\n  \"transitionText\": \"\",\n  \"transitionPlacement\": \"none\"\n}\n</PAGE_DATA>\n\n<DESIGN_BRIEF>\n{\n  \"nonRenderable\": true,\n  \"teachingAction\": \"按冻结原文的真实顺序组织阅读，并突出其中已有的概念、关系或判断。\",\n  \"density\": \"light\",\n  \"semanticGroups\": [\n    {\n      \"id\": \"intro\",\n      \"role\": \"intro\",\n      \"blockIndexes\": [\n        1\n      ],\n      \"purpose\": \"承接冻结原文的引入信息\"\n    },\n    {\n      \"id\": \"process\",\n      \"role\": \"process\",\n      \"blockIndexes\": [\n        2\n      ],\n      \"purpose\": \"呈现冻结原文中的步骤或先后关系\"\n    }\n  ],\n  \"hierarchyFocus\": [\n    \"intro\",\n    \"process\"\n  ],\n  \"contentShape\": \"process_or_sequence\",\n  \"rhythmRole\": \"structured\",\n  \"readingFlow\": [\n    \"按冻结原文顺序进入本页主题\",\n    \"用真实语义分组表达步骤、实例与判断关系\",\n    \"以冻结原文的结尾内容完成收束\"\n  ],\n  \"layoutFreedom\": \"必须把冻结原文中的步骤、实例与判断关系转化为不同阅读重量和空间组织；不得退化为等宽、等色、等间距的段落卡堆叠。\",\n  \"layoutArchetype\": \"left_aligned_process\",\n  \"groupPresentation\": [\n    {\n      \"groupId\": \"intro\",\n      \"geometry\": \"open_reading_band\",\n      \"surfaceRole\": \"open_background\",\n      \"visualWeight\": \"supporting\"\n    },\n    {\n      \"groupId\": \"process\",\n      \"geometry\": \"left_aligned_process\",\n      \"surfaceRole\": \"outlined_light_surface\",\n      \"visualWeight\": \"primary\"\n    }\n  ],\n  \"sourceProjectionPlan\": [\n    {\n      \"blockIndex\": 1,\n      \"mode\": \"single_region\",\n      \"region\": \"intro\"\n    },\n    {\n      \"blockIndex\": 2,\n      \"mode\": \"single_region\",\n      \"region\": \"process\"\n    }\n  ],\n  \"emphasisTargets\": [],\n  \"surfacePolicy\": {\n    \"lightDominant\": true,\n    \"allowLargeDarkSurface\": false,\n    \"nonCodeDarkSurfaceAreaPercentMax\": 0,\n    \"minimumOpenRegions\": 1,\n    \"maximumTopLevelVisualRegions\": 4,\n    \"nestedItemStyle\": \"flat_subregion\",\n    \"nestedItemsUseIndependentShadow\": false,\n    \"punctuatedClausesUseInlineFlow\": true,\n    \"maximumDecorativeGroups\": 2,\n    \"forbid\": [\n      \"largeNearBlackContentPanel\",\n      \"allContentInsideCards\",\n      \"uniformRoundedCardStack\"\n    ]\n  },\n  \"colorRoles\": {\n    \"primaryEmphasis\": \"runs_purple_inline\",\n    \"conflictEvidence\": \"warm_amber_inline\",\n    \"supportingInformation\": \"cool_blue_tint\",\n    \"conclusionSurface\": \"light_purple_tint\",\n    \"bodyText\": \"dark_neutral\",\n    \"inlineHighlightOnly\": true\n  },\n  \"spaceBalance\": {\n    \"readingAreaTarget\": \"60_to_75_percent\",\n    \"maximumUnusedLowerAreaPercent\": 12,\n    \"forbidTopHeavyComposition\": true\n  },\n  \"alignmentPolicy\": {\n    \"priority\": [\n      \"shared_left_edge\",\n      \"shared_top_edge\",\n      \"consistent_width\",\n      \"semantic_asymmetry\"\n    ],\n    \"sameSemanticLevelSharedLeftEdge\": true,\n    \"comparisonPeersTopAligned\": true,\n    \"comparisonPeersEqualWidth\": true,\n    \"sequenceItemsSharedLeftEdge\": true,\n    \"asymmetryOnlyForExplicitPrimarySupporting\": true,\n    \"forbid\": [\n      \"randomIndent\",\n      \"randomWidth\",\n      \"staggerForVariety\"\n    ]\n  },\n  \"comparisonLayoutPolicy\": {\n    \"sideBySideAllowed\": true,\n    \"sideBySideMaxCharsPerPeer\": 80,\n    \"sideBySideMaxCombinedChars\": 150,\n    \"withinLimitLayout\": \"aligned_equal_width_columns\",\n    \"overLimitLayout\": \"vertical_full_width_stack\",\n    \"verticalStackSharedLeftEdge\": true\n  },\n  \"highlightPolicy\": {\n    \"maximumSegmentsPerPage\": 3,\n    \"sameSemanticCategoryUsesSameStyle\": true,\n    \"shortHighlightNoWrapMaxChars\": 12,\n    \"shortHighlightMoveWholeToNextLine\": true,\n    \"forbidOrphanTailCharsMax\": 2,\n    \"forbid\": [\n      \"multicolorSameCategory\",\n      \"oneOrTwoCharacterHighlightedTail\"\n    ]\n  },\n  \"visualSystem\": \"浅色主导的RunS紫蓝系统；开放正文与柔和表面形成层级；非代码内容禁止大面积近黑背景；重点只在原句原位置使用语义色标记。\",\n  \"visibleCopyPolicy\": \"学生可见文字只来自冻结effective_content；按sourceProjectionPlan逐块单次投影，emphasisTargets仅在原句原位置标色，不抽取、不复制、不改写。\"\n}\n</DESIGN_BRIEF>\n\n内容硬规则：\n\n1. `contentBlocks` 必须逐块逐字、按原顺序各显示一次；heading 只作为其原文标题显示，段落和列表不得删减、改写、合并、拆句改写、调序、重复或新增学生可见文案。\n2. `transitionText` 非空时必须按 `transitionPlacement` 逐字渲染；为空时不得生成过渡句。\n3. 第一个学生可见 DOM 元素必须根据本次 PAGE_DATA 动态确定，不得复制其他课程、历史样例或示例页面标题。\n4. 不得生成副标题、总结、结论、解释标签、P03、知识讲解胶囊、来源、QA、semantic unit 或生产说明。\n5. 不得生成题干、选项、答案、解析、互动规格或任何答题控件。\n6. 内容区可以按原文关系独立设计，但只能使用 PAGE_DATA 中已有文字；装饰元素不得携带新增文字。\n7. P3 不生成音频、播放器、TTS、字幕、CUE、输入框或 Powered by RunS。\n8. 知识讲解与案例分析的学生内容卡一律禁止装饰性左侧彩色竖线、轨道、连接点或箭头；不得使用 `border-left`，也不得以 `::before` / `::after` 在卡片左缘制造强调线、点列或箭头。语义层级只能使用原文的字号、字重、底色、描边、阴影、间距与完整容器比例表达。\n9. 中等篇幅知识讲解页不得让内容仅堆在上半屏；当本页有三块及以上真实阅读块时，必须只用原文分层、卡片尺寸和垂直节奏平衡主要阅读区。不得新增学生文案、空白占位、强拉单一卡片或可见连接轨凑高度；两条短原文 `two_layer_reading` 不硬凑内容。\n10. `visualRecipePlan` 必须逐项落实，不显示字段名或配方名：`intro_observation_band` 使用 `content-module--intro-band`，`open_body_flow` 使用 `content-module--open-flow` 保留开放式非卡片正文，`inline_conflict_evidence` 使用 `content-module--inline-conflict` 保持同一自然句流并只做行内证据标色，`list_or_option_compact` 使用 `content-module--list-compact` 保留真实列表，`sequence_compact` 使用 `content-module--sequence-compact`，`analysis_conclusion_emphasis` 使用 `content-module--emphasis`，`evidence_quote_focus` 使用 `content-module--evidence-quote` 承接原文确有的引用或证据，`comparison_split` 使用 `content-module--comparison` 形成真实对比区域，`process_steps` 使用 `content-module--process-steps` 表达原文已有先后关系，`role_distribution_inline` 使用 `content-module--role-inline` 与 `continuous_inline_highlights` 在同一连续句流中表达媒介或角色分工；不得为这些结构新增学生可见标签。禁止 `sameWhiteCardStack` 和仅靠位置移动的 `positionOnlyDifferentiation`。\n10a. `sourceTextProjectionContract.required=true` 时，每个 `contentBlocks` 来源块的学生可见文字只能出现一次。关系构图若拆分同一来源块，只允许把原文连续切成 DOM 片段，片段按 DOM 顺序拼接后的 textContent 必须逐字等于该来源块原文；严禁“整块原文 + 派生子项”双重输出，严禁先显示完整段落再把其中短句复制成小卡、标签或徽章。\n10b. `semanticCompositionContract.required=true` 时由语义关系决定构图。真实对比可使用并列/分区，真实步骤可使用有序节奏，真实列表必须保持列表形态；连续说明不得为了丰富而拆块，逗号连接的同一句话也不得被拆成多个表面。禁止 `uniformRoundedCardStack`、嵌套同款圆角卡和仅改变底色的纵向等宽卡栈。\n10b-1. `alignmentContract` 必须执行左对齐优先、顶部对齐优先：同级内容共享左边界；同级对比项顶边对齐且等宽；步骤项共享同一左边界。只有明确主次关系才允许非对称，禁止随机缩进、随机宽度和为了变化而错位。\n10b-2. `comparisonLayoutContract` 允许图示这种篇幅使用顶边对齐、等宽的左右卡；任一对比项超过 80 个字符或两项合计超过 150 个字符时，必须改为上下同宽、共享左边界的纵向排列。\n10b-3. `highlightContract` 要求全页最多 3 个高亮片段；同类信息使用同一种强调样式。12 个字符以内的短高亮词组整体换行，宁可整体移到下一行，也不得留下 1—2 个字的孤立高亮尾巴。\n10b-4. 最终 HTML 必须兼容 Android System WebView Chrome 68。基础布局、首屏文字、正文滚动和固定按钮不得依赖新 CSS 函数、动态视口单位、新 JavaScript 语法或新 DOM API；观察器必须先检测再使用，缺失时基础内容仍直接显示。\n10c. `visualHierarchyContract.required=true` 时执行 `semanticHierarchyFirst=true`：优先级固定为来源保真、语义关系、阅读清晰、排版优雅、最后才是装饰。该突出的重点才在原句原位置使用字重、下划线或柔和底色；该体现的对比、步骤、列表才用对应关系构图。排版优雅优先，装饰不是必选项，纯 CSS 装饰只在改善构图时使用 0—2 组；不得为了丰富度增加表面，不得用装饰替代内容关系，禁止自动生成 Emoji、图标文字、标签文案或解释词。\n10d. `designExecutionContract.required=true` 时，S5 已完成页面设计，S6 不得重新推测：严格按 `layoutArchetype` 与 `groupPresentation` 决定几何和浅色表面；严格按 `sourceProjectionPlan` 逐块投影。`inline_conflict_evidence` 必须使用 `continuous_inline_flow` 保持同一自然句流，只给证据子串行内标色，严禁拆成独立左右卡；`sentence_sequence` 必须在一个 section 内使用 `single_section_flat_steps`；`role_distribution_inline` 必须使用 `continuous_inline_highlights`，整句作为一个连续文本流渲染，`punctuated clauses 不得拆成独立块`。所有 fragments 必须按顺序各出现一次且拼接等于来源块；任何 fragment 不得成为句首孤立标点或独立句号。`emphasisTargets` 只能在原句原位置标色，不得抽取成标签或第二份文字。`surfacePolicy.lightDominant=true` 且 `nonCodeDarkSurfaceAreaPercentMax=0` 时，非代码内容禁止大面积近黑背景；结论使用浅紫或浅蓝表面加局部主题色文字。最终 DOM 的顶层视觉区标记 `data-visual-region=\"top\"` 且不得超过 `maximumTopLevelVisualRegions`；无文字 CSS 装饰不得超过 `maximumDecorativeGroups` 组且可以为零。必须遵守 `spaceBalance.maximumUnusedLowerAreaPercent`，不得靠扩大空白制造层级。\n11. 当 `mediumReadingAreaBalance.required=true`，`.knowledge-content` 必须额外使用 `.knowledge-content--medium-structured`、`display:grid` 和 `align-content:space-between`，仅凭真实原文分组使主体约覆盖可用阅读区的 60%—75%。\n12. 当 `orderedListOrdinalContract.required=true`，有序列表只能遍历该列表 `items[]` 内 `itemIndex + 1`；每个列表必须从 1 连续编号，禁止 `contentBlockIndex`、`globalCounter`、Markdown 既有序号与生成序号的 `doubleNumbering`。\n13. 当 `unorderedListPresentationContract.required=true`，无序列表只显示 `items[]` 原有文字标签；不得生成 `numericBadge`、`autoOrdinal`、数字圆点或其他自动序号，特别是不得把“画面A/B/C”等已有标签转换为 `1/2/3`。\n\nHTML 与页面壳硬规则：\n\n- 必须包含：\n  <script src=\"https://res.xrunda.com/runs/plugin/creator/creator-review-sdk.js\"></script>\n- 除上述 SDK 外，不依赖外部框架、字体、图片或网络资源。\n- 页面适配 360–430px 手机宽度；不得横向滚动。\n- 平台负责顶部状态栏、关闭按钮、页面类型胶囊和进度条；页面内部不得生成 top-safe-area、102px/132px 顶部占位、平台胶囊或进度条。\n- 使用下面的类名和共享 CSS 基线；可以新增内容区 CSS，但不得改变这些计算样式：\n\n<REQUIRED_CSS>\n:root {\n  --safe-bottom: 0px;\n  --page-bottom-rgb: 213, 245, 254;\n  --page-bottom-bg: rgb(var(--page-bottom-rgb));\n  --footer-h: calc(80px + var(--safe-bottom));\n}\nhtml,\nbody {\n  width: 100%;\n  height: 100%;\n  margin: 0;\n  overflow: hidden;\n}\n.knowledge-page {\n  position: relative;\n  width: 100%;\n  height: 100%;\n  overflow: hidden;\n  background: linear-gradient(180deg, #d7c4ff 0%, #dce4ff 42%, var(--page-bottom-bg) 66.667%, var(--page-bottom-bg) 100%);\n}\n.knowledge-scroll {\n  box-sizing: border-box;\n  width: 100%;\n  height: 100%;\n  overflow-x: hidden;\n  overflow-y: auto;\n  padding: 8px 0 calc(var(--footer-h) + 24px);\n  -webkit-overflow-scrolling: touch;\n}\n.knowledge-content {\n  box-sizing: border-box;\n  width: 100%;\n  max-width: 680px;\n  margin: 0 auto;\n  padding: 0 24px;\n}\n.knowledge-content h1 {\n  overflow-wrap: break-word;\n  text-align: center;\n}\n.title-keep {\n  white-space: nowrap;\n}\n.knowledge-transition {\n  display: block;\n  margin: 0 0 16px;\n  padding: 6px 0;\n  color: rgba(39, 39, 52, 0.58);\n  font-size: 14px;\n  font-weight: 400;\n  line-height: 1.65;\n  letter-spacing: 0.01em;\n  text-align: left;\n  background: transparent;\n  border: 0;\n  border-radius: 0;\n  box-shadow: none;\n}\n.knowledge-transition::before,\n.knowledge-transition::after {\n  content: none;\n}\n.knowledge-content > .knowledge-transition:last-child {\n  margin: 16px 0 0;\n}\n.knowledge-footer {\n  position: absolute;\n  z-index: 5;\n  right: 0;\n  bottom: 0;\n  left: 0;\n  display: flex;\n  justify-content: center;\n  padding: 10px 0 calc(10px + var(--safe-bottom));\n  background: var(--page-bottom-bg);\n}\n.knowledge-primary-button {\n  position: static;\n  display: block;\n  width: calc(100% - 64px);\n  max-width: 260px;\n  min-height: 60px;\n  margin: 0;\n  border: 2px solid transparent;\n  border-radius: 40px;\n  color: #fff;\n  background:\n    linear-gradient(180deg, #9260fe, #9260fe) padding-box,\n    linear-gradient(180deg, #f2eef8, #8f5df3) border-box;\n  font: inherit;\n  font-size: 16px;\n  font-weight: 800;\n  cursor: pointer;\n  -webkit-tap-highlight-color: transparent;\n}\n</REQUIRED_CSS>\n\n- DOM 顺序必须是：\n  <main class=\"knowledge-page\">\n    <div class=\"knowledge-scroll\">\n      <article class=\"knowledge-content\">原文标题和全部正文</article>\n    </div>\n    <footer class=\"knowledge-footer\">\n      <button class=\"knowledge-primary-button\" type=\"button\">继续学习</button>\n    </footer>\n  </main>\n- 页面必须实现 UNIFIED_PERSISTENT_BOTTOM_ACTION_BAR：`.knowledge-footer` computed position 为 absolute 且 left/right/bottom 均为 0px；按钮自身为 static。\n- 只有 `.knowledge-scroll` 可以纵向滚动；它必须使用 `box-sizing:border-box`。短页与长页在任意滚动位置都持续显示底栏。`.knowledge-scroll` 的底部预留必须用 JavaScript 同步底栏真实高度并额外保留 24px。\n- 全页只有该按钮调用课程 SDK；页面动作是 next，按钮文案必须是“继续学习”。\n- `footerContract.required=true` 时必须无条件输出且只输出一个与字段匹配的 `<footer class=\"knowledge-footer\">` 与 `<button class=\"knowledge-primary-button\">`；不得条件省略、运行时创建、`display:none`、`visibility:hidden`、`opacity:0`，也不得放进 `.knowledge-scroll`。\n\nJavaScript 必须包含并使用以下安全函数：\n\n<REQUIRED_JS>\nfunction safeNextPage() {\n  if (\n    window.CreatorReviewSDK &&\n    (!window.CreatorReviewSDK.isAvailable || window.CreatorReviewSDK.isAvailable()) &&\n    typeof window.CreatorReviewSDK.nextPage === \"function\"\n  ) {\n    window.CreatorReviewSDK.nextPage();\n    return;\n  }\n  if (window.parent) window.parent.postMessage({ type: \"nextpage\" }, \"*\");\n}\nfunction safeComplete() {\n  if (\n    window.CreatorReviewSDK &&\n    (!window.CreatorReviewSDK.isAvailable || window.CreatorReviewSDK.isAvailable()) &&\n    typeof window.CreatorReviewSDK.complete === \"function\"\n  ) {\n    window.CreatorReviewSDK.complete();\n    return;\n  }\n  if (window.parent) window.parent.postMessage({ type: \"complete\" }, \"*\");\n}\nfunction syncFooterReserve() {\n  var footer = document.querySelector(\".knowledge-footer\");\n  if (!footer) return;\n  document.documentElement.style.setProperty(\n    \"--footer-h\",\n    Math.ceil(footer.getBoundingClientRect().height) + \"px\"\n  );\n}\nwindow.addEventListener(\"load\", syncFooterReserve);\nwindow.addEventListener(\"resize\", syncFooterReserve);\nwindow.addEventListener(\"orientationchange\", syncFooterReserve);\nif (\"ResizeObserver\" in window) {\n  new ResizeObserver(syncFooterReserve).observe(\n    document.querySelector(\".knowledge-footer\")\n  );\n}\n</REQUIRED_JS>\n\n请直接输出最终完整 HTML。"
+    },
+    {
+      "page_no": "P04",
+      "tag": "案例分析",
+      "title": "案例分析",
+      "summary": "S5 frozen effective-content projection",
+      "sdk_action": "nextpage",
+      "is_last_page": false,
+      "page_data": {
+        "source_block_ids": [
+          "B03"
+        ],
+        "effective_content_sha256": "86b91181d52ad19168e394180bfeeb728c7bddfd84b5528060b217fb25793834",
+        "assembly_mode": "model_oneshot_prompt_control",
+        "expected_model_output": "pure_complete_html",
+        "model_output_status": "NOT_GENERATED",
+        "whole_course_oneshot": "02_整课JSON_完整外层OneShot.md",
+        "route": "dynamic_oneshot",
+        "oneshot_contract_version": "RunS-CaseAnalysis-Dynamic-OneShot-v1.18",
+        "oneshot_asset_sha256": "35ee30c45d3b7757b771c785039c6888584b12e3fa66fd7ed9a9c1184305f433",
+        "design_brief": {
+          "nonRenderable": true,
+          "teachingAction": "按冻结原文的真实顺序组织阅读，并突出其中已有的概念、关系或判断。",
+          "density": "light",
+          "shortPageComposition": "two_layer_reading",
+          "semanticGroups": [
+            {
+              "id": "primary_reading",
+              "role": "intro",
+              "blockIndexes": [
+                1
+              ],
+              "purpose": "主阅读层"
+            },
+            {
+              "id": "supporting_result",
+              "role": "context",
+              "blockIndexes": [
+                2
+              ],
+              "purpose": "弱结果层"
+            }
+          ],
+          "hierarchyFocus": [
+            "primary_reading",
+            "supporting_result"
+          ],
+          "contentShape": "continuous_explanation",
+          "rhythmRole": "narrative",
+          "readingFlow": [
+            "按原序阅读主阅读层",
+            "按原序阅读弱结果层"
+          ],
+          "layoutFreedom": "仅用无文字留白组织两条短原文；不得补写连接、步骤或结论。",
+          "layoutArchetype": "two_layer_open_reading",
+          "groupPresentation": [
+            {
+              "groupId": "primary_reading",
+              "geometry": "open_reading_band",
+              "surfaceRole": "open_background",
+              "visualWeight": "supporting"
+            },
+            {
+              "groupId": "supporting_result",
+              "geometry": "open_body_flow",
+              "surfaceRole": "open_background",
+              "visualWeight": "normal"
+            }
+          ],
+          "sourceProjectionPlan": [
+            {
+              "blockIndex": 1,
+              "mode": "single_region",
+              "region": "primary_reading"
+            },
+            {
+              "blockIndex": 2,
+              "mode": "single_region",
+              "region": "supporting_result"
+            }
+          ],
+          "emphasisTargets": [],
+          "surfacePolicy": {
+            "lightDominant": true,
+            "allowLargeDarkSurface": false,
+            "nonCodeDarkSurfaceAreaPercentMax": 0,
+            "minimumOpenRegions": 1,
+            "maximumTopLevelVisualRegions": 4,
+            "nestedItemStyle": "flat_subregion",
+            "nestedItemsUseIndependentShadow": false,
+            "punctuatedClausesUseInlineFlow": true,
+            "maximumDecorativeGroups": 2,
+            "forbid": [
+              "largeNearBlackContentPanel",
+              "allContentInsideCards",
+              "uniformRoundedCardStack"
+            ]
+          },
+          "colorRoles": {
+            "primaryEmphasis": "runs_purple_inline",
+            "conflictEvidence": "warm_amber_inline",
+            "supportingInformation": "cool_blue_tint",
+            "conclusionSurface": "light_purple_tint",
+            "bodyText": "dark_neutral",
+            "inlineHighlightOnly": true
+          },
+          "spaceBalance": {
+            "readingAreaTarget": "60_to_75_percent",
+            "maximumUnusedLowerAreaPercent": 12,
+            "forbidTopHeavyComposition": true
+          },
+          "alignmentPolicy": {
+            "priority": [
+              "shared_left_edge",
+              "shared_top_edge",
+              "consistent_width",
+              "semantic_asymmetry"
+            ],
+            "sameSemanticLevelSharedLeftEdge": true,
+            "comparisonPeersTopAligned": true,
+            "comparisonPeersEqualWidth": true,
+            "sequenceItemsSharedLeftEdge": true,
+            "asymmetryOnlyForExplicitPrimarySupporting": true,
+            "forbid": [
+              "randomIndent",
+              "randomWidth",
+              "staggerForVariety"
+            ]
+          },
+          "comparisonLayoutPolicy": {
+            "sideBySideAllowed": true,
+            "sideBySideMaxCharsPerPeer": 80,
+            "sideBySideMaxCombinedChars": 150,
+            "withinLimitLayout": "aligned_equal_width_columns",
+            "overLimitLayout": "vertical_full_width_stack",
+            "verticalStackSharedLeftEdge": true
+          },
+          "highlightPolicy": {
+            "maximumSegmentsPerPage": 3,
+            "sameSemanticCategoryUsesSameStyle": true,
+            "shortHighlightNoWrapMaxChars": 12,
+            "shortHighlightMoveWholeToNextLine": true,
+            "forbidOrphanTailCharsMax": 2,
+            "forbid": [
+              "multicolorSameCategory",
+              "oneOrTwoCharacterHighlightedTail"
+            ]
+          },
+          "visualSystem": "浅色主导的RunS紫蓝系统；开放正文与柔和表面形成层级；非代码内容禁止大面积近黑背景；重点只在原句原位置使用语义色标记。",
+          "visibleCopyPolicy": "学生可见文字只来自冻结effective_content；按sourceProjectionPlan逐块单次投影，emphasisTargets仅在原句原位置标色，不抽取、不复制、不改写。"
+        },
+        "visualRecipePlan": {
+          "nonRenderable": true,
+          "recipeContract": "R36_REUSABLE_DYNAMIC_VISUAL_RECIPES",
+          "recipes": [
+            {
+              "recipe": "intro_observation_band",
+              "groupId": "primary_reading",
+              "source": "s5_group_presentation",
+              "geometry": "open_reading_band",
+              "visualTreatment": "open_background",
+              "visualWeight": "supporting"
+            },
+            {
+              "recipe": "open_body_flow",
+              "groupId": "supporting_result",
+              "source": "s5_group_presentation",
+              "geometry": "open_body_flow",
+              "visualTreatment": "open_background",
+              "visualWeight": "normal"
+            },
+            {
+              "recipe": "analysis_conclusion_emphasis",
+              "groupId": "supporting_result",
+              "source": "last_real_reading_group",
+              "geometry": "single_weighted_anchor",
+              "visualTreatment": "light_accent_tint"
+            }
+          ],
+          "mediumReadingAreaBalance": {
+            "required": false,
+            "target": "60_to_75_percent_of_available_reading_area",
+            "method": "distributed_real_groups_card_density_and_spacing",
+            "forbidFillers": true
+          },
+          "orderedListOrdinalContract": {
+            "required": false,
+            "source": "items[]",
+            "startAt": 1,
+            "displayExpression": "itemIndex + 1",
+            "forbid": [
+              "contentBlockIndex",
+              "globalCounter",
+              "doubleNumbering"
+            ]
+          },
+          "unorderedListPresentationContract": {
+            "required": false,
+            "source": "items[]",
+            "preserveExistingLabels": true,
+            "forbid": [
+              "numericBadge",
+              "autoOrdinal",
+              "doubleNumbering"
+            ]
+          },
+          "semanticCompositionContract": {
+            "required": true,
+            "relationshipDriven": true,
+            "preserveContinuousExplanation": true,
+            "preserveListsAsLists": true,
+            "punctuatedClausesUseInlineFlow": true,
+            "forbid": [
+              "sameWhiteCardStack",
+              "positionOnlyDifferentiation",
+              "decorationFirstComposition",
+              "surfaceCountForRichness",
+              "splitContinuousSentenceForVariety"
+            ]
+          },
+          "alignmentContract": {
+            "priority": [
+              "shared_left_edge",
+              "shared_top_edge",
+              "consistent_width",
+              "semantic_asymmetry"
+            ],
+            "sameSemanticLevelSharedLeftEdge": true,
+            "comparisonPeersTopAligned": true,
+            "comparisonPeersEqualWidth": true,
+            "sequenceItemsSharedLeftEdge": true,
+            "asymmetryOnlyForExplicitPrimarySupporting": true,
+            "forbid": [
+              "randomIndent",
+              "randomWidth",
+              "staggerForVariety"
+            ]
+          },
+          "comparisonLayoutContract": {
+            "sideBySideAllowed": true,
+            "sideBySideMaxCharsPerPeer": 80,
+            "sideBySideMaxCombinedChars": 150,
+            "withinLimitLayout": "aligned_equal_width_columns",
+            "overLimitLayout": "vertical_full_width_stack",
+            "verticalStackSharedLeftEdge": true
+          },
+          "highlightContract": {
+            "maximumSegmentsPerPage": 3,
+            "sameSemanticCategoryUsesSameStyle": true,
+            "shortHighlightNoWrapMaxChars": 12,
+            "shortHighlightMoveWholeToNextLine": true,
+            "forbidOrphanTailCharsMax": 2,
+            "forbid": [
+              "multicolorSameCategory",
+              "oneOrTwoCharacterHighlightedTail"
+            ]
+          },
+          "webViewCompatibilityContract": {
+            "baseline": "Android System WebView Chrome 68",
+            "untranspiledSource": true,
+            "modernFeaturesEnhancementOnly": true,
+            "forbidJavaScriptSyntax": [
+              "nullishCoalescing",
+              "optionalChaining",
+              "logicalAssignment",
+              "classFields",
+              "topLevelAwait"
+            ],
+            "forbidDomApis": [
+              "replaceChildren",
+              "toggleAttribute",
+              "queueMicrotask",
+              "structuredClone",
+              "crypto.randomUUID"
+            ],
+            "forbidCssFeatures": [
+              "minFunction",
+              "maxFunction",
+              "clampFunction",
+              "dynamicViewportUnits",
+              "aspectRatio",
+              "insetShorthand",
+              "flexGap",
+              "textWrap",
+              "backdropFilter",
+              "logicalProperties",
+              "modernColorFunctions"
+            ],
+            "requiredFallbacks": [
+              "height100Percent",
+              "physicalSpacingProperties",
+              "widthPlusMaxWidth",
+              "guardedObservers",
+              "visibleStaticFirstScreen"
+            ]
+          },
+          "sourceTextProjectionContract": {
+            "required": true,
+            "visibleOccurrencesPerBlock": 1,
+            "allowContiguousDomFragments": true,
+            "concatenatedTextMustEqualSource": true,
+            "forbidFullBlockPlusDerivedFragments": true,
+            "forbidParaphrasedLabels": true
+          },
+          "visualHierarchyContract": {
+            "required": false,
+            "semanticHierarchyFirst": true,
+            "priorityOrder": [
+              "source_fidelity",
+              "semantic_relationship",
+              "reading_clarity",
+              "typographic_elegance",
+              "decoration"
+            ],
+            "minimumReadingAreaCoveragePercent": 45,
+            "requireOpenOrNonCardRegion": true,
+            "maximumIndependentContentSurfaces": 4,
+            "sourceSubstringHighlight": {
+              "allowed": true,
+              "exactSourceOnly": true,
+              "maximumSegments": 3,
+              "forbidDuplicateText": true,
+              "preferredStyles": [
+                "font_weight",
+                "underline",
+                "soft_background"
+              ]
+            },
+            "decorativeElements": {
+              "minimum": 0,
+              "maximum": 2,
+              "optional": true,
+              "cssOnly": true,
+              "ariaHidden": true,
+              "forbidText": true,
+              "forbidGeneratedEmoji": true
+            },
+            "forbid": [
+              "allWhiteCards",
+              "allEqualRadius",
+              "allEqualWidthVerticalStack",
+              "inventedBadgeCopy",
+              "decorationFirstComposition",
+              "surfaceCountForRichness",
+              "largeUnusedLowerArea",
+              "topHeavyComposition"
+            ]
+          },
+          "designExecutionContract": {
+            "required": true,
+            "source": "S5.design_brief",
+            "layoutArchetype": "two_layer_open_reading",
+            "groupPresentation": [
+              {
+                "groupId": "primary_reading",
+                "geometry": "open_reading_band",
+                "surfaceRole": "open_background",
+                "visualWeight": "supporting"
+              },
+              {
+                "groupId": "supporting_result",
+                "geometry": "open_body_flow",
+                "surfaceRole": "open_background",
+                "visualWeight": "normal"
+              }
+            ],
+            "sourceProjectionPlan": [
+              {
+                "blockIndex": 1,
+                "mode": "single_region",
+                "region": "primary_reading"
+              },
+              {
+                "blockIndex": 2,
+                "mode": "single_region",
+                "region": "supporting_result"
+              }
+            ],
+            "emphasisTargets": [],
+            "surfacePolicy": {
+              "lightDominant": true,
+              "allowLargeDarkSurface": false,
+              "nonCodeDarkSurfaceAreaPercentMax": 0,
+              "minimumOpenRegions": 1,
+              "maximumTopLevelVisualRegions": 4,
+              "nestedItemStyle": "flat_subregion",
+              "nestedItemsUseIndependentShadow": false,
+              "punctuatedClausesUseInlineFlow": true,
+              "maximumDecorativeGroups": 2,
+              "forbid": [
+                "largeNearBlackContentPanel",
+                "allContentInsideCards",
+                "uniformRoundedCardStack"
+              ]
+            },
+            "colorRoles": {
+              "primaryEmphasis": "runs_purple_inline",
+              "conflictEvidence": "warm_amber_inline",
+              "supportingInformation": "cool_blue_tint",
+              "conclusionSurface": "light_purple_tint",
+              "bodyText": "dark_neutral",
+              "inlineHighlightOnly": true
+            },
+            "spaceBalance": {
+              "readingAreaTarget": "60_to_75_percent",
+              "maximumUnusedLowerAreaPercent": 12,
+              "forbidTopHeavyComposition": true
+            },
+            "alignmentPolicy": {
+              "priority": [
+                "shared_left_edge",
+                "shared_top_edge",
+                "consistent_width",
+                "semantic_asymmetry"
+              ],
+              "sameSemanticLevelSharedLeftEdge": true,
+              "comparisonPeersTopAligned": true,
+              "comparisonPeersEqualWidth": true,
+              "sequenceItemsSharedLeftEdge": true,
+              "asymmetryOnlyForExplicitPrimarySupporting": true,
+              "forbid": [
+                "randomIndent",
+                "randomWidth",
+                "staggerForVariety"
+              ]
+            },
+            "comparisonLayoutPolicy": {
+              "sideBySideAllowed": true,
+              "sideBySideMaxCharsPerPeer": 80,
+              "sideBySideMaxCombinedChars": 150,
+              "withinLimitLayout": "aligned_equal_width_columns",
+              "overLimitLayout": "vertical_full_width_stack",
+              "verticalStackSharedLeftEdge": true
+            },
+            "highlightPolicy": {
+              "maximumSegmentsPerPage": 3,
+              "sameSemanticCategoryUsesSameStyle": true,
+              "shortHighlightNoWrapMaxChars": 12,
+              "shortHighlightMoveWholeToNextLine": true,
+              "forbidOrphanTailCharsMax": 2,
+              "forbid": [
+                "multicolorSameCategory",
+                "oneOrTwoCharacterHighlightedTail"
+              ]
+            }
+          }
+        },
+        "footerContract": {
+          "required": true,
+          "footerClass": "case-footer",
+          "buttonClass": "case-primary-button",
+          "buttonText": "继续学习"
+        },
+        "prompt_version": "RunS-CaseAnalysis-Dynamic-OneShot-v1.18-asset-35ee30c45d3b-prompt-ae5cf2736e7d-lesson022-P04-R36-20260731",
+        "prompt_instance_sha256": "ae5cf2736e7da4ce0fa7c466001514b9534eece49d40474a5d73a06cb5ea180b"
+      },
+      "page_kind": "case_analysis",
+      "runtime_type": "html",
+      "components": [],
+      "prompt": "提示词版本号：RunS-CaseAnalysis-Dynamic-OneShot-v1.18-asset-35ee30c45d3b-prompt-ae5cf2736e7d-lesson022-P04-R36-20260731\n\n适用页面：lesson022｜P04｜第 4/7 页｜案例分析页。\n\n请根据本提示词中的 PAGE_DATA 与 DESIGN_BRIEF，生成一个完整、可运行的移动端单文件 HTML 网页。\n\n这是一次性提示词，没有任何外部上下文。不得读取本地路径、SOP、模板、历史页面、上一轮对话或其他课程。PAGE_DATA 是唯一学生可见内容源；DESIGN_BRIEF 只指导构图，绝不渲染。\n\n最终回复必须且只能包含从 <!doctype html> 到 </html> 的纯完整 HTML。不得输出 Markdown 围栏、解释、版本号、PAGE_DATA、DESIGN_BRIEF、QA 报告或调试信息。\n\n知识讲解与案例分析的学生内容卡一律禁止装饰性左侧彩色竖线、轨道、连接点或箭头；不得使用 `border-left`，也不得以 `::before` / `::after` 在卡片左缘制造强调线、点列或箭头。强调只能来自原文真实关系所需的字重、颜色、底色、描边、阴影、间距或完整容器层级。\n\nR36 动态构图硬规则：必须把 `PAGE_DATA.visualRecipePlan` 逐项落为真实 DOM class：`content-module--intro-band`、`content-module--open-flow`、`content-module--inline-conflict`、`content-module--list-compact`、`content-module--sequence-compact`、`content-module--emphasis`、`content-module--comparison`、`content-module--process-steps`、`content-module--role-inline`。`open_body_flow` 必须保留开放式非卡片正文；`inline_conflict_evidence` 必须使用 `continuous_inline_flow` 保持同一自然句流，只对证据子串行内标色，严禁拆成独立左右卡。`role_distribution_inline` 必须使用 `continuous_inline_highlights`：逗号或分号连接的同一句话只渲染一次，`punctuated clauses 不得拆成独立块`，只能在原位置用字重、下划线或柔和底色突出逐字来源片段。构图差异必须服务真实关系与阅读层级；禁止 `sameWhiteCardStack` 和 `positionOnlyDifferentiation`。\n\n来源文字单次投影硬规则：`sourceTextProjectionContract.required=true` 时，每个 `contentBlocks` 来源块的学生可见文字只能出现一次。关系构图若拆分同一来源块，只允许把原文连续切成 DOM 片段，片段按 DOM 顺序拼接后的 textContent 必须逐字等于该来源块原文；严禁“整块原文 + 派生子项”双重输出，严禁先显示完整段落再把其中短句复制成小卡、标签或徽章。\n\n语义构图硬规则：`semanticCompositionContract.required=true` 时由语义关系决定构图。真实对比可使用并列/分区，真实步骤可使用有序节奏，真实列表必须保持列表形态；连续说明不得为了丰富而拆块，逗号连接的同一句话也不得被拆成多个表面。禁止 `uniformRoundedCardStack`、嵌套同款圆角卡、`sameWhiteCardStack` 和仅靠位置变化的 `positionOnlyDifferentiation`。\n\n对齐硬规则：`alignmentContract` 必须执行左对齐优先、顶部对齐优先。同级内容共享左边界；同级对比项顶边对齐且等宽；步骤项共享同一左边界。只有明确主次关系才允许非对称，禁止随机缩进、随机宽度和为了变化而错位。\n\n对比与高亮硬规则：`comparisonLayoutContract` 允许当前示例篇幅使用顶边对齐、等宽的左右卡；任一对比项超过 80 个字符或两项合计超过 150 个字符时，必须改为上下同宽、共享左边界的纵向排列。`highlightContract` 要求全页最多 3 个高亮片段，同类信息使用同一种强调样式；12 个字符以内的短高亮词组整体换行，不得留下 1—2 个字的孤立高亮尾巴。\n\n兼容硬规则：最终 HTML 必须兼容 Android System WebView Chrome 68。基础布局、首屏文字、正文滚动和固定按钮不得依赖新 CSS 函数、动态视口单位、新 JavaScript 语法或新 DOM API；观察器必须先检测再使用，缺失时基础内容仍直接显示。\n\n视觉层级硬规则：`visualHierarchyContract.required=true` 时执行 `semanticHierarchyFirst=true`：优先来源保真、语义关系、阅读清晰和排版优雅，最后才考虑装饰。该突出的重点才在原句原位置使用字重、下划线或柔和底色；该体现的对比、步骤、列表才使用对应关系构图。排版优雅优先，装饰不是必选项，纯 CSS 装饰只在改善构图时使用 0—2 组；不得为了丰富度增加表面，不得用装饰替代关系，禁止自动生成 Emoji、图标文字、标签文案或解释词。\n\nS5 设计执行硬规则：`designExecutionContract.required=true` 时，不得在 S6 重新推测构图。严格按 `layoutArchetype`、`groupPresentation` 和 `sourceProjectionPlan` 投影；fragments 按顺序各出现一次且拼接等于来源块，禁止完整段落重复、句首孤立标点或独立句号。`sentence_sequence` 必须使用 `single_section_flat_steps`；`role_distribution_inline` 必须使用 `continuous_inline_highlights`，整句作为一个连续文本流渲染。`emphasisTargets` 只在原句原位置标色，不得抽取成标签或重复文字。`surfacePolicy.lightDominant=true` 且 `nonCodeDarkSurfaceAreaPercentMax=0` 时，非代码内容禁止大面积近黑背景；顶层视觉区标记 `data-visual-region=\"top\"` 且不超过 `maximumTopLevelVisualRegions`。装饰最多 `maximumDecorativeGroups` 组且可以为零。遵守 `spaceBalance.maximumUnusedLowerAreaPercent`，不得留下大面积无意义底部空白。\n\n列表保真硬规则：有序列表仅在本列表 `items[]` 内按 `itemIndex + 1` 从 1 连续编号；禁止 `contentBlockIndex`、`globalCounter`、`doubleNumbering`。无序列表必须逐项保留原有标签（如“画面A/B/C”），禁止 `numericBadge`、`autoOrdinal`、`doubleNumbering`；不得把无序标签重写为 1/2/3。\n\n<PAGE_DATA>\n{\n  \"lessonId\": \"lesson022\",\n  \"pageId\": \"P04\",\n  \"pageIndex\": 4,\n  \"pageCount\": 7,\n  \"pageType\": \"case_analysis\",\n  \"contentBlocks\": [\n    {\n      \"type\": \"paragraph\",\n      \"text\": \"同一张图可以在知识页用于观察，也可以在案例页用于核对证据。\",\n      \"markdown\": \"同一张图可以在知识页用于观察，也可以在案例页用于核对证据。\"\n    },\n    {\n      \"type\": \"paragraph\",\n      \"text\": \"保持图片不变，改变问题角度，就能形成不同的学习任务。\",\n      \"markdown\": \"保持图片不变，改变问题角度，就能形成不同的学习任务。\"\n    }\n  ],\n  \"pageAction\": \"next\",\n  \"visualRecipePlan\": {\n    \"nonRenderable\": true,\n    \"recipeContract\": \"R36_REUSABLE_DYNAMIC_VISUAL_RECIPES\",\n    \"recipes\": [\n      {\n        \"recipe\": \"intro_observation_band\",\n        \"groupId\": \"primary_reading\",\n        \"source\": \"s5_group_presentation\",\n        \"geometry\": \"open_reading_band\",\n        \"visualTreatment\": \"open_background\",\n        \"visualWeight\": \"supporting\"\n      },\n      {\n        \"recipe\": \"open_body_flow\",\n        \"groupId\": \"supporting_result\",\n        \"source\": \"s5_group_presentation\",\n        \"geometry\": \"open_body_flow\",\n        \"visualTreatment\": \"open_background\",\n        \"visualWeight\": \"normal\"\n      },\n      {\n        \"recipe\": \"analysis_conclusion_emphasis\",\n        \"groupId\": \"supporting_result\",\n        \"source\": \"last_real_reading_group\",\n        \"geometry\": \"single_weighted_anchor\",\n        \"visualTreatment\": \"light_accent_tint\"\n      }\n    ],\n    \"mediumReadingAreaBalance\": {\n      \"required\": false,\n      \"target\": \"60_to_75_percent_of_available_reading_area\",\n      \"method\": \"distributed_real_groups_card_density_and_spacing\",\n      \"forbidFillers\": true\n    },\n    \"orderedListOrdinalContract\": {\n      \"required\": false,\n      \"source\": \"items[]\",\n      \"startAt\": 1,\n      \"displayExpression\": \"itemIndex + 1\",\n      \"forbid\": [\n        \"contentBlockIndex\",\n        \"globalCounter\",\n        \"doubleNumbering\"\n      ]\n    },\n    \"unorderedListPresentationContract\": {\n      \"required\": false,\n      \"source\": \"items[]\",\n      \"preserveExistingLabels\": true,\n      \"forbid\": [\n        \"numericBadge\",\n        \"autoOrdinal\",\n        \"doubleNumbering\"\n      ]\n    },\n    \"semanticCompositionContract\": {\n      \"required\": true,\n      \"relationshipDriven\": true,\n      \"preserveContinuousExplanation\": true,\n      \"preserveListsAsLists\": true,\n      \"punctuatedClausesUseInlineFlow\": true,\n      \"forbid\": [\n        \"sameWhiteCardStack\",\n        \"positionOnlyDifferentiation\",\n        \"decorationFirstComposition\",\n        \"surfaceCountForRichness\",\n        \"splitContinuousSentenceForVariety\"\n      ]\n    },\n    \"alignmentContract\": {\n      \"priority\": [\n        \"shared_left_edge\",\n        \"shared_top_edge\",\n        \"consistent_width\",\n        \"semantic_asymmetry\"\n      ],\n      \"sameSemanticLevelSharedLeftEdge\": true,\n      \"comparisonPeersTopAligned\": true,\n      \"comparisonPeersEqualWidth\": true,\n      \"sequenceItemsSharedLeftEdge\": true,\n      \"asymmetryOnlyForExplicitPrimarySupporting\": true,\n      \"forbid\": [\n        \"randomIndent\",\n        \"randomWidth\",\n        \"staggerForVariety\"\n      ]\n    },\n    \"comparisonLayoutContract\": {\n      \"sideBySideAllowed\": true,\n      \"sideBySideMaxCharsPerPeer\": 80,\n      \"sideBySideMaxCombinedChars\": 150,\n      \"withinLimitLayout\": \"aligned_equal_width_columns\",\n      \"overLimitLayout\": \"vertical_full_width_stack\",\n      \"verticalStackSharedLeftEdge\": true\n    },\n    \"highlightContract\": {\n      \"maximumSegmentsPerPage\": 3,\n      \"sameSemanticCategoryUsesSameStyle\": true,\n      \"shortHighlightNoWrapMaxChars\": 12,\n      \"shortHighlightMoveWholeToNextLine\": true,\n      \"forbidOrphanTailCharsMax\": 2,\n      \"forbid\": [\n        \"multicolorSameCategory\",\n        \"oneOrTwoCharacterHighlightedTail\"\n      ]\n    },\n    \"webViewCompatibilityContract\": {\n      \"baseline\": \"Android System WebView Chrome 68\",\n      \"untranspiledSource\": true,\n      \"modernFeaturesEnhancementOnly\": true,\n      \"forbidJavaScriptSyntax\": [\n        \"nullishCoalescing\",\n        \"optionalChaining\",\n        \"logicalAssignment\",\n        \"classFields\",\n        \"topLevelAwait\"\n      ],\n      \"forbidDomApis\": [\n        \"replaceChildren\",\n        \"toggleAttribute\",\n        \"queueMicrotask\",\n        \"structuredClone\",\n        \"crypto.randomUUID\"\n      ],\n      \"forbidCssFeatures\": [\n        \"minFunction\",\n        \"maxFunction\",\n        \"clampFunction\",\n        \"dynamicViewportUnits\",\n        \"aspectRatio\",\n        \"insetShorthand\",\n        \"flexGap\",\n        \"textWrap\",\n        \"backdropFilter\",\n        \"logicalProperties\",\n        \"modernColorFunctions\"\n      ],\n      \"requiredFallbacks\": [\n        \"height100Percent\",\n        \"physicalSpacingProperties\",\n        \"widthPlusMaxWidth\",\n        \"guardedObservers\",\n        \"visibleStaticFirstScreen\"\n      ]\n    },\n    \"sourceTextProjectionContract\": {\n      \"required\": true,\n      \"visibleOccurrencesPerBlock\": 1,\n      \"allowContiguousDomFragments\": true,\n      \"concatenatedTextMustEqualSource\": true,\n      \"forbidFullBlockPlusDerivedFragments\": true,\n      \"forbidParaphrasedLabels\": true\n    },\n    \"visualHierarchyContract\": {\n      \"required\": false,\n      \"semanticHierarchyFirst\": true,\n      \"priorityOrder\": [\n        \"source_fidelity\",\n        \"semantic_relationship\",\n        \"reading_clarity\",\n        \"typographic_elegance\",\n        \"decoration\"\n      ],\n      \"minimumReadingAreaCoveragePercent\": 45,\n      \"requireOpenOrNonCardRegion\": true,\n      \"maximumIndependentContentSurfaces\": 4,\n      \"sourceSubstringHighlight\": {\n        \"allowed\": true,\n        \"exactSourceOnly\": true,\n        \"maximumSegments\": 3,\n        \"forbidDuplicateText\": true,\n        \"preferredStyles\": [\n          \"font_weight\",\n          \"underline\",\n          \"soft_background\"\n        ]\n      },\n      \"decorativeElements\": {\n        \"minimum\": 0,\n        \"maximum\": 2,\n        \"optional\": true,\n        \"cssOnly\": true,\n        \"ariaHidden\": true,\n        \"forbidText\": true,\n        \"forbidGeneratedEmoji\": true\n      },\n      \"forbid\": [\n        \"allWhiteCards\",\n        \"allEqualRadius\",\n        \"allEqualWidthVerticalStack\",\n        \"inventedBadgeCopy\",\n        \"decorationFirstComposition\",\n        \"surfaceCountForRichness\",\n        \"largeUnusedLowerArea\",\n        \"topHeavyComposition\"\n      ]\n    },\n    \"designExecutionContract\": {\n      \"required\": true,\n      \"source\": \"S5.design_brief\",\n      \"layoutArchetype\": \"two_layer_open_reading\",\n      \"groupPresentation\": [\n        {\n          \"groupId\": \"primary_reading\",\n          \"geometry\": \"open_reading_band\",\n          \"surfaceRole\": \"open_background\",\n          \"visualWeight\": \"supporting\"\n        },\n        {\n          \"groupId\": \"supporting_result\",\n          \"geometry\": \"open_body_flow\",\n          \"surfaceRole\": \"open_background\",\n          \"visualWeight\": \"normal\"\n        }\n      ],\n      \"sourceProjectionPlan\": [\n        {\n          \"blockIndex\": 1,\n          \"mode\": \"single_region\",\n          \"region\": \"primary_reading\"\n        },\n        {\n          \"blockIndex\": 2,\n          \"mode\": \"single_region\",\n          \"region\": \"supporting_result\"\n        }\n      ],\n      \"emphasisTargets\": [],\n      \"surfacePolicy\": {\n        \"lightDominant\": true,\n        \"allowLargeDarkSurface\": false,\n        \"nonCodeDarkSurfaceAreaPercentMax\": 0,\n        \"minimumOpenRegions\": 1,\n        \"maximumTopLevelVisualRegions\": 4,\n        \"nestedItemStyle\": \"flat_subregion\",\n        \"nestedItemsUseIndependentShadow\": false,\n        \"punctuatedClausesUseInlineFlow\": true,\n        \"maximumDecorativeGroups\": 2,\n        \"forbid\": [\n          \"largeNearBlackContentPanel\",\n          \"allContentInsideCards\",\n          \"uniformRoundedCardStack\"\n        ]\n      },\n      \"colorRoles\": {\n        \"primaryEmphasis\": \"runs_purple_inline\",\n        \"conflictEvidence\": \"warm_amber_inline\",\n        \"supportingInformation\": \"cool_blue_tint\",\n        \"conclusionSurface\": \"light_purple_tint\",\n        \"bodyText\": \"dark_neutral\",\n        \"inlineHighlightOnly\": true\n      },\n      \"spaceBalance\": {\n        \"readingAreaTarget\": \"60_to_75_percent\",\n        \"maximumUnusedLowerAreaPercent\": 12,\n        \"forbidTopHeavyComposition\": true\n      },\n      \"alignmentPolicy\": {\n        \"priority\": [\n          \"shared_left_edge\",\n          \"shared_top_edge\",\n          \"consistent_width\",\n          \"semantic_asymmetry\"\n        ],\n        \"sameSemanticLevelSharedLeftEdge\": true,\n        \"comparisonPeersTopAligned\": true,\n        \"comparisonPeersEqualWidth\": true,\n        \"sequenceItemsSharedLeftEdge\": true,\n        \"asymmetryOnlyForExplicitPrimarySupporting\": true,\n        \"forbid\": [\n          \"randomIndent\",\n          \"randomWidth\",\n          \"staggerForVariety\"\n        ]\n      },\n      \"comparisonLayoutPolicy\": {\n        \"sideBySideAllowed\": true,\n        \"sideBySideMaxCharsPerPeer\": 80,\n        \"sideBySideMaxCombinedChars\": 150,\n        \"withinLimitLayout\": \"aligned_equal_width_columns\",\n        \"overLimitLayout\": \"vertical_full_width_stack\",\n        \"verticalStackSharedLeftEdge\": true\n      },\n      \"highlightPolicy\": {\n        \"maximumSegmentsPerPage\": 3,\n        \"sameSemanticCategoryUsesSameStyle\": true,\n        \"shortHighlightNoWrapMaxChars\": 12,\n        \"shortHighlightMoveWholeToNextLine\": true,\n        \"forbidOrphanTailCharsMax\": 2,\n        \"forbid\": [\n          \"multicolorSameCategory\",\n          \"oneOrTwoCharacterHighlightedTail\"\n        ]\n      }\n    }\n  },\n  \"footerContract\": {\n    \"required\": true,\n    \"footerClass\": \"case-footer\",\n    \"buttonClass\": \"case-primary-button\",\n    \"buttonText\": \"继续学习\"\n  },\n  \"linkedQuestionPageId\": \"P05\"\n}\n</PAGE_DATA>\n\n<DESIGN_BRIEF>\n{\n  \"nonRenderable\": true,\n  \"teachingAction\": \"按冻结原文的真实顺序组织阅读，并突出其中已有的概念、关系或判断。\",\n  \"density\": \"light\",\n  \"shortPageComposition\": \"two_layer_reading\",\n  \"semanticGroups\": [\n    {\n      \"id\": \"primary_reading\",\n      \"role\": \"intro\",\n      \"blockIndexes\": [\n        1\n      ],\n      \"purpose\": \"主阅读层\"\n    },\n    {\n      \"id\": \"supporting_result\",\n      \"role\": \"context\",\n      \"blockIndexes\": [\n        2\n      ],\n      \"purpose\": \"弱结果层\"\n    }\n  ],\n  \"hierarchyFocus\": [\n    \"primary_reading\",\n    \"supporting_result\"\n  ],\n  \"contentShape\": \"continuous_explanation\",\n  \"rhythmRole\": \"narrative\",\n  \"readingFlow\": [\n    \"按原序阅读主阅读层\",\n    \"按原序阅读弱结果层\"\n  ],\n  \"layoutFreedom\": \"仅用无文字留白组织两条短原文；不得补写连接、步骤或结论。\",\n  \"layoutArchetype\": \"two_layer_open_reading\",\n  \"groupPresentation\": [\n    {\n      \"groupId\": \"primary_reading\",\n      \"geometry\": \"open_reading_band\",\n      \"surfaceRole\": \"open_background\",\n      \"visualWeight\": \"supporting\"\n    },\n    {\n      \"groupId\": \"supporting_result\",\n      \"geometry\": \"open_body_flow\",\n      \"surfaceRole\": \"open_background\",\n      \"visualWeight\": \"normal\"\n    }\n  ],\n  \"sourceProjectionPlan\": [\n    {\n      \"blockIndex\": 1,\n      \"mode\": \"single_region\",\n      \"region\": \"primary_reading\"\n    },\n    {\n      \"blockIndex\": 2,\n      \"mode\": \"single_region\",\n      \"region\": \"supporting_result\"\n    }\n  ],\n  \"emphasisTargets\": [],\n  \"surfacePolicy\": {\n    \"lightDominant\": true,\n    \"allowLargeDarkSurface\": false,\n    \"nonCodeDarkSurfaceAreaPercentMax\": 0,\n    \"minimumOpenRegions\": 1,\n    \"maximumTopLevelVisualRegions\": 4,\n    \"nestedItemStyle\": \"flat_subregion\",\n    \"nestedItemsUseIndependentShadow\": false,\n    \"punctuatedClausesUseInlineFlow\": true,\n    \"maximumDecorativeGroups\": 2,\n    \"forbid\": [\n      \"largeNearBlackContentPanel\",\n      \"allContentInsideCards\",\n      \"uniformRoundedCardStack\"\n    ]\n  },\n  \"colorRoles\": {\n    \"primaryEmphasis\": \"runs_purple_inline\",\n    \"conflictEvidence\": \"warm_amber_inline\",\n    \"supportingInformation\": \"cool_blue_tint\",\n    \"conclusionSurface\": \"light_purple_tint\",\n    \"bodyText\": \"dark_neutral\",\n    \"inlineHighlightOnly\": true\n  },\n  \"spaceBalance\": {\n    \"readingAreaTarget\": \"60_to_75_percent\",\n    \"maximumUnusedLowerAreaPercent\": 12,\n    \"forbidTopHeavyComposition\": true\n  },\n  \"alignmentPolicy\": {\n    \"priority\": [\n      \"shared_left_edge\",\n      \"shared_top_edge\",\n      \"consistent_width\",\n      \"semantic_asymmetry\"\n    ],\n    \"sameSemanticLevelSharedLeftEdge\": true,\n    \"comparisonPeersTopAligned\": true,\n    \"comparisonPeersEqualWidth\": true,\n    \"sequenceItemsSharedLeftEdge\": true,\n    \"asymmetryOnlyForExplicitPrimarySupporting\": true,\n    \"forbid\": [\n      \"randomIndent\",\n      \"randomWidth\",\n      \"staggerForVariety\"\n    ]\n  },\n  \"comparisonLayoutPolicy\": {\n    \"sideBySideAllowed\": true,\n    \"sideBySideMaxCharsPerPeer\": 80,\n    \"sideBySideMaxCombinedChars\": 150,\n    \"withinLimitLayout\": \"aligned_equal_width_columns\",\n    \"overLimitLayout\": \"vertical_full_width_stack\",\n    \"verticalStackSharedLeftEdge\": true\n  },\n  \"highlightPolicy\": {\n    \"maximumSegmentsPerPage\": 3,\n    \"sameSemanticCategoryUsesSameStyle\": true,\n    \"shortHighlightNoWrapMaxChars\": 12,\n    \"shortHighlightMoveWholeToNextLine\": true,\n    \"forbidOrphanTailCharsMax\": 2,\n    \"forbid\": [\n      \"multicolorSameCategory\",\n      \"oneOrTwoCharacterHighlightedTail\"\n    ]\n  },\n  \"visualSystem\": \"浅色主导的RunS紫蓝系统；开放正文与柔和表面形成层级；非代码内容禁止大面积近黑背景；重点只在原句原位置使用语义色标记。\",\n  \"visibleCopyPolicy\": \"学生可见文字只来自冻结effective_content；按sourceProjectionPlan逐块单次投影，emphasisTargets仅在原句原位置标色，不抽取、不复制、不改写。\"\n}\n</DESIGN_BRIEF>\n\n内容与题目边界硬规则：\n\n1. `contentBlocks` 必须逐块逐字、按原顺序各显示一次；heading 只作为其原文标题显示，引用块必须保留原始换行。\n2. 第一个学生可见 DOM 元素必须根据本页 PAGE_DATA 动态确定；不得写死其他课程或示例页面标题。\n3. 不得生成“案例分析”胶囊、P05、P06、linkedQuestionPageId、来源、QA 或生产说明。\n4. 本页只承载背景。不得生成“请判断下面这句话是对还是错。”、题目标题、选项、答案、解析、答错提示、重试方式或任何答题控件。\n5. 不得新增“请思考”“接下来选择”等动作文案，不得把背景概括成结论。\n6. 内容区可采用通知卡、引用卡和事实材料视觉；PAGE_DATA / 原文已有的小标题、列表名称或短标签可以独立呈现，但必须逐字来源；不得使用在线图片。\n7. 不生成音频、播放器、TTS、字幕、CUE、输入框或 Powered by RunS。\n\nHTML 与页面壳硬规则：\n\n- 必须包含：\n  <script src=\"https://res.xrunda.com/runs/plugin/creator/creator-review-sdk.js\"></script>\n- 除上述 SDK 外，不依赖外部框架、字体、图片或网络资源。\n- 页面适配 360–430px 手机宽度；不得横向滚动。\n- 平台负责顶部状态栏、关闭按钮、案例分析胶囊和进度条；页面内部不得生成 top-safe-area、102px/132px 顶部占位、平台胶囊或进度条。\n- 使用下面的类名和共享 CSS 基线；可以新增内容区 CSS，但不得改变这些计算样式：\n\n<REQUIRED_CSS>\n:root {\n  --safe-bottom: 0px;\n  --page-bottom-rgb: 213, 245, 254;\n  --page-bottom-bg: rgb(var(--page-bottom-rgb));\n  --footer-h: calc(80px + var(--safe-bottom));\n}\nhtml,\nbody {\n  width: 100%;\n  height: 100%;\n  margin: 0;\n  overflow: hidden;\n}\n.case-page {\n  position: relative;\n  width: 100%;\n  height: 100%;\n  overflow: hidden;\n  background: linear-gradient(180deg, #d7c4ff 0%, #dce4ff 42%, var(--page-bottom-bg) 66.667%, var(--page-bottom-bg) 100%);\n}\n.case-scroll {\n  box-sizing: border-box;\n  width: 100%;\n  height: 100%;\n  overflow-x: hidden;\n  overflow-y: auto;\n  padding: 8px 0 calc(var(--footer-h) + 24px);\n  -webkit-overflow-scrolling: touch;\n}\n.case-content {\n  box-sizing: border-box;\n  width: 100%;\n  max-width: 680px;\n  margin: 0 auto;\n  padding: 0 24px;\n}\n.case-content h1 {\n  overflow-wrap: break-word;\n  text-align: center;\n}\n.title-keep {\n  white-space: nowrap;\n}\n.case-footer {\n  position: absolute;\n  z-index: 5;\n  right: 0;\n  bottom: 0;\n  left: 0;\n  display: flex;\n  justify-content: center;\n  padding: 10px 0 calc(10px + var(--safe-bottom));\n  background: var(--page-bottom-bg);\n}\n.case-primary-button {\n  position: static;\n  display: block;\n  width: calc(100% - 64px);\n  max-width: 260px;\n  min-height: 60px;\n  margin: 0;\n  border: 2px solid transparent;\n  border-radius: 40px;\n  color: #fff;\n  background:\n    linear-gradient(180deg, #9260fe, #9260fe) padding-box,\n    linear-gradient(180deg, #f2eef8, #8f5df3) border-box;\n  font: inherit;\n  font-size: 16px;\n  font-weight: 800;\n  cursor: pointer;\n  -webkit-tap-highlight-color: transparent;\n}\n</REQUIRED_CSS>\n\n- DOM 顺序必须是：\n  <main class=\"case-page\">\n    <div class=\"case-scroll\">\n      <article class=\"case-content\">原文标题和全部背景</article>\n    </div>\n    <footer class=\"case-footer\">\n      <button class=\"case-primary-button\" type=\"button\">继续学习</button>\n    </footer>\n  </main>\n- 页面必须实现 UNIFIED_PERSISTENT_BOTTOM_ACTION_BAR：`.case-footer` computed position 为 absolute 且 left/right/bottom 均为 0px；按钮自身为 static。\n- 只有 `.case-scroll` 可以纵向滚动并使用 `box-sizing:border-box`；长短页在任意滚动位置都持续显示底栏。底部预留必须用 JavaScript 同步底栏真实高度并额外保留 24px。\n- 全页只有该按钮调用课程 SDK；页面动作是 next，按钮文案必须是“继续学习”。\n- `footerContract.required=true` 时必须无条件输出且只输出一个与字段匹配的 `<footer class=\"case-footer\">` 与 `<button class=\"case-primary-button\">`；不得条件省略、运行时创建、`display:none`、`visibility:hidden`、`opacity:0`，也不得放进 `.case-scroll`。\n\nJavaScript 必须包含并使用以下安全函数：\n\n<REQUIRED_JS>\nfunction safeNextPage() {\n  if (\n    window.CreatorReviewSDK &&\n    (!window.CreatorReviewSDK.isAvailable || window.CreatorReviewSDK.isAvailable()) &&\n    typeof window.CreatorReviewSDK.nextPage === \"function\"\n  ) {\n    window.CreatorReviewSDK.nextPage();\n    return;\n  }\n  if (window.parent) window.parent.postMessage({ type: \"nextpage\" }, \"*\");\n}\nfunction safeComplete() {\n  if (\n    window.CreatorReviewSDK &&\n    (!window.CreatorReviewSDK.isAvailable || window.CreatorReviewSDK.isAvailable()) &&\n    typeof window.CreatorReviewSDK.complete === \"function\"\n  ) {\n    window.CreatorReviewSDK.complete();\n    return;\n  }\n  if (window.parent) window.parent.postMessage({ type: \"complete\" }, \"*\");\n}\nfunction syncFooterReserve() {\n  var footer = document.querySelector(\".case-footer\");\n  if (!footer) return;\n  document.documentElement.style.setProperty(\n    \"--footer-h\",\n    Math.ceil(footer.getBoundingClientRect().height) + \"px\"\n  );\n}\nwindow.addEventListener(\"load\", syncFooterReserve);\nwindow.addEventListener(\"resize\", syncFooterReserve);\nwindow.addEventListener(\"orientationchange\", syncFooterReserve);\nif (\"ResizeObserver\" in window) {\n  new ResizeObserver(syncFooterReserve).observe(\n    document.querySelector(\".case-footer\")\n  );\n}\n</REQUIRED_JS>\n\n请直接输出最终完整 HTML。"
+    },
+    {
+      "page_no": "P05",
+      "tag": "试一试",
+      "title": "互动题目",
+      "summary": "S5 frozen effective-content projection",
+      "sdk_action": "nextpage",
+      "is_last_page": false,
+      "page_data": {
+        "source_block_ids": [
+          "B04"
+        ],
+        "effective_content_sha256": "005af3d1eb2cdb34a3906fc26650ae86895029f24966677e4dcb353937b1c562",
+        "assembly_mode": "model_oneshot_prompt_control",
+        "expected_model_output": "pure_complete_html",
+        "model_output_status": "NOT_GENERATED",
+        "whole_course_oneshot": "02_整课JSON_完整外层OneShot.md"
+      },
+      "page_kind": "question_component_page",
+      "runtime_type": "component",
+      "prompt": "",
+      "components": [
+        {
+          "type": "galaxy_select_question",
+          "componentId": "L022-I01",
+          "content": {
+            "questions": [
+              {
+                "question": "哪一种信息适合由文字补充？",
+                "options": [
+                  "人物位置",
+                  "事情原因"
+                ],
+                "isMultiple": false,
+                "answerIndex": [
+                  1
+                ],
+                "answer": [
+                  "事情原因"
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "page_no": "P06",
+      "tag": "拓展练习",
+      "title": "拓展练习",
+      "summary": "S5 frozen effective-content projection",
+      "sdk_action": "nextpage",
+      "is_last_page": false,
+      "page_data": {
+        "source_block_ids": [
+          "B05"
+        ],
+        "effective_content_sha256": "1dd63e55be5250cb8bc041b224166fd3a77ffc7220f3beabeba143883c2e96fa",
+        "assembly_mode": "model_oneshot_prompt_control",
+        "expected_model_output": "pure_complete_html",
+        "model_output_status": "NOT_GENERATED",
+        "whole_course_oneshot": "02_整课JSON_完整外层OneShot.md",
+        "route": "compact_direct_oneshot",
+        "oneshot_contract_version": "RunS-PostClassTask-Compact-Direct-OneShot-Contract-v1.11-20260805",
+        "oneshot_asset_sha256": "79d9a7fdad4701c784a9e0e6cfbbbdfaeb727211ce26b8eda7e9a5e46effba98",
+        "prompt_version": "RunS-PostClassTask-Compact-Direct-OneShot-Contract-v1.11-20260805-asset-79d9a7fdad47-prompt-e113cb145d44-lesson022-P06-R36-20260731",
+        "prompt_instance_sha256": "e113cb145d448807e0b46b0994b14ed04762d130b09d70e2a31c1621644f1b5d"
+      },
+      "page_kind": "post_class_task",
+      "runtime_type": "html",
+      "components": [],
+      "prompt": "提示词版本号：RunS-PostClassTask-Compact-Direct-OneShot-Contract-v1.11-20260805-asset-79d9a7fdad47-prompt-e113cb145d44-lesson022-P06-R36-20260731\n\n适用页面：lesson022｜P06｜第 6/7 页｜拓展练习页。\n\n这是一次性完整 Compact-OneShot，没有任何外部上下文。当前合同：RunS-PostClassTask-Compact-Direct-OneShot-Contract-v1.11-20260805。学生正文已按冻结 sections 预编译为静态富卡片 DOM；不得改写、删减、调序或用 JavaScript 重建正文。\n\n最终回复必须且只能包含下方从 <!doctype html> 到 </html> 的完整 HTML，不得输出解释、Markdown 围栏、版本说明、提示词正文、PAGE_DATA 或字段名。\n\n请原样输出下方完整代码：\n\n<!doctype html>\n<html lang=\"zh-CN\">\n<head>\n  <meta charset=\"utf-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1, viewport-fit=cover\">\n  <title>拓展练习页固定模板 Demo</title>\n  <script src=\"https://res.xrunda.com/runs/plugin/creator/creator-review-sdk.js\"></script>\n  <style>\n    /* FIXED_LAYOUT_CONTRACT: 顶部/两侧/底部留白、底栏和主按钮均为固定代码；每课只替换 POST_CLASS_TASK_VARIABLES。 */\n    :root {\n      --purple: #8658f5;\n      --purple-deep: #6840da;\n      --purple-soft: rgba(134, 88, 245, 0.12);\n      --ink: #282634;\n      --muted: rgba(46, 43, 61, 0.62);\n      --surface: rgba(255, 255, 255, 0.66);\n      --surface-strong: rgba(255, 255, 255, 0.84);\n      --yellow: #ffd76a;\n      --yellow-soft: rgba(255, 246, 205, 0.88);\n      --line: rgba(112, 88, 175, 0.11);\n      --safe-bottom: 0px;\n      --footer-h: 92px;\n      --page-bottom-bg: #dff8ff;\n      font-family: -apple-system, \"SF Pro Text\", \"PingFang SC\", \"Noto Sans SC\", \"Microsoft YaHei\", sans-serif;\n      color: var(--ink);\n    }\n\n    * {\n      box-sizing: border-box;\n      min-width: 0;\n    }\n\n    html,\n    body {\n      width: 100%;\n      height: 100%;\n      margin: 0;\n      overflow: hidden;\n      background: linear-gradient(180deg, #ece2ff 0%, var(--page-bottom-bg) 66.667%, var(--page-bottom-bg) 100%);\n    }\n\n    body {\n      letter-spacing: 0.01em;\n    }\n\n    button {\n      font: inherit;\n    }\n\n    .post-task-page {\n      position: relative;\n      width: 100%;\n      max-width: 538px;\n      height: 100%;\n      min-height: 100%;\n      margin: 0 auto;\n      overflow: hidden;\n      background:\n        radial-gradient(circle at 12% 8%, rgba(255, 255, 255, 0.44) 0 8%, transparent 28%),\n        radial-gradient(circle at 88% 20%, rgba(255, 224, 119, 0.25) 0 8%, transparent 26%),\n        linear-gradient(180deg, #d9c6ff 0%, #d7dfff 46%, #d8f7ff 100%);\n    }\n\n    .task-scroll {\n      width: 100%;\n      height: 100%;\n      overflow-y: auto;\n      overflow-x: hidden;\n      padding: 20px 24px\n        calc(var(--footer-h) + var(--safe-bottom) + 22px);\n      overscroll-behavior: contain;\n      -webkit-overflow-scrolling: touch;\n    }\n\n    .top-safe-area {\n      width: 100%;\n      height: 0;\n    }\n\n    .task-hero {\n      display: grid;\n      justify-items: center;\n      padding: 0 8px 16px;\n      text-align: center;\n    }\n\n    .notebook-badge {\n      position: relative;\n      display: grid;\n      place-items: center;\n      width: 76px;\n      height: 76px;\n      margin-bottom: 8px;\n      transform: rotate(-2deg);\n    }\n\n    .notebook-badge::after {\n      content: none;\n    }\n\n    .notebook-image {\n      display: block;\n      width: 76px;\n      height: 76px;\n      object-fit: contain;\n      filter: drop-shadow(0 5px 7px rgba(42, 24, 94, 0.18));\n      transform: rotate(2deg);\n    }\n\n    .task-hero h1 {\n      max-width: 450px;\n      margin: 0;\n      color: var(--ink);\n      font-size: 27px;\n      line-height: 1.35;\n      font-weight: 850;\n    }\n\n    .title-keep-together {\n      white-space: nowrap;\n    }\n\n    .task-content {\n      display: grid;\n      gap: 14px;\n    }\n\n    .task-intro {\n      margin: 0;\n      padding: 0 8px 2px;\n      color: rgba(45, 41, 58, 0.74);\n      font-size: 17px;\n      line-height: 1.72;\n      text-align: center;\n      overflow-wrap: break-word;\n    }\n\n    .task-lead {\n      max-width: 460px;\n      margin-right: auto;\n      margin-left: auto;\n      font-weight: 600;\n    }\n\n    .glass-card {\n      border: 1px solid rgba(255, 255, 255, 0.74);\n      border-radius: 26px;\n      background: var(--surface);\n      box-shadow:\n        inset 0 1px 0 rgba(255, 255, 255, 0.82),\n        0 13px 30px rgba(97, 80, 151, 0.07);\n    }\n\n    .task-card {\n      padding: 18px;\n    }\n\n    .card-heading {\n      display: flex;\n      align-items: center;\n      margin-bottom: 10px;\n    }\n\n    .card-symbol {\n      display: grid;\n      flex: 0 0 auto;\n      place-items: center;\n      width: 32px;\n      height: 32px;\n      border-radius: 11px;\n      color: var(--purple-deep);\n      background: var(--purple-soft);\n      font-size: 14px;\n      line-height: 1;\n      font-weight: 900;\n      margin-right: 10px;\n    }\n\n    .card-heading h2 {\n      margin: 0;\n      color: #433b58;\n      font-size: 15px;\n      line-height: 1.4;\n      font-weight: 850;\n    }\n\n    .task-card p,\n    .decision-card p,\n    .support-copy {\n      margin: 0;\n      color: #373341;\n      font-size: 17px;\n      line-height: 1.72;\n      font-weight: 450;\n      overflow-wrap: break-word;\n    }\n\n    .task-card p {\n      font-weight: 650;\n    }\n\n    .facts-card {\n      padding: 17px;\n    }\n\n    .facts-grid {\n      display: grid;\n      grid-template-columns: repeat(2, minmax(0, 1fr));\n      gap: 9px;\n      margin: 0;\n      padding: 0;\n      list-style: none;\n    }\n\n    .facts-grid li {\n      display: grid;\n      grid-template-columns: 9px minmax(0, 1fr);\n      gap: 8px;\n      align-items: start;\n      min-height: 46px;\n      padding: 11px 12px;\n      border-radius: 16px;\n      color: #4b455d;\n      background: var(--surface-strong);\n      font-size: 14px;\n      line-height: 1.55;\n      font-weight: 600;\n      overflow-wrap: break-word;\n    }\n\n    .facts-grid li::before {\n      width: 7px;\n      height: 7px;\n      margin-top: 7px;\n      border-radius: 50%;\n      background: var(--yellow);\n      box-shadow: 0 0 0 4px rgba(255, 215, 106, 0.2);\n      content: \"\";\n    }\n\n    .facts-grid li:last-child:nth-child(odd) {\n      grid-column: 1 / -1;\n    }\n\n    .action-section {\n      display: grid;\n      gap: 12px;\n      padding: 10px 0 2px;\n    }\n\n    .action-title {\n      display: flex;\n      align-items: center;\n      padding: 0 6px;\n    }\n\n    .action-title::before {\n      width: 24px;\n      height: 4px;\n      border-radius: 999px;\n      background: linear-gradient(90deg, var(--purple-deep), var(--purple));\n      content: \"\";\n      margin-right: 10px;\n    }\n\n    .action-title h2 {\n      margin: 0;\n      color: #423a57;\n      font-size: 19px;\n      line-height: 1.4;\n      font-weight: 850;\n    }\n\n    .step-group {\n      position: relative;\n      padding-left: 45px;\n    }\n\n    .step-group::before {\n      position: absolute;\n      top: 44px;\n      bottom: -12px;\n      left: 18px;\n      width: 2px;\n      border-radius: 999px;\n      background: linear-gradient(180deg, rgba(134, 88, 245, 0.32), rgba(134, 88, 245, 0.05));\n      content: \"\";\n    }\n\n    .step-group:last-child::before {\n      display: none;\n    }\n\n    .step-index {\n      position: absolute;\n      z-index: 2;\n      top: 16px;\n      left: 0;\n      display: grid;\n      place-items: center;\n      width: 37px;\n      height: 37px;\n      border: 3px solid rgba(255, 255, 255, 0.7);\n      border-radius: 13px;\n      color: #fff;\n      background: linear-gradient(145deg, var(--purple), var(--purple-deep));\n      font-size: 12px;\n      line-height: 1;\n      font-weight: 900;\n      box-shadow: 0 9px 18px rgba(104, 64, 218, 0.2);\n    }\n\n    .step-card {\n      padding: 16px;\n    }\n\n    .step-lead {\n      margin: 0 0 12px;\n      color: #393348;\n      font-size: 17px;\n      line-height: 1.65;\n      font-weight: 750;\n      overflow-wrap: break-word;\n    }\n\n    .prompt-block {\n      overflow: hidden;\n      border: 1px solid rgba(115, 81, 208, 0.12);\n      border-radius: 18px;\n      background: linear-gradient(145deg, #3f3560 0%, #2e2848 100%);\n      box-shadow: 0 11px 24px rgba(50, 41, 76, 0.12);\n    }\n\n    .prompt-label {\n      display: flex;\n      align-items: center;\n      min-height: 34px;\n      padding: 8px 13px;\n      border-bottom: 1px solid rgba(255, 255, 255, 0.09);\n      color: rgba(255, 255, 255, 0.62);\n      font-family: ui-monospace, \"SFMono-Regular\", Consolas, \"Liberation Mono\", monospace;\n      font-size: 10px;\n      line-height: 1;\n      font-weight: 800;\n      letter-spacing: 0.12em;\n    }\n\n    .prompt-label::before {\n      width: 7px;\n      height: 7px;\n      border-radius: 50%;\n      background: var(--yellow);\n      content: \"\";\n      box-shadow: 11px 0 0 rgba(255, 255, 255, 0.3), 22px 0 0 rgba(255, 255, 255, 0.16);\n      margin-right: 30px;\n    }\n\n    .prompt-block pre {\n      margin: 0;\n      padding: 15px;\n      overflow-x: auto;\n      white-space: pre-wrap;\n      overflow-wrap: break-word;\n    }\n\n    .prompt-block code {\n      color: rgba(255, 255, 255, 0.92);\n      font-family: ui-monospace, \"SFMono-Regular\", Consolas, \"Liberation Mono\", \"PingFang SC\", monospace;\n      font-size: 15px;\n      line-height: 1.72;\n      font-weight: 450;\n    }\n\n    .checklist-block {\n      overflow: hidden;\n      border: 1px solid rgba(104, 64, 218, 0.12);\n      border-radius: 18px;\n      background: rgba(255, 255, 255, 0.72);\n    }\n\n    .checklist-label {\n      padding: 10px 13px;\n      color: var(--purple-deep);\n      background: rgba(134, 88, 245, 0.1);\n      font-size: 13px;\n      line-height: 1.4;\n      font-weight: 850;\n    }\n\n    .checklist-row {\n      display: grid;\n      grid-template-columns: minmax(76px, auto) minmax(0, 1fr);\n      gap: 8px;\n      min-height: 40px;\n      padding: 9px 13px;\n      color: #403a50;\n      font-size: 14px;\n      line-height: 1.5;\n    }\n\n    .checklist-row + .checklist-row {\n      border-top: 1px solid rgba(104, 64, 218, 0.08);\n    }\n\n    .checklist-key {\n      color: #54496b;\n      font-weight: 750;\n    }\n\n    .checklist-row-full {\n      display: block;\n    }\n\n    .decision-card {\n      position: relative;\n      overflow: hidden;\n      padding: 19px 18px 18px;\n      background:\n        radial-gradient(circle at 100% 0, rgba(255, 215, 106, 0.24), transparent 34%),\n        var(--surface);\n    }\n\n    .decision-card::after {\n      position: absolute;\n      right: -18px;\n      bottom: -20px;\n      width: 80px;\n      height: 80px;\n      border-radius: 28px;\n      background: rgba(134, 88, 245, 0.06);\n      content: \"\";\n      transform: rotate(18deg);\n    }\n\n    .support-stack {\n      display: grid;\n      gap: 9px;\n      padding: 14px;\n      border: 1px solid rgba(255, 234, 155, 0.75);\n      border-radius: 22px;\n      background: var(--yellow-soft);\n      box-shadow: 0 10px 24px rgba(125, 103, 55, 0.06);\n    }\n\n    .support-row {\n      display: grid;\n      grid-template-columns: 28px minmax(0, 1fr);\n      gap: 10px;\n      align-items: start;\n      padding: 3px 2px;\n    }\n\n    .support-row + .support-row {\n      padding-top: 11px;\n      border-top: 1px solid rgba(126, 103, 49, 0.1);\n    }\n\n    .support-mark {\n      display: grid;\n      place-items: center;\n      width: 28px;\n      height: 28px;\n      border-radius: 10px;\n      color: #6d5522;\n      background: rgba(255, 255, 255, 0.56);\n      font-size: 13px;\n      line-height: 1;\n      font-weight: 900;\n    }\n\n    .support-copy {\n      color: #5c4a28;\n      font-size: 14px;\n      line-height: 1.65;\n      font-weight: 650;\n    }\n\n    .task-footer {\n      position: absolute;\n      z-index: 5;\n      display: flex;\n      flex-direction: column;\n      align-items: center;\n      justify-content: center;\n      right: 0;\n      bottom: 0;\n      left: 0;\n      padding: 16px 0 calc(14px + var(--safe-bottom));\n      background: var(--page-bottom-bg);\n    }\n\n    .task-button {\n      width: calc(100% - 64px);\n      max-width: 260px;\n      max-width: 260px;\n      min-height: 60px;\n      border: 2px solid transparent;\n      border-radius: 40px;\n      color: #fff;\n      background:\n        linear-gradient(180deg, rgba(255, 255, 255, 0.18), transparent) padding-box,\n        linear-gradient(180deg, #9260fe, #9260fe) padding-box,\n        linear-gradient(180deg, #f2eef8, #8f5df3) border-box;\n      box-shadow: 0 13px 27px rgba(104, 64, 218, 0.24);\n      font-size: 16px;\n      line-height: 1.2;\n      font-weight: 850;\n      cursor: pointer;\n      transition: transform 150ms ease-out, filter 150ms ease-out;\n      -webkit-tap-highlight-color: transparent;\n    }\n\n    .task-button:active {\n      transform: translateY(2px);\n      filter: brightness(0.98);\n    }\n\n    @media (max-width: 420px) {\n      .task-scroll {\n        padding-right: 24px;\n        padding-left: 24px;\n      }\n\n      .notebook-badge {\n        width: 76px;\n        height: 76px;\n      }\n\n      .facts-grid {\n        grid-template-columns: 1fr;\n      }\n\n      .facts-grid li:last-child:nth-child(odd) {\n        grid-column: auto;\n      }\n\n      .step-group {\n        padding-left: 41px;\n      }\n\n    }\n\n    @media (orientation: landscape) and (max-height: 720px) {\n      .post-task-page {\n        max-width: 760px;\n      }\n\n      .top-safe-area {\n        height: 0;\n      }\n\n      .task-hero {\n        grid-template-columns: 64px minmax(0, 1fr);\n        column-gap: 16px;\n        align-items: center;\n        justify-items: start;\n        padding: 8px 12px 18px;\n        text-align: left;\n      }\n\n      .notebook-badge {\n        width: 64px;\n        height: 64px;\n        margin: 0;\n      }\n\n      .notebook-image {\n        width: 64px;\n        height: 64px;\n      }\n\n      .task-hero h1 {\n        max-width: none;\n        font-size: 23px;\n      }\n\n      .task-footer {\n        padding-top: 16px;\n        padding-bottom: calc(14px + var(--safe-bottom));\n      }\n    }\n\n    @media (prefers-reduced-motion: reduce) {\n      * {\n        scroll-behavior: auto !important;\n        transition: none !important;\n      }\n    }\n  </style>\n</head>\n<body>\n  <main class=\"post-task-page\" data-screen-label=\"拓展练习页方案A\">\n    <div class=\"task-scroll\" id=\"taskScroll\">\n      <div class=\"top-safe-area\" aria-hidden=\"true\"></div>\n\n      <header class=\"task-hero\" aria-labelledby=\"taskTitle\">\n        <div class=\"notebook-badge\" aria-hidden=\"true\">\n          <img class=\"notebook-image\" src=\"https://res.xrunda.com/xruns/static/image/20270724/3.png\" width=\"76\" height=\"76\" alt=\"\">\n        </div>\n        <h1 id=\"taskTitle\">完成一张图文说明卡</h1>\n      </header>\n\n      <section class=\"task-content\" id=\"taskContent\" aria-label=\"拓展练习内容\"><p class=\"task-intro task-lead\" data-section-role=\"lead\" data-source-section-index=\"0\">选择课程中的一张图片，为它补充一句画面外的信息。</p><section class=\"glass-card facts-card\" data-section-role=\"preflight\"><div class=\"card-heading\"><span class=\"card-symbol\">✓</span><h2>固定材料</h2></div><ul class=\"facts-grid\" data-source-section-index=\"1\"><li>课程图片；一句补充文字。</li></ul></section><section class=\"action-section\"><div class=\"action-title\"><h2>操作步骤</h2></div><article class=\"step-group\"><span class=\"step-index\">01</span><section class=\"glass-card step-card\"><div class=\"prompt-block\" data-section-role=\"prompt\"><div class=\"prompt-label\">提示词</div><pre data-source-section-index=\"2\"><code>请检查文字是否补充了图片中看不到的信息。</code></pre></div></section></article><article class=\"step-group\"><span class=\"step-index\">02</span><section class=\"glass-card step-card\"><p class=\"step-lead\" data-section-role=\"review\" data-source-section-index=\"3\">完成后再核对图片和文字是否互相重复。</p></section></article></section></section>\n    </div>\n\n    <footer class=\"task-footer\">\n      <button class=\"task-button\" id=\"taskButton\" type=\"button\">继续学习</button>\n    </footer>\n  </main>\n\n  <script>\nfunction safeNextPage() { if (window.CreatorReviewSDK && (!CreatorReviewSDK.isAvailable || CreatorReviewSDK.isAvailable()) && typeof CreatorReviewSDK.nextPage === \"function\") CreatorReviewSDK.nextPage(); }\nfunction safeComplete() { if (window.CreatorReviewSDK && (!CreatorReviewSDK.isAvailable || CreatorReviewSDK.isAvailable()) && typeof CreatorReviewSDK.complete === \"function\") CreatorReviewSDK.complete(); }\n\nfunction syncFooterReserve() { const footer=document.querySelector(\".task-footer\"); if (footer) document.documentElement.style.setProperty(\"--footer-h\", Math.ceil(footer.getBoundingClientRect().height || 92) + \"px\"); }\nsyncFooterReserve(); if (\"ResizeObserver\" in window) new ResizeObserver(syncFooterReserve).observe(document.querySelector(\".task-footer\")); window.addEventListener(\"resize\", syncFooterReserve, {passive:true}); document.getElementById(\"taskButton\").addEventListener(\"click\", safeNextPage);\n  </script>\n</body>\n</html>"
+    },
+    {
+      "page_no": "P07",
+      "tag": "课程小结",
+      "title": "课程小结",
+      "summary": "S5 frozen effective-content projection",
+      "sdk_action": "complete",
+      "is_last_page": true,
+      "page_data": {
+        "source_block_ids": [
+          "B06"
+        ],
+        "effective_content_sha256": "0d41dc207ad6362e7ef7038a9970caecf4213334697c32cff97b3e3557acb867",
+        "assembly_mode": "model_oneshot_prompt_control",
+        "expected_model_output": "pure_complete_html",
+        "model_output_status": "NOT_GENERATED",
+        "whole_course_oneshot": "02_整课JSON_完整外层OneShot.md",
+        "route": "fixed_template",
+        "template": "COURSE_SUMMARY_VARIABLES",
+        "oneshot_contract_version": "RunS-CourseSummary-FixedTemplate-OneShot-v1.11",
+        "oneshot_asset_sha256": "95f033f32583035fb846732e9092d868ede638a8aa837c9fd41bf20d1aaee142",
+        "template_sha256": "52310103bf4db235c39b94f1393b6a1f8436a32794b4b42aee1580d44ee51d8c",
+        "non_variable_sha256": "80570336e03205383a7a296d07b00e57d15e745b7f53f90ac6660d9221efa356",
+        "template_outside_variable_region_unchanged": true,
+        "prompt_version": "RunS-CourseSummary-FixedTemplate-OneShot-v1.11-asset-95f033f32583-prompt-46f731f608a1-lesson022-P07-R36-20260731",
+        "prompt_instance_sha256": "46f731f608a1e935f8e0a4938351ecc03d25705db56c3e25398dece9cb207201"
+      },
+      "page_kind": "course_summary",
+      "runtime_type": "html",
+      "components": [],
+      "prompt": "提示词版本号：RunS-CourseSummary-FixedTemplate-OneShot-v1.11-asset-95f033f32583-prompt-46f731f608a1-lesson022-P07-R36-20260731\n\n适用页面：lesson022｜P07｜第 7/7 页｜课程小结页。\n\n请输出一个完整、可运行的移动端 HTML 网页。\n\n这是一次性提示词，没有任何外部上下文。不得读取文件、路径、Demo、SOP、历史模板或其他对话。网页所需的课程内容、HTML、CSS、JavaScript、图片元素和 SDK 行为已经全部包含在本提示词中。\n\n最终回复必须且只能包含下方完整 HTML：\n\n- 第一个非空白字符必须是 HTML 文档声明。\n- 最后一个标签必须是 </html>。\n- 不得输出解释、Markdown 围栏、版本说明、调试信息或提示词正文。\n- 不得重排、改写、删减或补写学生可见内容。\n- 不得修改 COURSE_SUMMARY_VARIABLES 之外的任何 HTML、CSS、JavaScript、图片地址、模块顺序、按钮或 SDK 行为。\n- 必须保留透明完成头部、奖杯到标题 0px、标题到小结卡 24px、长内容滚动、统一底栏和唯一课程动作按钮。\n- 不得生成平台顶部壳层、页面类型胶囊、音频、播放器、TTS、字幕、CUE、输入框、Powered by RunS 或来源中不存在的模块。\n- COURSE_SUMMARY_VARIABLES.pageAction 是本页唯一动作真源；值为 next 时调用 CreatorReviewSDK.nextPage() 且静态底部按钮必须直接显示“继续学习”，值为 complete 时调用 CreatorReviewSDK.complete() 且静态底部按钮必须直接显示“完成学习”。\n- 单一总结块时使用单块小结构图分支；不得补写、拆改或重复学生原文。此分支只调整既有奖杯、标题和小结卡的比例与垂直居中，不生成额外列表、步骤、预告或按钮。\n- 本实例冻结动作为 complete；装配其他课程时必须以该页有效页面规划为准，不得复制本实例动作。\n\n下方 HTML 已完成本课变量注入。请直接返回这份完整 HTML，不得重新解释、修复、格式化、换引号或改写任何字符：\n\n<!doctype html>\n<html lang=\"zh-CN\">\n<head>\n  <meta charset=\"utf-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1, viewport-fit=cover\">\n  <title>课程小结页固定模板</title>\n  <script src=\"https://res.xrunda.com/runs/plugin/creator/creator-review-sdk.js\"></script>\n  <style>\n    /* FIXED_LAYOUT_CONTRACT: 顶部/两侧/底部留白、底栏和主按钮均为固定代码；每课只替换 COURSE_SUMMARY_VARIABLES。 */\n    :root {\n      --purple: #9260fe;\n      --purple-soft: rgba(146, 96, 254, 0.12);\n      --ink: #252431;\n      --muted: rgba(39, 39, 52, 0.58);\n      --surface: rgba(255, 255, 255, 0.58);\n      --surface-strong: rgba(255, 255, 255, 0.78);\n      --safe-bottom: 0px;\n      --page-bottom-rgb: 232, 219, 255;\n      --page-bottom-bg: rgb(var(--page-bottom-rgb));\n      --footer-h: calc(80px + var(--safe-bottom));\n      --content-max: 360px;\n      --button-height: 60px;\n      --button-radius: 40px;\n      font-family: -apple-system, \"SF Pro Text\", \"PingFang SC\", \"Noto Sans SC\", \"Microsoft YaHei\", sans-serif;\n      color: var(--ink);\n    }\n\n    * {\n      box-sizing: border-box;\n      min-width: 0;\n    }\n\n    html,\n    body {\n      width: 100%;\n      height: 100%;\n      margin: 0;\n      overflow: hidden;\n      background: var(--page-bottom-bg);\n    }\n\n    body {\n      letter-spacing: 0.01em;\n    }\n\n    .summary-page {\n      position: relative;\n      width: 100%;\n      max-width: 538px;\n      height: 100%;\n      min-height: 100%;\n      margin: 0 auto;\n      overflow: hidden;\n      background:\n        radial-gradient(circle at 50% 8%, rgba(255, 255, 255, 0.28) 0 9%, transparent 30%),\n        linear-gradient(180deg, #d9f4ff 0%, #dddfff 47%, var(--page-bottom-bg) 66.667%, var(--page-bottom-bg) 100%);\n    }\n\n    .summary-scroll {\n      width: 100%;\n      height: 100%;\n      overflow-y: auto;\n      overflow-x: hidden;\n      padding: 28px 24px\n        calc(var(--footer-h) + 24px);\n      overscroll-behavior: contain;\n      -webkit-overflow-scrolling: touch;\n    }\n\n    .top-safe-area {\n      display: none;\n      width: 100%;\n      height: 0;\n    }\n\n    .completion-card {\n      position: relative;\n      width: 100%;\n      max-width: var(--content-max);\n      min-height: 0;\n      margin: 93px auto 0;\n      padding: 49px 20px 8px;\n      border-radius: 20px;\n      text-align: center;\n    }\n\n    .trophy-wrap {\n      position: absolute;\n      z-index: 3;\n      top: -93px;\n      left: 50%;\n      width: 106px;\n      height: 142px;\n      transform: translateX(-50%);\n      pointer-events: none;\n    }\n\n    .trophy-wrap img {\n      display: block;\n      width: 100%;\n      height: 100%;\n      object-fit: contain;\n    }\n\n    .completion-card h1 {\n      margin: 0;\n      color: var(--ink);\n      font-size: 18px;\n      line-height: 1.35;\n      font-weight: 800;\n    }\n\n    .summary-card,\n    .next-card {\n      width: 100%;\n      max-width: var(--content-max);\n      margin-right: auto;\n      margin-top: 16px;\n      margin-left: auto;\n      border: 1px solid rgba(255, 255, 255, 0.72);\n      border-radius: 22px;\n      background: var(--surface);\n      box-shadow:\n        inset 0 1px 0 rgba(255, 255, 255, 0.82),\n        0 12px 30px rgba(111, 105, 177, 0.06);\n    }\n\n    .summary-card {\n      padding: 18px;\n    }\n\n    .summary-card.summary-card--single-block {\n      display: grid;\n      min-height: 300px;\n      align-content: center;\n    }\n\n    .summary-card.summary-card--single-block .summary-content {\n      max-width: 31rem;\n      margin: 0 auto;\n    }\n\n    .summary-card h2 {\n      margin: 0 0 12px;\n      color: var(--purple);\n      font-size: 20px;\n      line-height: 1.45;\n      font-weight: 800;\n      text-align: center;\n    }\n\n    .next-card h2 {\n      margin: 0 0 10px;\n      color: var(--purple);\n      font-size: 18px;\n      line-height: 1.45;\n      font-weight: 400;\n      text-align: center;\n    }\n\n    .summary-content {\n      display: grid;\n      gap: 12px;\n    }\n\n    .summary-paragraph,\n    .summary-quote,\n    .summary-notice {\n      margin: 0;\n      color: #34313f;\n      font-size: 17px;\n      line-height: 1.72;\n      font-weight: 400;\n      overflow-wrap: break-word;\n    }\n\n    .summary-paragraph {\n      padding: 0 2px;\n    }\n\n    .summary-list {\n      display: grid;\n      gap: 10px;\n      margin: 0;\n      padding: 0;\n      list-style: none;\n    }\n\n    .summary-item {\n      display: grid;\n      grid-template-columns: 34px minmax(0, 1fr);\n      gap: 11px;\n      align-items: start;\n      padding: 13px 14px;\n      border-radius: 18px;\n      background: var(--surface-strong);\n      color: #34313f;\n      font-size: 17px;\n      line-height: 1.58;\n      font-weight: 400;\n      overflow-wrap: break-word;\n    }\n\n    .summary-index {\n      display: grid;\n      place-items: center;\n      width: 34px;\n      height: 34px;\n      border-radius: 11px;\n      color: var(--purple);\n      background: var(--purple-soft);\n      font-size: 12px;\n      line-height: 1;\n      font-weight: 900;\n    }\n\n    .summary-quote {\n      position: relative;\n      padding: 16px 17px 16px 43px;\n      border-radius: 20px;\n      background:\n        linear-gradient(145deg, rgba(255, 255, 255, 0.82), rgba(244, 239, 255, 0.82));\n      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);\n    }\n\n    .summary-quote::before {\n      position: absolute;\n      top: 10px;\n      left: 15px;\n      color: rgba(146, 96, 254, 0.36);\n      content: \"“\";\n      font-family: Georgia, \"Songti SC\", serif;\n      font-size: 38px;\n      line-height: 1;\n      font-weight: 700;\n    }\n\n    .summary-notice {\n      padding: 14px 16px;\n      border: 1px solid rgba(255, 190, 80, 0.24);\n      border-radius: 18px;\n      color: #5f4a24;\n      background: rgba(255, 248, 220, 0.82);\n      font-weight: 600;\n    }\n\n    .summary-code {\n      margin: 0;\n      padding: 16px 18px;\n      border: 1px solid rgba(255, 255, 255, 0.44);\n      border-radius: 20px;\n      color: rgba(255, 255, 255, 0.96);\n      background:\n        radial-gradient(circle at 92% 8%, rgba(190, 166, 255, 0.28), transparent 36%),\n        linear-gradient(145deg, rgba(82, 66, 122, 0.96), rgba(111, 82, 176, 0.92));\n      box-shadow:\n        inset 0 1px 0 rgba(255, 255, 255, 0.18),\n        0 10px 24px rgba(72, 55, 116, 0.12);\n      overflow-x: hidden;\n      white-space: pre-wrap;\n      overflow-wrap: break-word;\n      word-break: break-word;\n    }\n\n    .summary-code code {\n      font-family: ui-monospace, \"SFMono-Regular\", Menlo, Monaco, Consolas, \"PingFang SC\", \"Noto Sans Mono CJK SC\", monospace;\n      font-size: 16px;\n      line-height: 1.78;\n      font-weight: 650;\n    }\n\n    .next-card {\n      padding: 17px 20px 19px;\n    }\n\n    .next-card p {\n      margin: 0;\n      color: rgba(37, 36, 49, 0.74);\n      font-size: 14px;\n      line-height: 1.65;\n      font-weight: 400;\n      text-align: center;\n      overflow-wrap: break-word;\n    }\n\n    .summary-footer {\n      position: absolute;\n      z-index: 5;\n      display: flex;\n      flex-direction: column;\n      align-items: center;\n      justify-content: center;\n      right: 0;\n      bottom: 0;\n      left: 0;\n      padding: 10px 0 calc(10px + var(--safe-bottom));\n      background: var(--page-bottom-bg);\n    }\n\n    .complete-button {\n      width: calc(100% - 64px);\n      max-width: 260px;\n      min-height: var(--button-height);\n      border: 2px solid transparent;\n      border-radius: var(--button-radius);\n      color: #fff;\n      background:\n        linear-gradient(180deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0)) padding-box,\n        linear-gradient(180deg, #9260fe, #9260fe) padding-box,\n        linear-gradient(180deg, #f2eef8, #8f5df3) border-box;\n      font: inherit;\n      font-size: 16px;\n      line-height: 1;\n      font-weight: 800;\n      cursor: pointer;\n      transition: transform 150ms ease-out, filter 150ms ease-out;\n      -webkit-tap-highlight-color: transparent;\n    }\n\n    .complete-button:active {\n      transform: translateY(2px);\n      filter: brightness(0.98);\n    }\n\n    .summary-error {\n      width: calc(100% - 64px);\n      margin: 120px auto 0;\n      padding: 24px;\n      border-radius: 28px;\n      background: rgba(255, 255, 255, 0.68);\n      color: #792536;\n      text-align: center;\n      font-size: 15px;\n      line-height: 1.6;\n    }\n\n    @media (max-width: 420px) {\n      .summary-scroll {\n        padding-right: 24px;\n        padding-left: 24px;\n      }\n\n      .completion-card {\n        margin-top: 93px;\n      }\n\n      .summary-card {\n        padding: 15px;\n      }\n\n      .summary-content {\n        gap: 10px;\n      }\n\n      .summary-item {\n        grid-template-columns: 32px minmax(0, 1fr);\n        padding: 12px;\n      }\n\n      .summary-index {\n        width: 32px;\n        height: 32px;\n      }\n\n      .summary-quote {\n        padding: 14px 14px 14px 39px;\n      }\n\n      .summary-code {\n        padding: 14px 15px;\n      }\n    }\n\n    @media (orientation: landscape) and (max-height: 720px) {\n      .completion-card {\n        margin-top: 58px;\n        padding-top: 38px;\n        padding-bottom: 12px;\n      }\n\n      .trophy-wrap {\n        top: -58px;\n        width: 72px;\n        height: 96px;\n      }\n\n      .completion-card h1 {\n        font-size: 16px;\n      }\n\n      .summary-card,\n      .next-card {\n        margin-top: 12px;\n      }\n\n      .summary-card {\n        padding: 14px;\n      }\n\n      .summary-item {\n        padding-top: 16px;\n        padding-bottom: 10px;\n      }\n\n      .summary-paragraph,\n      .summary-quote,\n      .summary-notice,\n      .summary-code code {\n        font-size: 15px;\n        line-height: 1.62;\n      }\n\n      .summary-footer {\n        padding-top: 10px;\n        padding-bottom: calc(10px + var(--safe-bottom));\n      }\n    }\n\n    @media (max-height: 660px) and (orientation: portrait) {\n      .completion-card {\n        margin-top: 78px;\n        padding-top: 40px;\n        padding-bottom: 12px;\n      }\n\n      .trophy-wrap {\n        top: -78px;\n        width: 88px;\n        height: 118px;\n      }\n\n      .summary-card,\n      .next-card {\n        margin-top: 12px;\n      }\n    }\n\n    @media (prefers-reduced-motion: reduce) {\n      * {\n        transition: none !important;\n        scroll-behavior: auto !important;\n      }\n    }\n  </style>\n</head>\n<body>\n  <main class=\"summary-page\">\n    <div class=\"summary-scroll\">\n      <div class=\"top-safe-area\" aria-hidden=\"true\"></div>\n\n      <section class=\"completion-card\" aria-labelledby=\"completionTitle\">\n        <div class=\"trophy-wrap\" aria-hidden=\"true\">\n          <img\n            src=\"https://res.xrunda.com/xruns/static/image/course_summary_trophy.png\"\n            alt=\"\"\n          >\n        </div>\n        <h1 id=\"completionTitle\">恭喜你完成本节课程！</h1>\n      </section>\n\n      <section class=\"summary-card\" aria-label=\"本课小结\">\n        <h2 id=\"summaryTitle\">五项信息组成完整的问题说明</h2>\n        <div class=\"summary-content\" id=\"summaryContent\" data-summary-static=\"true\"><p class=\"summary-paragraph\">现在，把刚才的信息合在一起：</p><blockquote class=\"summary-quote\">第一次参加社区桌游体验的人，不清楚不同游戏需要的人数和时长，到了现场常要重新挑选。我们希望他们出发前能根据公开说明选到合适的游戏。处理时只使用公开信息，不收集姓名等个人资料。这样可以减少等待，把更多时间留给游戏体验。</blockquote><p class=\"summary-paragraph\">这段问题说明里有五项信息：</p><ol class=\"summary-list\"><li class=\"summary-item\"><span class=\"summary-index\">01</span><span>对象：第一次参加的人。</span></li><li class=\"summary-item\"><span class=\"summary-index\">02</span><span>困难：不知道人数和时长，到场后重新等待。</span></li><li class=\"summary-item\"><span class=\"summary-index\">03</span><span>期望变化：出发前选到合适的游戏。</span></li><li class=\"summary-item\"><span class=\"summary-index\">04</span><span>边界：只用公开说明，不收集个人信息。</span></li><li class=\"summary-item\"><span class=\"summary-index\">05</span><span>处理价值：减少等待，增加游戏时间。</span></li></ol><aside class=\"summary-notice\">注意，这里还没有决定一定要使用AI。</aside><p class=\"summary-paragraph\">先把问题说清楚，后面才能判断该用什么方法，也才能判断AI是否适合参与。</p></div>\n      </section>\n\n      <section class=\"next-card\" id=\"nextCard\" aria-labelledby=\"nextTitle\" hidden>\n        <h2 id=\"nextTitle\">下一课预告</h2>\n        <p id=\"nextLessonPreview\"></p>\n      </section>\n    </div>\n\n    <footer class=\"summary-footer\">\n      <button class=\"complete-button\" id=\"completeButton\" type=\"button\">完成学习</button>\n    </footer>\n  </main>\n\n  <script>\n    /* ============================================================\n       每课只允许替换本变量区中的完成头、原文内容与 pageAction。\n       contentBlocks 必须按教案原顺序逐字录入，不得概括、删句、合并或去重。\n       变量名、结构、HTML、CSS、渲染逻辑均不得修改。\n       ============================================================ */\n    const COURSE_SUMMARY_VARIABLES = Object.freeze({\"completionTitle\":\"恭喜你完成本节课程！\",\"contentBlocks\":[{\"items\":[\"图片呈现可见线索\",\"文字补充画面外信息\",\"放大查看不改变课程进度\"],\"type\":\"orderedList\"}],\"nextLessonPreview\":\"\",\"pageAction\":\"complete\",\"summaryTitle\":\"图片与文字各有分工\"});\n    /* ======================= 变量区结束 ======================= */\n\n    function validateSummaryVariables(data) {\n      const missing = [];\n      const invalid = [];\n      const allowedTypes = new Set([\"paragraph\", \"orderedList\", \"blockquote\", \"notice\", \"codeBlock\"]);\n\n      if (typeof data.completionTitle !== \"string\" || !data.completionTitle.trim()) missing.push(\"completionTitle\");\n      if (typeof data.summaryTitle !== \"string\" || !data.summaryTitle.trim()) missing.push(\"summaryTitle\");\n      if (!Array.isArray(data.contentBlocks) || data.contentBlocks.length < 1) missing.push(\"contentBlocks\");\n      if (typeof data.nextLessonPreview !== \"string\") missing.push(\"nextLessonPreview\");\n      if (missing.length) throw new Error(`SUMMARY_FIELD_MISSING: ${missing.join(\", \")}`);\n\n      data.contentBlocks.forEach((block, blockIndex) => {\n        if (!block || typeof block !== \"object\" || !allowedTypes.has(block.type)) {\n          invalid.push(`contentBlocks[${blockIndex}].type`);\n          return;\n        }\n\n        if (block.type === \"orderedList\") {\n          if (!Array.isArray(block.items) || block.items.length < 1) {\n            invalid.push(`contentBlocks[${blockIndex}].items`);\n            return;\n          }\n          if (block.sourceNumbered !== undefined && typeof block.sourceNumbered !== \"boolean\") {\n            invalid.push(`contentBlocks[${blockIndex}].sourceNumbered`);\n          }\n          block.items.forEach((item, itemIndex) => {\n            if (typeof item !== \"string\" || !item.trim()) {\n              invalid.push(`contentBlocks[${blockIndex}].items[${itemIndex}]`);\n            }\n          });\n          return;\n        }\n\n        if (block.type === \"codeBlock\" && block.language !== undefined && typeof block.language !== \"string\") {\n          invalid.push(`contentBlocks[${blockIndex}].language`);\n        }\n\n        if (typeof block.text !== \"string\" || !block.text.trim()) {\n          invalid.push(`contentBlocks[${blockIndex}].text`);\n        }\n      });\n\n      if (!new Set([\"next\", \"complete\"]).has(data.pageAction)) invalid.push(\"pageAction\");\n      if (invalid.length) throw new Error(`SUMMARY_FIELD_INVALID: ${invalid.join(\", \")}`);\n    }\n\n    function safeNextPage() {\n      if (\n        window.CreatorReviewSDK &&\n        (!window.CreatorReviewSDK.isAvailable || window.CreatorReviewSDK.isAvailable()) &&\n        typeof window.CreatorReviewSDK.nextPage === \"function\"\n      ) {\n        window.CreatorReviewSDK.nextPage();\n        return;\n      }\n      if (window.parent) window.parent.postMessage({ type: \"nextpage\" }, \"*\");\n    }\n\n    function safeComplete() {\n      if (\n        window.CreatorReviewSDK &&\n        (!window.CreatorReviewSDK.isAvailable || window.CreatorReviewSDK.isAvailable()) &&\n        typeof window.CreatorReviewSDK.complete === \"function\"\n      ) {\n        window.CreatorReviewSDK.complete();\n        return;\n      }\n      if (window.parent) window.parent.postMessage({ type: \"complete\" }, \"*\");\n    }\n\n    function createTextBlock(tagName, className, text, blockType) {\n      const element = document.createElement(tagName);\n      element.className = className;\n      element.dataset.blockType = blockType;\n      element.textContent = text;\n      return element;\n    }\n\n    function createOrderedListBlock(block) {\n      const list = document.createElement(\"ol\");\n      list.className = \"summary-list\";\n      list.dataset.blockType = \"orderedList\";\n      list.dataset.numberingMode = block.sourceNumbered ? \"source-plus-generated\" : \"generated\";\n\n      block.items.forEach((item, index) => {\n        const listItem = document.createElement(\"li\");\n        listItem.className = \"summary-item\";\n\n        const number = document.createElement(\"span\");\n        number.className = \"summary-index\";\n        number.setAttribute(\"aria-hidden\", \"true\");\n        number.textContent = String(index + 1).padStart(2, \"0\");\n        listItem.appendChild(number);\n\n        const text = document.createElement(\"span\");\n        text.textContent = item;\n\n        listItem.appendChild(text);\n        list.appendChild(listItem);\n      });\n\n      return list;\n    }\n\n    function createCodeBlock(block) {\n      const pre = document.createElement(\"pre\");\n      pre.className = \"summary-code\";\n      pre.dataset.blockType = \"codeBlock\";\n      if (block.language) pre.dataset.language = block.language;\n\n      const code = document.createElement(\"code\");\n      code.textContent = block.text;\n      pre.appendChild(code);\n      return pre;\n    }\n\n    function renderContentBlocks(container, blocks) {\n      const fragment = document.createDocumentFragment();\n\n      blocks.forEach(block => {\n        if (block.type === \"orderedList\") {\n          fragment.appendChild(createOrderedListBlock(block));\n          return;\n        }\n\n        if (block.type === \"codeBlock\") {\n          fragment.appendChild(createCodeBlock(block));\n          return;\n        }\n\n        const blockConfig = {\n          paragraph: [\"p\", \"summary-paragraph\"],\n          blockquote: [\"blockquote\", \"summary-quote\"],\n          notice: [\"aside\", \"summary-notice\"]\n        }[block.type];\n\n        fragment.appendChild(createTextBlock(blockConfig[0], blockConfig[1], block.text, block.type));\n      });\n\n      container.textContent = \"\";\n      container.appendChild(fragment);\n    }\n\n    function configurePageAction(button, pageAction) {\n      if (pageAction === \"next\") {\n        button.textContent = \"继续学习\";\n        button.addEventListener(\"click\", safeNextPage);\n        return;\n      }\n\n      button.textContent = \"完成学习\";\n      button.addEventListener(\"click\", safeComplete);\n    }\n\n    function renderSummaryPage() {\n      const data = COURSE_SUMMARY_VARIABLES;\n      validateSummaryVariables(data);\n\n      document.getElementById(\"completionTitle\").textContent = data.completionTitle;\n      document.getElementById(\"summaryTitle\").textContent = data.summaryTitle;\n      renderContentBlocks(document.getElementById(\"summaryContent\"), data.contentBlocks);\n      const summaryCard = document.querySelector(\".summary-card\");\n      summaryCard.classList.toggle(\"summary-card--single-block\", data.contentBlocks.length === 1);\n\n      const nextCard = document.getElementById(\"nextCard\");\n      if (data.nextLessonPreview.trim()) {\n        document.getElementById(\"nextLessonPreview\").textContent = data.nextLessonPreview;\n        nextCard.hidden = false;\n      }\n\n      const button = document.getElementById(\"completeButton\");\n      configurePageAction(button, data.pageAction);\n    }\n\n    function syncLayoutMetrics() {\n      const footer = document.querySelector(\".summary-footer\");\n      const height = Math.ceil(footer.getBoundingClientRect().height || 80);\n      document.documentElement.style.setProperty(\"--footer-h\", `${height}px`);\n    }\n\n    try {\n      renderSummaryPage();\n      syncLayoutMetrics();\n      if (\"ResizeObserver\" in window) {\n        new ResizeObserver(syncLayoutMetrics).observe(document.querySelector(\".summary-footer\"));\n      }\n      window.addEventListener(\"resize\", syncLayoutMetrics, { passive: true });\n      window.addEventListener(\"orientationchange\", () => setTimeout(syncLayoutMetrics, 120), { passive: true });\n    } catch (error) {\n      document.documentElement.dataset.summaryError = \"SUMMARY_FIELD_MISSING\";\n      document.body.innerHTML = '<main class=\"summary-error\" role=\"alert\">课程小结内容暂不可用</main>';\n      throw error;\n    }\n  </script>\n</body>\n</html>\n"
+    }
+  ]
+}

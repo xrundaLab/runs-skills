@@ -12,6 +12,8 @@
 
 知识讲解页动态生成补充合同：`07_知识讲解页_动态生成OneShot.md`。案例分析页动态生成补充合同：`08_案例分析页_动态生成OneShot.md`。两者分别完整内嵌单份真实 `PAGE_DATA`、共享 CSS、SDK 和纯 HTML 输出合同；动态内容区不执行变量区外哈希。当前 RunS `pages[].prompt` 保存完整动态 OneShot 实际模型输入，模型输出另层验收。
 
+当且仅当唯一 S5 输入含 `visualMode: visual_enhanced` 时，六类非互动页分别切换到 `09`—`14` 配图增强 OneShot，并只从同页 S5 `visual` 映射单图 `page_data.visualAsset` 或组图 `page_data.planVisualAssets[]`。互动页不得出现图片字段。S6 不读取视觉 manifest 或外部回传；URL、alt、可选 displayLabel 与组图顺序全部参与提示词实例哈希。同页灯箱使用原生图片、自然比例、响应式 contain、按钮触发、关闭按钮、遮罩与 Escape 关闭，禁止外链预览或把缩放行为绑定到 CreatorReviewSDK。`text_only` 继续只使用 `03`—`08`，其输出结构和资产哈希不得改变。
+
 ## 1. 用途与边界
 
 这是**整课课件 JSON 的外层装配基线**：根对象、`pages[]` 页面包络、路由、动作、来源记录和 workflow 均按当前 V3.5 实例字段编写。

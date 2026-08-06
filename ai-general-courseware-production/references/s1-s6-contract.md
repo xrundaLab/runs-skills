@@ -14,10 +14,12 @@
 - 每阶段只生成本阶段声明的输出。下游产物、页面提示词、整课 JSON、导入、运行、渲染、测试与发布均不得提前生成或执行。
 - 原始教师版 `final.md` 只读。学生版只在 S2 作结构辅助核查，不能成为课程语义真源。
 - 产物发生内容变更时，从发生变更的阶段开始，按阶段顺序重新冻结和验证；不得只补下游文件。
+- 单阶段执行可显式引用其他输出根或旧兼容版本中已经 PASS 的上游产物与回执；被选中的 S4 正文继续作为本次完整内容权威，不得因为存在更新目录而自动切换，也不得要求无变化的 S1—S4 重跑。只有当前合同新增或改变的下游快照需要重新生成。
+- 启动时必须显式冻结 `visualMode: text_only | visual_enhanced`。缺失为 `BLOCKED:VISUAL_MODE_NOT_SELECTED`；新生成的 S2—S6 Gate receipt 与冻结模式不一致为 `BLOCKED:VISUAL_MODE_DRIFT`。模式不得在运行中切换。仅对早于该字段的旧 S4 PASS 回执保留窄兼容：S1 initial 必须明确为 `visual_enhanced`，且旧回执的合同、课程、阶段、输出绝对路径和 SHA-256 全部与当前 S4 匹配；回执若已含 `visualMode` 但值不一致，仍然阻断。
 
 | 阶段 | 唯一/主要输入 | 唯一输出 | 放行条件 |
 | --- | --- | --- | --- |
-| S1 教案预处理 | 教师版 `final.md`、课程信息 | `source_manifest.json`、`final_preprocessed.md`、`preprocess_comparison.json` | 来源、六项课程信息和教师正文可逐项追溯。 |
+| S1 教案预处理 | 教师版 `final.md`、课程信息；仅增强模式额外读取教师视觉脚本 | 现有三个 S1 输出不变；增强模式另存图片管理三态快照 | 来源、六项课程信息和教师正文可逐项追溯；视觉分支独立通过或显式跳过。 |
 | S2 页面规划工作版 | 冻结 `final_preprocessed.md`；学生版仅辅助 | `page_plan_working_full.md`、`student_structure_check.md` | 页面边界、类型、顺序及过渡句归属明确。 |
 | S3 题目处理 | 仅 `page_plan_working_full.md` | `question_processed_full.md` | 完整继承 S2 页面规划；每个互动页原位追加自然语言与 JSON 数据，题干完整。 |
 | S4 最终有效页面规划 | 冻结工作版、已批准题目 JSON | `page_plan_full.md` | 页面元数据与题目归属一致，互动 JSON 原样冻结。 |
@@ -33,7 +35,7 @@ S1 只读取以下两类输入：
 1. 教师版 `final.md`：唯一课程语义真源，原文件只读。
 2. 课程信息：必须完整提供且冻结以下六项原文值：`课包名称`、`单元名称`、`课程编号`、`课程标题`、`课程目标`、`知识点`。`lesson_id` 可作为机器标识登记，但不替代六项课程信息。
 
-学生版、历史“题目处理版教案”、题目组件 JSON、页面模板和单课执行证据均不是 S1 输入。
+学生版、历史“题目处理版教案”、题目组件 JSON、页面模板和单课执行证据均不是 S1 输入。仅当冻结模式为 `visual_enhanced` 时，S1 图片管理分支额外读取用户显式提供的教师视觉脚本；`text_only` 不得读取该脚本。
 
 ### 处理动作
 
@@ -64,6 +66,19 @@ S1 只读取以下两类输入：
 ### S1 Gate
 
 以下任一情况为 `BLOCKED`：教师版或课程信息缺失；六项字段缺失/与教师版冲突；源 SHA 未登记；正文 SHA-256 不一致；出现未授权正文改写；输出含 S2 以后字段。仅当三个 S1 输出齐全、比对为 `PASS` 才能进入 S2。
+
+### S1 图片管理分支
+
+现有三个 S1 内容产物的职责、文件名和正文 SHA 规则不因配图模式改变。图片管理是并列的 S1 逻辑产物，使用 `scripts/orchestrator/run_visual_manifest_gate.py`：
+
+- `text_only`：不读取视觉脚本、不生成 visual manifest，仅写 `status: SKIPPED_BY_VISUAL_MODE` 的视觉回执。
+- `visual_enhanced / initial`：校验教师视觉脚本登记的教师 SHA 等于本次 `final.md` SHA，冻结教案图片 ID、HTTPS URL、用途、`教案位置`完整原文、每次位置细节、源行号、前后文本锚点、教师权威 render placement、复用关系和连续组图顺序。最终 S4 页码必须为空。
+- `visual_enhanced / request`：仅在 S4 PASS 后读取 initial、原始 S4 与其回执，把每条教案锚点唯一绑定到最终页；非互动页按教案图最高优先级决定 `lesson_plan_image | courseware_image`。互动页始终为 `interaction_no_image`；其内部被唯一识别的教师 placement 只以 `suppressed_on_interaction_page` 留在图片管理审计链，不进入页面资产。若 S4 合法省略过渡侧的一条锚点，只有在该侧全文零命中、保留下来的另一侧恰好唯一命中一页时，才允许按单边证据绑定，且不得改写 initial 中的教师 placement；保留侧多页命中、两侧跨页命中或两侧都缺失仍阻断。题目处理导致前后文合并时，只允许使用唯一、长度至少 12 字的原锚点句段识别互动页。正式页型复用 `scripts/page_type_contract.py`。
+- `visual_enhanced / resolved`：读取 request、被选中的 S4 与显式外部回传；只提取允许的课件图片元数据，把已请求课件图的 URL、尺寸、alt 和可选生成版本写入新快照。外部回传正文不是内容权威：同链时登记 `bindingMode: exact_page_plan`；跨链时只要有序页号集合和规范化页型与当前 S4 一致，即登记 `bindingMode: cross_chain_page_metadata` 并把图片元数据重新绑定到当前 request/S4。被选中的 S4 正文始终完整进入后续 S5，旧回传正文永不投影。页集合/页型错位、当前 request 决策冲突或当前 S4 placement review 无效仍阻断。同事可在所有非互动页回传候选课件图；request 已判定为教案图的页面按教案图优先规则忽略该候选，并在 resolved provenance 登记被忽略页码。外部文件仅作为本次 finalizer 输入及 provenance，不成为 S5 输入。
+
+三个快照为 `lessonNNN__S1__visual_asset_manifest.initial.json`、`.request.json`、`.resolved.json`，均不可覆盖；每次调用保留不可变 attempt 回执。完整字段与外部回传合同见 `references/visual-return-contract.md` 及 `references/schemas/visual-asset-manifest.schema.json`。
+
+S1 图片分支阻断码至少包括：`TEACHER_VISUAL_SCRIPT_MISSING`、`TEACHER_VISUAL_SCRIPT_TEACHER_SHA_MISMATCH`、`LESSON_PLAN_IMAGE_ID_DUPLICATE`、`LESSON_PLAN_IMAGE_URL_MISSING`、`LESSON_PLAN_IMAGE_ANCHOR_INVALID`、`LESSON_PLAN_IMAGE_GROUP_ORDER_INVALID`。互动页 placement 按上述规则受控抑制；增强模式不得因其他阻断静默退回无图模式。
 
 ## S2 页面规划工作版
 
@@ -291,9 +306,13 @@ python3 scripts/validators/validate_v35_page_plan_question_boundaries.py --effec
 
 以下任一情况为 `BLOCKED`：缺失工作版或已批准题目 JSON；元数据、P01、有效内容或页面动作不完整；页面结构或非互动原文漂移；互动 JSON 缺失、冲突、不可解析或非逐字副本；出现研发说明或下游字段。S4 不得因状态句而删改原文，也不得再次执行互动边界语义判断。`PASS` 后才可进入 S5。
 
+S4 的唯一输出仍是原始 `page_plan_full.md`。S4 PASS 只解锁 S1 图片管理分支的 `request` 绑定，不让 S4 读取或输出视觉字段，也不改变 S4 SHA。
+
 ## S5 有效内容 JSON
 
-只以冻结的 S4 `page_plan_full.md` 为内容真源，由 `scripts/generators/build_effective_content.py` 生成唯一 `effective_content_full.json`。S5 不接收 candidate、draft 或初始化器；页序、基础字段、原文、互动 JSON、学生投影、课程小结结构块与知识/案例 `design_brief` 全部从 S4 确定性生成。输入保留在各自阶段目录，不得复制到 S5 目录或从同目录猜测输入。不得回读工作版、题目处理版、教师版或学生版。顶层必须含 `lesson_id`、`sop_version`、逐字指向该唯一上游的 `source_page_plan` 与非空 `pages[]`。
+`text_only` 只以冻结的 S4 `page_plan_full.md` 为内容真源，由 `scripts/generators/build_effective_content.py` 生成唯一 `effective_content_full.json`，输出结构与 0.2.21-r36 无图链路保持等价。`visual_enhanced` 的输入白名单仅增加 S1 图片管理分支的 resolved manifest 与路径/SHA 一致的视觉 PASS 回执；外部回传文件不是 S5 输入，即使 resolved 登记了 `externalReturn.path`，S5 也禁止打开或重新解析。两种模式都不接收 candidate、draft 或初始化器；页序、基础字段、原文、互动 JSON、学生投影、课程小结结构块与知识/案例 `design_brief` 全部从原始 S4 确定性生成。输入保留在各自阶段目录，不得复制到 S5 目录或从同目录猜测输入。不得回读工作版、题目处理版、教师版或学生版。
+
+`text_only` 顶层保持 `lesson_id`、`sop_version`、逐字指向唯一上游的 `source_page_plan` 与非空 `pages[]`，不得出现图片字段。`visual_enhanced` 顶层还必须含 `visualMode: visual_enhanced`、resolved manifest 的绝对 `sourceVisualManifest` 与 `sourceVisualManifestSha256`。每个非互动页从 resolved 的同页 decision、assets 与 placements 生成唯一 `visual`：`imageType`、`displayMode: single | group`、`placementMode: per_asset`、统一 `presentation` 以及有序 `assets[]`。单图也使用一项 `assets[]`；每项投影 `assetId`、HTTPS `url`、原始 `width/height`（未知保持 null）、`alt`、连续 `order`、来自原文的可选 `displayLabel`、resolved 中同一 placement 的 `renderPlacement` 与 `visualReview`，不得改写为统一页尾位置。组图若且仅若每个 `displayLabel` 都能在同一 S5 `unordered_list` 中唯一匹配一个带同名冒号前缀的原文项，S5 还为整组冻结逐项 `pairedStudentText` 与 `pairedSource`；缺失或歧义时全部省略且不阻断，不得猜配。知识、案例与拓展练习的课件配图必须是 `placementStatus: reviewed` 且带 `model_visual_review` 证据；开篇、场景与小结记录固定页型无需看图审阅。互动页禁止 `visual`、`visualAsset`、`planVisualAssets` 或任何课程图片 URL。
 
 每页固定含六项基础字段：`page_no`、`page_type`、`capsule`、`page_action`、`source_block_ids`、`effective_content`。非互动页必须额外保留 `source.rawMarkdown`，且逐字等于上游有效内容；互动页的 `effective_content` 必须是完整题目 JSON 的有序对象投影，并使 `component_type` 等于其 `type`；所有页面禁止独立 `background`。
 
@@ -302,7 +321,7 @@ python3 scripts/validators/validate_v35_page_plan_question_boundaries.py --effec
 R32 对知识讲解/案例分析追加确定性结构投影：必须仅从同页 `source.rawMarkdown` 按原序拆出 `heading`、`paragraph`、`ordered_list`、`unordered_list`、`blockquote` 或 `code_block`。每块必须保留逐字 `markdown`；heading 保留 `level` 与原文 `text`，列表保留原序 `items[]`，其他可见块保留原文 `text`。禁止把整页收为 `type: markdown` 单块，禁止补写、删减、跨块调序、把列表降为段落，或让 `content.blocks` 与 `effective_content.blocks` 不一致。`source.rawMarkdown` 继续保留完整审计真源；结构块是其唯一可供 S6 投影的学生内容表示。
 
 - P01 的 `effective_content` 按固定顺序保留六项课程信息原始值；`content` 按固定顺序映射为 `packageName`、`unitName`、`lessonNumber`、`courseName`、`courseIntroduction`、`knowledgePoints`。其中原始 `知识点` 不改写，`knowledgePoints` 必须按 `;`、`；` 或换行拆为非空有序 list；条目前导的 Markdown bullet 或数字编号只从 list item 展示值中剥离，原始字段继续保留。
-- 拓展练习的 `content.taskTitle` 必须由 `source.rawMarkdown` 的首个标题逐字确定性投影；标题后的每一个冻结 Markdown 块必须按原序生成一条带 `sourceMarkdown` 的 `sections[]`。`sections[].type` 只允许 `paragraph`、`task`、`facts`、`step`、`prompt`、`decision`、`safety`、`fallback`；每块还必须带受控 `role`：`lead`、`preflight`、`action`、`prompt`、`review`、`checklist`、`condition`、`correctivePrompt`、`decision`、`safetyFallback`、`fallback`、`note`。role 只表达冻结块在任务流中的展示职责，不改变内容。不得摘要、删减、补写、跨块合并或重排拓展练习正文；S5 发现标题缺失、漏段、重排、role 非法或仅保留首段即 `BLOCKED`。
+- 拓展练习的 `content.taskTitle` 必须由 `source.rawMarkdown` 的首个标题逐字确定性投影；标题后的每一个冻结 Markdown 块必须按原序生成一条带 `sourceMarkdown` 的 `sections[]`。`sections[].type` 只允许 `paragraph`、`task`、`facts`、`step`、`prompt`、`decision`、`safety`、`fallback`、`section_heading`、`composite`；每块还必须带受控 `role`：`lead`、`preflight`、`action`、`prompt`、`review`、`checklist`、`condition`、`correctivePrompt`、`decision`、`safetyFallback`、`fallback`、`note`、`storySequenceHeading`、`storySequence`、`composite`。role 只表达冻结块在任务流中的展示职责，不改变内容。“故事顺序”标题与紧随列表必须原位形成独立故事区，不得降为“任务要点”。同时含实际操作、完成前检查与支持条件的一个源段落仍保持一个 section，并按原文连续片段记录 `action`、`completionCheck`、`supportNote` 三项 `segments[]`；三段拼接必须严格等于源段落。不得摘要、删减、补写、跨源块合并或重排拓展练习正文；S5 发现标题缺失、漏段、重排、role 非法、复合段拼接不等或仅保留首段即 `BLOCKED`。
 - 课程小结必须有非空 heading，且 `effective_content.blocks`、`content.contentBlocks` 与 `sections` 中的首个可见 heading 必须逐字一致，可直接投影为 S6 `summaryTitle`。该 heading 仅用于标题投影，不得在学生正文重复。源内容含有序列表或连续编号条目时，`content.contentBlocks` 必须使用 `orderedList` 并保留完整 `items[]`；允许源编号与视觉编号并存。`source.rawMarkdown` 必须完整保留原文；精确状态句“本课没有课后练习。”只能从学生投影中剔除，同段后续的下一课预告必须逐字保留。
 - 知识讲解与案例分析页必须有非渲染 `design_brief`，并冻结 `layoutArchetype`、`groupPresentation`、`sourceProjectionPlan`、`emphasisTargets`、`surfacePolicy`、`colorRoles`、`spaceBalance` 与 `alignmentPolicy`。`alignmentPolicy` 规定左对齐、顶部对齐优先：同级内容共享左边界，同级对比项顶边对齐且等宽，步骤项共享同一左边界；只有明确 primary/supporting 主次关系才允许非对称，禁止随机缩进、随机宽度和为了变化而错位。S5 仍须从冻结原文识别真实对比、步骤、列表、媒介分工与判断关系；连续分句保持连续句流，重点仅在原位置强调。`surfacePolicy` 浅色主导，装饰允许为零；`spaceBalance` 限制无意义底部留白。
 - `comparisonLayoutPolicy` 规定横向等宽对比仅适用于每项不超过 80 个中文字符且合计不超过 150 个字符；超限必须切为同一左边界的上下全宽卡片。`highlightPolicy` 规定全页高亮最多 3 个逐字来源片段、同一语义类别使用同一样式、12 字以内的短高亮整体换行，禁止出现单独换行的 1—2 字高亮尾巴。
@@ -314,10 +333,18 @@ R32 对知识讲解/案例分析追加确定性结构投影：必须仅从同页
 串行生产使用官方 Gate 入口，它会先核对 S4 `PASS` 回执与输出哈希，再从 S4 唯一确定性生成并校验 S5。课程开篇、场景、互动、知识/案例、拓展练习与小结的内容和内容要求均由冻结 S4 直接投影；知识/案例的非渲染 `design_brief` 也由冻结文本的真实关系确定性生成。
 
 ```bash
-python3 scripts/orchestrator/run_stage_gate.py --stage S5 --lesson-id <lesson_id> \
+python3 scripts/orchestrator/run_stage_gate.py --stage S5 --lesson-id <lesson_id> --visual-mode text_only \
   --receipt-dir <receipts> --prior-receipt <receipts/s4_gate_receipt.json> \
   --page-plan <S4/page_plan_full.md> \
   --output <S5/effective_content_full.json>
+```
+
+增强模式在同一入口额外传入：
+
+```bash
+--visual-mode visual_enhanced \
+--visual-manifest <lessonNNN__S1__visual_asset_manifest.resolved.json> \
+--visual-receipt <receipts/visual_manifest_gate_receipt.json>
 ```
 
 独立审计时可运行：
@@ -328,11 +355,19 @@ python3 scripts/validators/validate_v35_effective_content.py \
   effective_content_full.json
 ```
 
-以下任一情况为 `BLOCKED`：上游缺失或不唯一；页数、顺序、六项基础字段或无损内容漂移；P01 映射、互动 JSON、模板前置数据、设计简报、拓展练习 canonical 元数据或 sections、课程小结 heading / 有序列表或页面动作不合规；课程小结标题缺失、不一致或在正文重复；出现下游字段。`PASS` 只允许进入 S6 静态装配。
+增强模式独立审计还必须显式传 `--visual-mode visual_enhanced --visual-manifest <resolved.json>`；校验器不读取 external return。
+
+以下任一情况为 `BLOCKED`：上游缺失或不唯一；模式漂移；resolved/视觉回执路径或 SHA 与实际输入不一致；resolved 绑定的 S4 不是当前原始 S4；页数、顺序、六项基础字段或无损内容漂移；图片分类、URL、页码、组图顺序、标签、`visualReview` 或 placement 投影漂移；知识、案例或任务课件图未完成回传后看图审阅；互动页出现图片；P01 映射、互动 JSON、模板前置数据、设计简报、拓展练习 canonical 元数据或 sections、课程小结 heading / 有序列表或页面动作不合规；课程小结标题缺失、不一致或在正文重复；出现下游字段。`PASS` 只允许进入 S6 静态装配。
 
 ## S6 整课 JSON 装配
 
 只读取已通过的 S5 `effective_content_full.json`，输出唯一整课 JSON 与装配校验结果；不得读取 S1--S4 或旧式 `p1/p2/s2e/p3` manifest。静态检查器以这两个绝对路径显式接收输入，不复制上游文件。整课根必须含非空 `pages[]`；当前受控包络还含 `course_id`、`title`、`description`、`source`、`workflow`。导入后的课件任务名唯一取根 `title`，格式固定为 `第{lessonNumber}课｜{courseName}｜RunS_V3.5.0-S1-S6-R36-20260731`；不得使用 `pages[].title` 或课程任务页内部标题。每页必须含 `tag`、`title`、`summary`、`page_no`、`page_kind`、`runtime_type`、`sdk_action`、`is_last_page`、`prompt`、`components`、`page_data`。
+
+`text_only` 继续走 0.2.21-r36 登记的 `03`—`08` OneShot，输出不得出现 `visualMode`、`visualAsset` 或 `planVisualAssets`。`visual_enhanced` 只从同一 S5 JSON 读取每页 `visual`：单图逐字段映射为 `page_data.visualAsset`，组图按冻结顺序映射为 `page_data.planVisualAssets[]`，可选 `pairedStudentText` / `pairedSource` 与共享样式一并无损映射，并使用 `09`—`14` 配图增强 OneShot；根写入 `visualMode: visual_enhanced`。S6 命令不接受 visual manifest、placement review 或 external return 参数。互动页没有图片字段。URL、placement、`visualReview`、alt、可选 `displayLabel`、顺序和已冻结配对必须原样进入 PAGE_DATA/预编译 DOM，并参与内容寻址提示词哈希；课件图 alt 未回填时，S5 的 `null` 只允许在 S6 确定性规范化为 HTML 合法空值 `alt=""`，不得编造描述。完整配对组必须以唯一 `visual-paired-list` 按数组顺序逐项输出；每个 `visual-paired-item` 相邻包含本图、图注和唯一 `visual-paired-copy`，已消费原列表项不得在其他区域重复。缺失 URL、位置、审阅证据、重复、调序、拆散已冻结图文配对或凭空生成标签均阻断；没有冻结配对字段本身不阻断。
+
+配图 UI 必须把图片作为正文主配图而非缩略图、小装饰条或图标：使用内容区宽度、自然宽高比、`height:auto`、`object-fit:contain`、16px 圆角与 16px 上下间距，不默认增加独立卡片。教案配图按教师前后锚点插入；开篇、场景与小结课件图执行固定 placement；知识、案例与拓展练习执行 resolved 中回传后模型看图审阅的 placement，找不到唯一语义位置时知识/案例落在页面标题后，任务落在第一块正文后。任何图片不得成为正文最后一块、出现在末段之后或紧邻 CTA/footer。两张及以上图片无论是否方图，都按冻结顺序纵向全宽排列；逐图说明只出现一次，禁止并排、宫格、三列和缩略图。除另行冻结的课程开篇 P01 外，图片左右边缘必须与其所属正文区域平齐，禁止在正文容器内再次使用 `calc(100% - 48px)` 等水平内缩。图片本体是唯一可见触发器，保留真实 `button.image-zoom-trigger` 的键盘语义但不显示按钮外观或额外“查看大图”文案。深色 `visual-lightbox` 不显示标题或 caption；放大图片在视口水平、纵向居中，`.visual-lightbox-close` 是圆形 ×，不参与图片 transform，并由 `positionVisualClose` 根据 `getBoundingClientRect` 水平居中定位到图片底部与视口底部之间的纵向中点。灯箱支持点击遮罩、Escape、两指 1×—4× 缩放、放大后的单指拖动；低于 1×及关闭时复位，打开期间禁止背景滚动。灯箱不得打开外部预览、新窗口或新标签页，也不得调用 `CreatorReviewSDK.nextPage()` / `complete()`。非开篇配图 OneShot 与 `templates/demos/visual_enhanced/` 共用冻结的主标题、内容标题、正文、列表、caption 排版 Token，并遵守 Chrome 68 基线；真实移动端手势仍须另行验收。
+
+拓展练习 S6 必须只把 `composite.segments[action]` 放入编号步骤；`completionCheck` 与 `supportNote` 紧随其后但位于 `.step-group` 外。除页面主标题外，拓展练习正文、列表、步骤、检查与支持说明全部左对齐。“故事顺序”使用独立 `story-sequence-card`，不得伪装为 preflight 或“任务要点”。
 
 页面类型只能按下表映射；这张表是当前 S6 的唯一类型映射。
 
@@ -356,13 +391,13 @@ python3 scripts/validators/validate_v35_effective_content.py \
 
 所有知识/案例动态页还必须注入 `visualHierarchyContract`；当页面含至少 3 个真实阅读块且不是 `two_layer_reading` 短页时必须执行 `semanticHierarchyFirst: true`，优先顺序固定为来源保真、语义关系、阅读清晰、排版优雅、装饰。该突出的重点才在原句原位置最多强调 3 个逐字来源片段，优先使用字重、下划线或柔和底色；该体现的对比、步骤、列表才使用相应关系构图。装饰元素可为 0，最多 2 组，仅在改善构图时使用，必须无文字、`aria-hidden` 且禁止自动生成 Emoji。不得为了满足丰富度增加表面、卡片、标签或高对比区域；禁止统一圆角纵向卡栈、虚构徽章文案、上重下空和大面积无意义底部留白。`density: medium` 页面主体阅读区覆盖目标不得低于 60%。
 
-S6 还必须把 S5 上述七项可执行设计字段逐字复制到 `visualRecipePlan.designExecutionContract`，并以 `source: S5.design_brief` 标明唯一来源。S6 只能映射已有组、来源片段、强调目标和浅色表面，不能重新识别或替换页面设计；缺字段、不一致、将完整来源段落复制到多个区域、非代码大面积近黑背景或把原句重点抽取成第二份文字，均为 `V35_DYNAMIC_S5_DESIGN_EXECUTION_CONTRACT_MISSING`。得到模型返回的 HTML 后，必须使用 `scripts/validators/validate_dynamic_html.py` 核验 Chrome 68 兼容性、学生可见文字的逐字原序单次投影、孤立标点和顶层视觉区不超过四个。该 DOM Gate 只验收明确提供的生成结果，不发起 RunS 生成、导入、渲染或发布。
+S6 还必须把 S5 上述七项可执行设计字段逐字复制到 `visualRecipePlan.designExecutionContract`，并以 `source: S5.design_brief` 标明唯一来源。S6 只能映射已有组、来源片段、强调目标和浅色表面，不能重新识别或替换页面设计；缺字段、不一致、将完整来源段落复制到多个区域、非代码大面积近黑背景或把原句重点抽取成第二份文字，均为 `V35_DYNAMIC_S5_DESIGN_EXECUTION_CONTRACT_MISSING`。得到模型返回的 HTML 后，必须使用 `scripts/validators/validate_dynamic_html.py` 核验 Chrome 68 兼容性、学生可见文字的逐字原序单次投影、孤立标点、顶层视觉区不超过四个，以及配图纵向组、非末尾插入和大图关闭按钮的结构合同。该 DOM Gate 只验收明确提供的生成结果，不发起 RunS 生成、导入、渲染或发布。
 
 所有 OneShot、固定 Demo 与外部授权后得到的页面 HTML，以未转译的 Android System WebView Chrome 68 为最低兼容基线。禁止可选链、空值合并、逻辑赋值、class fields/static blocks、数字分隔符及登记的不兼容 DOM API；禁止动态视口单位、CSS `min()` / `max()` / `clamp()`、Flex `gap`、逻辑间距属性、`env()`、`backdrop-filter`、`text-wrap` 与现代颜色函数。必须使用 `height:100%`、物理方向间距、`width` 加 `max-width`、Observer 能力检测和外部资源失败时仍可见的静态首屏。兼容 Gate 检查实际 HTML/CSS/JS，只有提示词声明而模板代码不兼容时仍为 BLOCKED。
 
 ### S6 只读回归基线
 
-lesson001、lesson008、lesson021 的已冻结整课 JSON 仅是 S6 回归夹具：在装配器或静态检查器变更后，可用于核对页面包络、`pages[]` 投影和模板合同是否退化。它们不是 Golden Baseline，不能作为 S6 输入、不能回读以补全 S5、不能替代 OneShot/Demo，也不能单独授权 `IMPORT_READY_STATIC`。唯一基线版本、路径和 SHA-256 由资产清单及版本登记锁定；任何新增版本必须先登记，不能以目录中较新的同名 JSON 自动替换。
+Skill 自带的 `lesson022-text-only-v1` 与 `lesson022-visual-enhanced-v1` 是测试自有、可确定性重算的 S5→S6 回归夹具，统一位于 `scripts/tests/fixtures/whole-course-baselines/`，并由 `references/whole-course-baseline-registry.json` 锁定 S5、期望 S6、OneShot/Demo 的路径与 SHA-256。它们只用于核对装配器和静态检查器的页面包络、逐页投影、双模式资产与提示词身份是否退化；不是 Golden Baseline、不是生产 S6 输入、不能回读补全 S5、不能替代 OneShot/Demo，也不授权 import/create/render、视觉验收或发布。替换必须同时更新 registry、SHA、测试与形成版本，不得自动选取目录中较新的同名 JSON。第 12 课用户指定 JSON 仅登记为 `manual_reference`，不进入正式 baseline 列表。
 
 ### S6 Gate
 

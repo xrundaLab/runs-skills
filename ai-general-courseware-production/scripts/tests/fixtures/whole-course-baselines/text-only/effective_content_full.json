@@ -1,0 +1,669 @@
+{
+  "lesson_id": "lesson022",
+  "sop_version": "RunS_V3.5.0-S1-S6-R36-20260731",
+  "source_page_plan": "/Users/dq/Documents/润思/runs-ai-monorepo/skills/ai-general-courseware-production/scripts/tests/fixtures/whole-course-baselines/source_page_plan.md",
+  "pages": [
+    {
+      "page_no": "P01",
+      "page_type": "课程开篇",
+      "capsule": "课程开篇",
+      "page_action": "nextPage",
+      "source_block_ids": [
+        "course_info_header"
+      ],
+      "source": {
+        "rawMarkdown": "课包名称：测试自有整课基线\n单元名称：双模式静态回归\n课程编号：第22课\n课程标题：图片与文字如何协作\n课程目标：理解配图与正文各自承担的信息\n知识点：单图；组图；同页放大"
+      },
+      "effective_content": {
+        "课包名称": "测试自有整课基线",
+        "单元名称": "双模式静态回归",
+        "课程编号": "第22课",
+        "课程标题": "图片与文字如何协作",
+        "课程目标": "理解配图与正文各自承担的信息",
+        "知识点": "单图；组图；同页放大"
+      },
+      "content": {
+        "packageName": "测试自有整课基线",
+        "unitName": "双模式静态回归",
+        "lessonNumber": 22,
+        "courseName": "图片与文字如何协作",
+        "courseIntroduction": "理解配图与正文各自承担的信息",
+        "knowledgePoints": [
+          "单图",
+          "组图",
+          "同页放大"
+        ]
+      },
+      "sections": [
+        {
+          "type": "course_info",
+          "label": "课包名称",
+          "text": "测试自有整课基线"
+        },
+        {
+          "type": "course_info",
+          "label": "单元名称",
+          "text": "双模式静态回归"
+        },
+        {
+          "type": "course_info",
+          "label": "课程编号",
+          "text": "第22课"
+        },
+        {
+          "type": "course_info",
+          "label": "课程标题",
+          "text": "图片与文字如何协作"
+        },
+        {
+          "type": "course_info",
+          "label": "课程目标",
+          "text": "理解配图与正文各自承担的信息"
+        },
+        {
+          "type": "course_info",
+          "label": "知识点",
+          "text": "单图；组图；同页放大",
+          "items": [
+            "单图",
+            "组图",
+            "同页放大"
+          ]
+        }
+      ],
+      "display_hints": {
+        "layout": "course_intro"
+      }
+    },
+    {
+      "page_no": "P02",
+      "page_type": "场景引入",
+      "capsule": "场景引入",
+      "page_action": "nextPage",
+      "source_block_ids": [
+        "B01"
+      ],
+      "source": {
+        "rawMarkdown": "你看到一张机器人整理资料的图片。\n\n接下来看看图片和文字怎样配合。"
+      },
+      "effective_content": {
+        "blocks": [
+          {
+            "type": "paragraph",
+            "text": "你看到一张机器人整理资料的图片。",
+            "markdown": "你看到一张机器人整理资料的图片。"
+          },
+          {
+            "type": "paragraph",
+            "text": "接下来看看图片和文字怎样配合。",
+            "markdown": "接下来看看图片和文字怎样配合。"
+          }
+        ]
+      },
+      "content": {
+        "blocks": [
+          {
+            "type": "paragraph",
+            "text": "你看到一张机器人整理资料的图片。",
+            "markdown": "你看到一张机器人整理资料的图片。"
+          },
+          {
+            "type": "paragraph",
+            "text": "接下来看看图片和文字怎样配合。",
+            "markdown": "接下来看看图片和文字怎样配合。"
+          }
+        ]
+      },
+      "sections": [
+        {
+          "type": "paragraph",
+          "text": "你看到一张机器人整理资料的图片。",
+          "markdown": "你看到一张机器人整理资料的图片。"
+        },
+        {
+          "type": "paragraph",
+          "text": "接下来看看图片和文字怎样配合。",
+          "markdown": "接下来看看图片和文字怎样配合。"
+        }
+      ],
+      "display_hints": {
+        "layout": "reading"
+      }
+    },
+    {
+      "page_no": "P03",
+      "page_type": "知识讲解",
+      "capsule": "知识讲解",
+      "page_action": "nextPage",
+      "source_block_ids": [
+        "B02"
+      ],
+      "source": {
+        "rawMarkdown": "图片呈现人物、位置和动作，文字补充原因、顺序和判断。\n\n1. 先核对画面中的可见线索\n2. 再核对文字中的补充信息"
+      },
+      "effective_content": {
+        "blocks": [
+          {
+            "type": "paragraph",
+            "text": "图片呈现人物、位置和动作，文字补充原因、顺序和判断。",
+            "markdown": "图片呈现人物、位置和动作，文字补充原因、顺序和判断。"
+          },
+          {
+            "type": "ordered_list",
+            "items": [
+              "先核对画面中的可见线索",
+              "再核对文字中的补充信息"
+            ],
+            "markdown": "1. 先核对画面中的可见线索\n2. 再核对文字中的补充信息"
+          }
+        ]
+      },
+      "content": {
+        "blocks": [
+          {
+            "type": "paragraph",
+            "text": "图片呈现人物、位置和动作，文字补充原因、顺序和判断。",
+            "markdown": "图片呈现人物、位置和动作，文字补充原因、顺序和判断。"
+          },
+          {
+            "type": "ordered_list",
+            "items": [
+              "先核对画面中的可见线索",
+              "再核对文字中的补充信息"
+            ],
+            "markdown": "1. 先核对画面中的可见线索\n2. 再核对文字中的补充信息"
+          }
+        ]
+      },
+      "sections": [
+        {
+          "type": "paragraph",
+          "text": "图片呈现人物、位置和动作，文字补充原因、顺序和判断。",
+          "markdown": "图片呈现人物、位置和动作，文字补充原因、顺序和判断。"
+        },
+        {
+          "type": "ordered_list",
+          "items": [
+            "先核对画面中的可见线索",
+            "再核对文字中的补充信息"
+          ],
+          "markdown": "1. 先核对画面中的可见线索\n2. 再核对文字中的补充信息"
+        }
+      ],
+      "display_hints": {
+        "layout": "reading"
+      },
+      "design_brief": {
+        "nonRenderable": true,
+        "teachingAction": "按冻结原文的真实顺序组织阅读，并突出其中已有的概念、关系或判断。",
+        "density": "light",
+        "semanticGroups": [
+          {
+            "id": "intro",
+            "role": "intro",
+            "blockIndexes": [
+              1
+            ],
+            "purpose": "承接冻结原文的引入信息"
+          },
+          {
+            "id": "process",
+            "role": "process",
+            "blockIndexes": [
+              2
+            ],
+            "purpose": "呈现冻结原文中的步骤或先后关系"
+          }
+        ],
+        "hierarchyFocus": [
+          "intro",
+          "process"
+        ],
+        "contentShape": "process_or_sequence",
+        "rhythmRole": "structured",
+        "readingFlow": [
+          "按冻结原文顺序进入本页主题",
+          "用真实语义分组表达步骤、实例与判断关系",
+          "以冻结原文的结尾内容完成收束"
+        ],
+        "layoutFreedom": "必须把冻结原文中的步骤、实例与判断关系转化为不同阅读重量和空间组织；不得退化为等宽、等色、等间距的段落卡堆叠。",
+        "layoutArchetype": "left_aligned_process",
+        "groupPresentation": [
+          {
+            "groupId": "intro",
+            "geometry": "open_reading_band",
+            "surfaceRole": "open_background",
+            "visualWeight": "supporting"
+          },
+          {
+            "groupId": "process",
+            "geometry": "left_aligned_process",
+            "surfaceRole": "outlined_light_surface",
+            "visualWeight": "primary"
+          }
+        ],
+        "sourceProjectionPlan": [
+          {
+            "blockIndex": 1,
+            "mode": "single_region",
+            "region": "intro"
+          },
+          {
+            "blockIndex": 2,
+            "mode": "single_region",
+            "region": "process"
+          }
+        ],
+        "emphasisTargets": [],
+        "surfacePolicy": {
+          "lightDominant": true,
+          "allowLargeDarkSurface": false,
+          "nonCodeDarkSurfaceAreaPercentMax": 0,
+          "minimumOpenRegions": 1,
+          "maximumTopLevelVisualRegions": 4,
+          "nestedItemStyle": "flat_subregion",
+          "nestedItemsUseIndependentShadow": false,
+          "punctuatedClausesUseInlineFlow": true,
+          "maximumDecorativeGroups": 2,
+          "forbid": [
+            "largeNearBlackContentPanel",
+            "allContentInsideCards",
+            "uniformRoundedCardStack"
+          ]
+        },
+        "colorRoles": {
+          "primaryEmphasis": "runs_purple_inline",
+          "conflictEvidence": "warm_amber_inline",
+          "supportingInformation": "cool_blue_tint",
+          "conclusionSurface": "light_purple_tint",
+          "bodyText": "dark_neutral",
+          "inlineHighlightOnly": true
+        },
+        "spaceBalance": {
+          "readingAreaTarget": "60_to_75_percent",
+          "maximumUnusedLowerAreaPercent": 12,
+          "forbidTopHeavyComposition": true
+        },
+        "alignmentPolicy": {
+          "priority": [
+            "shared_left_edge",
+            "shared_top_edge",
+            "consistent_width",
+            "semantic_asymmetry"
+          ],
+          "sameSemanticLevelSharedLeftEdge": true,
+          "comparisonPeersTopAligned": true,
+          "comparisonPeersEqualWidth": true,
+          "sequenceItemsSharedLeftEdge": true,
+          "asymmetryOnlyForExplicitPrimarySupporting": true,
+          "forbid": [
+            "randomIndent",
+            "randomWidth",
+            "staggerForVariety"
+          ]
+        },
+        "comparisonLayoutPolicy": {
+          "sideBySideAllowed": true,
+          "sideBySideMaxCharsPerPeer": 80,
+          "sideBySideMaxCombinedChars": 150,
+          "withinLimitLayout": "aligned_equal_width_columns",
+          "overLimitLayout": "vertical_full_width_stack",
+          "verticalStackSharedLeftEdge": true
+        },
+        "highlightPolicy": {
+          "maximumSegmentsPerPage": 3,
+          "sameSemanticCategoryUsesSameStyle": true,
+          "shortHighlightNoWrapMaxChars": 12,
+          "shortHighlightMoveWholeToNextLine": true,
+          "forbidOrphanTailCharsMax": 2,
+          "forbid": [
+            "multicolorSameCategory",
+            "oneOrTwoCharacterHighlightedTail"
+          ]
+        },
+        "visualSystem": "浅色主导的RunS紫蓝系统；开放正文与柔和表面形成层级；非代码内容禁止大面积近黑背景；重点只在原句原位置使用语义色标记。",
+        "visibleCopyPolicy": "学生可见文字只来自冻结effective_content；按sourceProjectionPlan逐块单次投影，emphasisTargets仅在原句原位置标色，不抽取、不复制、不改写。"
+      }
+    },
+    {
+      "page_no": "P04",
+      "page_type": "案例分析",
+      "capsule": "案例分析",
+      "page_action": "nextPage",
+      "source_block_ids": [
+        "B03"
+      ],
+      "source": {
+        "rawMarkdown": "同一张图可以在知识页用于观察，也可以在案例页用于核对证据。\n\n保持图片不变，改变问题角度，就能形成不同的学习任务。"
+      },
+      "effective_content": {
+        "blocks": [
+          {
+            "type": "paragraph",
+            "text": "同一张图可以在知识页用于观察，也可以在案例页用于核对证据。",
+            "markdown": "同一张图可以在知识页用于观察，也可以在案例页用于核对证据。"
+          },
+          {
+            "type": "paragraph",
+            "text": "保持图片不变，改变问题角度，就能形成不同的学习任务。",
+            "markdown": "保持图片不变，改变问题角度，就能形成不同的学习任务。"
+          }
+        ]
+      },
+      "content": {
+        "blocks": [
+          {
+            "type": "paragraph",
+            "text": "同一张图可以在知识页用于观察，也可以在案例页用于核对证据。",
+            "markdown": "同一张图可以在知识页用于观察，也可以在案例页用于核对证据。"
+          },
+          {
+            "type": "paragraph",
+            "text": "保持图片不变，改变问题角度，就能形成不同的学习任务。",
+            "markdown": "保持图片不变，改变问题角度，就能形成不同的学习任务。"
+          }
+        ]
+      },
+      "sections": [
+        {
+          "type": "paragraph",
+          "text": "同一张图可以在知识页用于观察，也可以在案例页用于核对证据。",
+          "markdown": "同一张图可以在知识页用于观察，也可以在案例页用于核对证据。"
+        },
+        {
+          "type": "paragraph",
+          "text": "保持图片不变，改变问题角度，就能形成不同的学习任务。",
+          "markdown": "保持图片不变，改变问题角度，就能形成不同的学习任务。"
+        }
+      ],
+      "display_hints": {
+        "layout": "reading"
+      },
+      "design_brief": {
+        "nonRenderable": true,
+        "teachingAction": "按冻结原文的真实顺序组织阅读，并突出其中已有的概念、关系或判断。",
+        "density": "light",
+        "shortPageComposition": "two_layer_reading",
+        "semanticGroups": [
+          {
+            "id": "primary_reading",
+            "role": "intro",
+            "blockIndexes": [
+              1
+            ],
+            "purpose": "主阅读层"
+          },
+          {
+            "id": "supporting_result",
+            "role": "context",
+            "blockIndexes": [
+              2
+            ],
+            "purpose": "弱结果层"
+          }
+        ],
+        "hierarchyFocus": [
+          "primary_reading",
+          "supporting_result"
+        ],
+        "contentShape": "continuous_explanation",
+        "rhythmRole": "narrative",
+        "readingFlow": [
+          "按原序阅读主阅读层",
+          "按原序阅读弱结果层"
+        ],
+        "layoutFreedom": "仅用无文字留白组织两条短原文；不得补写连接、步骤或结论。",
+        "layoutArchetype": "two_layer_open_reading",
+        "groupPresentation": [
+          {
+            "groupId": "primary_reading",
+            "geometry": "open_reading_band",
+            "surfaceRole": "open_background",
+            "visualWeight": "supporting"
+          },
+          {
+            "groupId": "supporting_result",
+            "geometry": "open_body_flow",
+            "surfaceRole": "open_background",
+            "visualWeight": "normal"
+          }
+        ],
+        "sourceProjectionPlan": [
+          {
+            "blockIndex": 1,
+            "mode": "single_region",
+            "region": "primary_reading"
+          },
+          {
+            "blockIndex": 2,
+            "mode": "single_region",
+            "region": "supporting_result"
+          }
+        ],
+        "emphasisTargets": [],
+        "surfacePolicy": {
+          "lightDominant": true,
+          "allowLargeDarkSurface": false,
+          "nonCodeDarkSurfaceAreaPercentMax": 0,
+          "minimumOpenRegions": 1,
+          "maximumTopLevelVisualRegions": 4,
+          "nestedItemStyle": "flat_subregion",
+          "nestedItemsUseIndependentShadow": false,
+          "punctuatedClausesUseInlineFlow": true,
+          "maximumDecorativeGroups": 2,
+          "forbid": [
+            "largeNearBlackContentPanel",
+            "allContentInsideCards",
+            "uniformRoundedCardStack"
+          ]
+        },
+        "colorRoles": {
+          "primaryEmphasis": "runs_purple_inline",
+          "conflictEvidence": "warm_amber_inline",
+          "supportingInformation": "cool_blue_tint",
+          "conclusionSurface": "light_purple_tint",
+          "bodyText": "dark_neutral",
+          "inlineHighlightOnly": true
+        },
+        "spaceBalance": {
+          "readingAreaTarget": "60_to_75_percent",
+          "maximumUnusedLowerAreaPercent": 12,
+          "forbidTopHeavyComposition": true
+        },
+        "alignmentPolicy": {
+          "priority": [
+            "shared_left_edge",
+            "shared_top_edge",
+            "consistent_width",
+            "semantic_asymmetry"
+          ],
+          "sameSemanticLevelSharedLeftEdge": true,
+          "comparisonPeersTopAligned": true,
+          "comparisonPeersEqualWidth": true,
+          "sequenceItemsSharedLeftEdge": true,
+          "asymmetryOnlyForExplicitPrimarySupporting": true,
+          "forbid": [
+            "randomIndent",
+            "randomWidth",
+            "staggerForVariety"
+          ]
+        },
+        "comparisonLayoutPolicy": {
+          "sideBySideAllowed": true,
+          "sideBySideMaxCharsPerPeer": 80,
+          "sideBySideMaxCombinedChars": 150,
+          "withinLimitLayout": "aligned_equal_width_columns",
+          "overLimitLayout": "vertical_full_width_stack",
+          "verticalStackSharedLeftEdge": true
+        },
+        "highlightPolicy": {
+          "maximumSegmentsPerPage": 3,
+          "sameSemanticCategoryUsesSameStyle": true,
+          "shortHighlightNoWrapMaxChars": 12,
+          "shortHighlightMoveWholeToNextLine": true,
+          "forbidOrphanTailCharsMax": 2,
+          "forbid": [
+            "multicolorSameCategory",
+            "oneOrTwoCharacterHighlightedTail"
+          ]
+        },
+        "visualSystem": "浅色主导的RunS紫蓝系统；开放正文与柔和表面形成层级；非代码内容禁止大面积近黑背景；重点只在原句原位置使用语义色标记。",
+        "visibleCopyPolicy": "学生可见文字只来自冻结effective_content；按sourceProjectionPlan逐块单次投影，emphasisTargets仅在原句原位置标色，不抽取、不复制、不改写。"
+      }
+    },
+    {
+      "page_no": "P05",
+      "page_type": "互动题目",
+      "capsule": "试一试",
+      "page_action": "nextPage",
+      "source_block_ids": [
+        "B04"
+      ],
+      "effective_content": {
+        "type": "galaxy_select_question",
+        "componentId": "L022-I01",
+        "content": {
+          "questions": [
+            {
+              "question": "哪一种信息适合由文字补充？",
+              "options": [
+                "人物位置",
+                "事情原因"
+              ],
+              "isMultiple": false,
+              "answerIndex": [
+                1
+              ],
+              "answer": [
+                "事情原因"
+              ]
+            }
+          ]
+        }
+      },
+      "component_type": "galaxy_select_question",
+      "layout_plan": {
+        "layout": "question"
+      }
+    },
+    {
+      "page_no": "P06",
+      "page_type": "拓展练习",
+      "capsule": "拓展练习",
+      "page_action": "nextPage",
+      "source_block_ids": [
+        "B05"
+      ],
+      "source": {
+        "rawMarkdown": "## 完成一张图文说明卡\n\n选择课程中的一张图片，为它补充一句画面外的信息。\n\n**固定材料：**课程图片；一句补充文字。\n\n```text\n请检查文字是否补充了图片中看不到的信息。\n```\n\n完成后再核对图片和文字是否互相重复。"
+      },
+      "effective_content": {
+        "text": "拓展练习"
+      },
+      "content": {
+        "taskTitle": "完成一张图文说明卡"
+      },
+      "sections": [
+        {
+          "type": "task",
+          "role": "lead",
+          "label": "任务",
+          "text": "选择课程中的一张图片，为它补充一句画面外的信息。",
+          "sourceMarkdown": "选择课程中的一张图片，为它补充一句画面外的信息。"
+        },
+        {
+          "type": "facts",
+          "role": "preflight",
+          "label": "固定材料",
+          "text": "课程图片；一句补充文字。",
+          "sourceMarkdown": "**固定材料：**课程图片；一句补充文字。"
+        },
+        {
+          "type": "prompt",
+          "role": "prompt",
+          "label": "提示词",
+          "text": "请检查文字是否补充了图片中看不到的信息。",
+          "sourceMarkdown": "```text\n请检查文字是否补充了图片中看不到的信息。\n```"
+        },
+        {
+          "type": "paragraph",
+          "role": "review",
+          "text": "完成后再核对图片和文字是否互相重复。",
+          "sourceMarkdown": "完成后再核对图片和文字是否互相重复。"
+        }
+      ],
+      "display_hints": {
+        "layout": "task"
+      }
+    },
+    {
+      "page_no": "P07",
+      "page_type": "课程小结",
+      "capsule": "课程小结",
+      "page_action": "complete",
+      "source_block_ids": [
+        "B06"
+      ],
+      "source": {
+        "rawMarkdown": "## 图片与文字各有分工\n\n1. 图片呈现可见线索\n2. 文字补充画面外信息\n3. 放大查看不改变课程进度"
+      },
+      "effective_content": {
+        "blocks": [
+          {
+            "type": "heading",
+            "level": 2,
+            "text": "图片与文字各有分工",
+            "markdown": "## 图片与文字各有分工"
+          },
+          {
+            "type": "ordered_list",
+            "items": [
+              "图片呈现可见线索",
+              "文字补充画面外信息",
+              "放大查看不改变课程进度"
+            ],
+            "markdown": "1. 图片呈现可见线索\n2. 文字补充画面外信息\n3. 放大查看不改变课程进度"
+          }
+        ]
+      },
+      "content": {
+        "contentBlocks": [
+          {
+            "type": "heading",
+            "level": 2,
+            "text": "图片与文字各有分工",
+            "markdown": "## 图片与文字各有分工"
+          },
+          {
+            "type": "orderedList",
+            "items": [
+              "图片呈现可见线索",
+              "文字补充画面外信息",
+              "放大查看不改变课程进度"
+            ]
+          }
+        ]
+      },
+      "sections": [
+        {
+          "type": "heading",
+          "level": 2,
+          "text": "图片与文字各有分工",
+          "markdown": "## 图片与文字各有分工"
+        },
+        {
+          "type": "ordered_list",
+          "items": [
+            "图片呈现可见线索",
+            "文字补充画面外信息",
+            "放大查看不改变课程进度"
+          ],
+          "markdown": "1. 图片呈现可见线索\n2. 文字补充画面外信息\n3. 放大查看不改变课程进度"
+        }
+      ],
+      "display_hints": {
+        "layout": "reading"
+      }
+    }
+  ]
+}

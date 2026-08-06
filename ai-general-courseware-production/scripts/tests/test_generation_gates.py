@@ -20,6 +20,7 @@ S5_GENERATOR = SKILL_ROOT / "scripts" / "generators" / "build_effective_content.
 BOUNDARY_VALIDATOR = SKILL_ROOT / "scripts" / "validators" / "validate_v35_page_plan_question_boundaries.py"
 QUESTION_VALIDATOR = SKILL_ROOT / "scripts" / "validators" / "validate_question_component_json.py"
 GATE_RUNNER = SKILL_ROOT / "scripts" / "orchestrator" / "run_stage_gate.py"
+VISUAL_GATE_RUNNER = SKILL_ROOT / "scripts" / "orchestrator" / "run_visual_manifest_gate.py"
 ASSEMBLER = SKILL_ROOT / "scripts" / "assembler" / "assemble_whole_course.py"
 STATIC_CHECKER = SKILL_ROOT / "scripts" / "validators" / "check_whole_course_static.py"
 DYNAMIC_HTML_VALIDATOR = SKILL_ROOT / "scripts" / "validators" / "validate_dynamic_html.py"
@@ -383,7 +384,28 @@ class GenerationGateTests(unittest.TestCase):
             ["lead", "preflight", "action", "prompt", "decision", "fallback"],
         )
         document = assembler.task_html(
-            page["content"]["taskTitle"], page["sections"], "complete"
+            page["content"]["taskTitle"],
+            page["sections"],
+            "complete",
+            {
+                "visualAsset": {
+                    "assetId": "L001-P10-C01",
+                    "url": "https://res.xrunda.com/test/p10.webp",
+                    "alt": "",
+                    "placement": {
+                        "authority": "model_visual_review",
+                        "anchorType": "reviewed_semantic_anchor",
+                        "rule": "extension_contextual_image",
+                        "insertAfter": "story_sequence_or_task_goal",
+                        "fallback": "after_first_text_block",
+                        "terminalPlacementForbidden": True,
+                    },
+                },
+                "visualPresentation": {
+                    "groupLayout": "vertical_stack",
+                    "terminalPlacementForbidden": True,
+                },
+            },
         )
         self.assertEqual(
             [int(value) for value in re.findall(r'data-source-section-index="(\d+)"', document)],
@@ -467,6 +489,110 @@ class GenerationGateTests(unittest.TestCase):
                 page["sections"], document.replace("操作步骤", "开始行动")
             )
         )
+
+    def test_p10_story_sequence_and_composite_paragraph_keep_distinct_semantics(self) -> None:
+        generator = self.load_module("courseware_p10_story_projection", S5_GENERATOR_MODULE)
+        assembler = self.load_module("courseware_p10_story_assembler", ASSEMBLER)
+        checker = self.load_module("courseware_p10_story_checker", STATIC_CHECKER)
+        raw = (
+            FIXTURES
+            / "representative-projections"
+            / "p10_story_sequence_source.md"
+        ).read_text(encoding="utf-8").strip()
+        page = generator.protected_page(
+            {
+                "page_no": "P10",
+                "page_type": "课后任务",
+                "capsule": "课后任务",
+                "action": "complete",
+                "source_block": "fixture-p10-story-sequence",
+                "body": raw,
+            }
+        )
+
+        roles = {section.get("role") for section in page["sections"]}
+        for expected_role in ("storySequenceHeading", "storySequence", "composite"):
+            self.assertIn(expected_role, roles)
+        story_heading = next(
+            section for section in page["sections"]
+            if section.get("role") == "storySequenceHeading"
+        )
+        story_sequence = next(
+            section for section in page["sections"]
+            if section.get("role") == "storySequence"
+        )
+        composite = next(
+            section for section in page["sections"]
+            if section.get("role") == "composite"
+        )
+        self.assertEqual(story_heading["type"], "section_heading")
+        self.assertEqual(story_sequence["type"], "facts")
+        self.assertNotEqual(story_sequence.get("label"), "任务要点")
+        self.assertEqual(composite["type"], "composite")
+        self.assertEqual(
+            [segment["role"] for segment in composite["segments"]],
+            ["action", "completionCheck", "supportNote"],
+        )
+        self.assertEqual(
+            "".join(segment["text"] for segment in composite["segments"]),
+            composite["text"],
+        )
+
+        self.assertEqual(assembler.task_sections(page), page["sections"])
+
+        document = assembler.task_html(
+            page["content"]["taskTitle"],
+            page["sections"],
+            "complete",
+            {
+                "visualAsset": {
+                    "assetId": "L001-P10-C01",
+                    "url": "https://res.xrunda.com/test/p10.webp",
+                    "alt": "",
+                    "placement": {
+                        "authority": "model_visual_review",
+                        "anchorType": "reviewed_semantic_anchor",
+                        "rule": "extension_contextual_image",
+                        "insertAfter": "story_sequence_or_task_goal",
+                        "fallback": "after_first_text_block",
+                        "terminalPlacementForbidden": True,
+                    },
+                },
+                "visualPresentation": {
+                    "groupLayout": "vertical_stack",
+                    "terminalPlacementForbidden": True,
+                },
+            },
+        )
+        self.assertIn('story-sequence-card"', document)
+        story_html = document.split('story-sequence-card"', 1)[1].split(
+            "</section>", 1
+        )[0]
+        self.assertNotIn("任务要点", story_html)
+        self.assertIn('class="completion-check"', document)
+        self.assertIn('class="support-note"', document)
+        action_text = assembler.esc(composite["segments"][0]["text"])
+        check_text = assembler.esc(composite["segments"][1]["text"])
+        support_text = assembler.esc(composite["segments"][2]["text"])
+        action_group = document.split(action_text, 1)[0].rsplit('class="step-group', 1)[-1]
+        self.assertNotIn(check_text, action_group)
+        self.assertLess(document.index(action_text), document.index(check_text))
+        self.assertLess(document.index(check_text), document.index(support_text))
+        self.assertEqual(
+            [int(value) for value in re.findall(r'data-source-section-index="(\d+)"', document)],
+            list(range(len(page["sections"]))),
+        )
+        self.assertTrue(checker.task_sections_match_static_dom(page["sections"], document))
+        self.assertTrue(checker.task_semantic_structure_matches_static_dom(page["sections"], document))
+        self.assertLess(document.index('story-sequence-card"'), document.index('class="visual-gallery"'))
+        self.assertLess(document.index('class="visual-gallery"'), document.index('class="action-section"'))
+        self.assertRegex(
+            document,
+            r'<button type="button" class="visual-lightbox-close" aria-label="关闭大图"><span aria-hidden="true">×</span></button>',
+        )
+        self.assertIn("function positionVisualClose()", document)
+        self.assertIn("getBoundingClientRect", document)
+        self.assertIn("border-radius:50%", document.replace(" ", ""))
 
     def test_s2_requires_extension_practice_for_post_class_metadata(self) -> None:
         validator = self.load_module(
@@ -631,6 +757,8 @@ class GenerationGateTests(unittest.TestCase):
             "S4",
             "--lesson-id",
             "lesson001",
+            "--visual-mode",
+            "text_only",
             "--receipt-dir",
             temp / "receipts",
             "--working-plan",
@@ -658,6 +786,7 @@ class GenerationGateTests(unittest.TestCase):
             "contract": "RunS_V3.5.0-S1-S6-R36-20260731",
             "lesson_id": "lesson001",
             "stage": "S3",
+            "visualMode": "text_only",
             "status": status,
             "command": ["fixture"],
             "exit_code": 0 if status == "PASS" else 1,
@@ -726,6 +855,7 @@ class GenerationGateTests(unittest.TestCase):
                         "contract": "RunS_V3.5.0-S1-S6-R36-20260731",
                         "lesson_id": "lesson001",
                         "stage": "S4",
+                        "visualMode": "text_only",
                         "status": "PASS",
                         "output": {
                             "role": "page_plan",
@@ -744,6 +874,8 @@ class GenerationGateTests(unittest.TestCase):
                 "S5",
                 "--lesson-id",
                 "lesson001",
+                "--visual-mode",
+                "text_only",
                 "--receipt-dir",
                 temp / "receipts",
                 "--prior-receipt",
@@ -1468,6 +1600,25 @@ class GenerationGateTests(unittest.TestCase):
                 hashlib.sha256(normalized.encode("utf-8")).hexdigest(),
                 f"{demo.name}: non-variable region",
             )
+        for values in (assembler.VISUAL_FIXED["课程开篇"],):
+            kind, filename, variable, _, oneshot_hash, demo_hash, nonvar_hash = values
+            oneshot = SKILL_ROOT / "templates" / "oneshots" / filename
+            demo = SKILL_ROOT / "templates" / "demos" / "visual_enhanced" / "course_intro_demo.html"
+            demo_text = demo.read_text(encoding="utf-8")
+            visual_start = demo_text.index("    const VISUAL_DATA = Object.freeze(")
+            visual_end = demo_text.index("    function renderVisualAssets()", visual_start)
+            normalized = demo_text[:visual_start] + "    const VISUAL_DATA = Object.freeze({});\n\n" + demo_text[visual_end:]
+            content_start = normalized.index(f"    const {variable} = Object.freeze(")
+            marker = "    /* ======================= 变量区结束 ======================= */"
+            content_end = normalized.index(marker, content_start)
+            normalized = normalized[:content_start] + f"    const {variable} = Object.freeze({{}});\n" + normalized[content_end:]
+            self.assertEqual(oneshot_hash, sha256(oneshot), filename)
+            self.assertEqual(demo_hash, sha256(demo), demo.name)
+            self.assertEqual(
+                nonvar_hash,
+                hashlib.sha256(normalized.encode("utf-8")).hexdigest(),
+                f"{demo.name}: visual non-variable region",
+            )
         for _, filename, _, expected_hash in assembler.DYNAMIC.values():
             self.assertEqual(
                 expected_hash,
@@ -1710,6 +1861,1465 @@ class GenerationGateTests(unittest.TestCase):
             "版本不得倒退或复用",
         ):
             self.assertIn(marker, skill)
+
+
+class VisualManifestGateTests(unittest.TestCase):
+    def write_teacher_inputs(
+        self,
+        temp: Path,
+        *,
+        anchor_line: int = 3,
+        recorded_sha: str | None = None,
+    ) -> tuple[Path, Path]:
+        teacher = temp / "final.md"
+        teacher.write_text(
+            "# 测试课\n导入情境。\n观察这张主图。\n说出图中的线索。\n继续学习。\n",
+            encoding="utf-8",
+        )
+        teacher_sha = recorded_sha or sha256(teacher)
+        visual_script = temp / "teacher-visual.md"
+        visual_script.write_text(
+            "# 阶段一教学必备视觉资产功能与衔接脚本\n\n"
+            "## 1. 第1课\n\n"
+            "源教案：`lesson001/final.md`  \n"
+            f"SHA-256：`{teacher_sha}`\n\n"
+            "### `L001-V01` 测试主图\n\n"
+            "| 字段 | 内容 |\n|---|---|\n"
+            "| 图片用途 | 支持观察主图 |\n"
+            f"| 教案位置 | 第{anchor_line}行后单独显示 |\n"
+            "| 图片要求 | 展示测试对象 |\n"
+            "| 图片地址 | https://res.xrunda.com/test/l001-v01.webp |\n",
+            encoding="utf-8",
+        )
+        return teacher, visual_script
+
+    def write_page_plan(self, temp: Path) -> Path:
+        page_plan = temp / "page_plan_full.md"
+        page_plan.write_text(
+            "## P01\n"
+            "- 页面类型：知识讲解\n- 胶囊文案：知识讲解\n- 页面动作：nextPage\n"
+            "- 来源块：B01\n- 内容块类型：段落\n- 布局意图：按原文展示。\n"
+            "- 过渡句位置：none\n- 过渡句原文：无\n\n### 有效内容\n\n"
+            "观察这张主图。\n说出图中的线索。\n\n"
+            "## P02\n"
+            "- 页面类型：课后任务\n- 胶囊文案：课后任务\n- 页面动作：nextPage\n"
+            "- 来源块：B02\n- 内容块类型：段落\n- 布局意图：按原文展示。\n"
+            "- 过渡句位置：none\n- 过渡句原文：无\n\n### 有效内容\n\n"
+            "完成一个课后作品。\n\n"
+            "## P03\n"
+            "- 页面类型：互动题目\n- 胶囊文案：试一试\n- 页面动作：complete\n"
+            "- 来源块：B03\n- 内容块类型：题目\n- 布局意图：组件展示。\n"
+            "- 过渡句位置：none\n- 过渡句原文：无\n- 组件类型：galaxy_select_question\n\n"
+            "### 有效内容\n\n```json\n{\"type\":\"galaxy_select_question\",\"componentId\":\"L001-I01\",\"content\":{\"questions\":[{\"question\":\"请选择\",\"options\":[\"A\",\"B\"],\"isMultiple\":false,\"answerIndex\":[0],\"answer\":[\"A\"]}]}}\n```\n",
+            encoding="utf-8",
+        )
+        return page_plan
+
+    def run_initial(
+        self,
+        temp: Path,
+        teacher: Path,
+        visual_script: Path,
+    ) -> tuple[subprocess.CompletedProcess[str], Path]:
+        output = temp / "lesson001__S1__visual_asset_manifest.initial.json"
+        result = run(
+            VISUAL_GATE_RUNNER,
+            "--phase",
+            "initial",
+            "--lesson-id",
+            "lesson001",
+            "--visual-mode",
+            "visual_enhanced",
+            "--teacher-final",
+            teacher,
+            "--teacher-visual-script",
+            visual_script,
+            "--receipt-dir",
+            temp / "receipts",
+            "--output",
+            output,
+        )
+        return result, output
+
+    def run_request(
+        self,
+        temp: Path,
+        initial: Path,
+        page_plan: Path,
+        *,
+        receipt_visual_mode: str | None = "visual_enhanced",
+    ) -> tuple[subprocess.CompletedProcess[str], Path]:
+        s4_receipt = temp / "s4_gate_receipt.json"
+        receipt_payload = {
+            "contract": "RunS_V3.5.0-S1-S6-R36-20260731",
+            "lesson_id": "lesson001",
+            "stage": "S4",
+            "status": "PASS",
+            "output": {
+                "role": "page_plan",
+                "path": str(page_plan.resolve()),
+                "sha256": sha256(page_plan),
+            },
+        }
+        if receipt_visual_mode is not None:
+            receipt_payload["visualMode"] = receipt_visual_mode
+        s4_receipt.write_text(
+            json.dumps(
+                receipt_payload,
+                ensure_ascii=False,
+            ),
+            encoding="utf-8",
+        )
+        output = temp / "lesson001__S1__visual_asset_manifest.request.json"
+        result = run(
+            VISUAL_GATE_RUNNER,
+            "--phase",
+            "request",
+            "--lesson-id",
+            "lesson001",
+            "--visual-mode",
+            "visual_enhanced",
+            "--initial-manifest",
+            initial,
+            "--page-plan",
+            page_plan,
+            "--s4-receipt",
+            s4_receipt,
+            "--receipt-dir",
+            temp / "receipts",
+            "--output",
+            output,
+        )
+        return result, output
+
+    def write_task_placement_review(
+        self,
+        temp: Path,
+        request: Path,
+        external: Path,
+    ) -> Path:
+        request_payload = json.loads(request.read_text(encoding="utf-8"))
+        asset_id = next(
+            item["assetId"]
+            for item in request_payload["placements"]
+            if item.get("pageNo") == "P02"
+        )
+        review = temp / "lesson001__S1__visual_placement_review.json"
+        review.write_text(
+            json.dumps(
+                {
+                    "schemaVersion": "1.0",
+                    "lessonId": "lesson001",
+                    "sourceRequestManifest": {"path": str(request.resolve()), "sha256": sha256(request)},
+                    "sourceExternalReturn": {"path": str(external.resolve()), "sha256": sha256(external)},
+                    "reviews": [
+                        {
+                            "pageNo": "P02",
+                            "assetId": asset_id,
+                            "imageReviewed": True,
+                            "semanticRelation": "图片支持理解课后作品任务。",
+                            "embeddedTextOverlapDetected": False,
+                            "fallbackUsed": True,
+                            "renderPlacement": {
+                                "authority": "model_visual_review",
+                                "anchorType": "reviewed_semantic_anchor",
+                                "rule": "extension_contextual_image",
+                                "insertAfter": "first_text_block",
+                                "fallback": "after_first_text_block",
+                                "terminalPlacementForbidden": True,
+                            },
+                        }
+                    ],
+                },
+                ensure_ascii=False,
+                indent=2,
+            ) + "\n",
+            encoding="utf-8",
+        )
+        return review
+
+    def test_visual_mode_is_required(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp = Path(temp_dir)
+            result = run(
+                VISUAL_GATE_RUNNER,
+                "--phase",
+                "initial",
+                "--lesson-id",
+                "lesson001",
+                "--receipt-dir",
+                temp / "receipts",
+            )
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            self.assertIn("VISUAL_MODE_NOT_SELECTED", result.stdout)
+
+    def test_text_only_writes_skip_receipt_without_manifest(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp = Path(temp_dir)
+            output = temp / "should-not-exist.json"
+            result = run(
+                VISUAL_GATE_RUNNER,
+                "--phase",
+                "initial",
+                "--lesson-id",
+                "lesson001",
+                "--visual-mode",
+                "text_only",
+                "--receipt-dir",
+                temp / "receipts",
+                "--output",
+                output,
+            )
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertFalse(output.exists())
+            receipt = json.loads(
+                (temp / "receipts" / "visual_manifest_gate_receipt.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(receipt["status"], "SKIPPED_BY_VISUAL_MODE")
+            self.assertEqual(receipt["visualMode"], "text_only")
+            self.assertEqual(receipt["inputs"], [])
+            self.assertEqual(receipt["outputs"], [])
+
+    def test_initial_freezes_teacher_assets_and_anchor(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp = Path(temp_dir)
+            teacher, visual_script = self.write_teacher_inputs(temp)
+            result, output = self.run_initial(temp, teacher, visual_script)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            payload = json.loads(output.read_text(encoding="utf-8"))
+            self.assertEqual(payload["lifecycleState"], "initial")
+            self.assertEqual(payload["assets"][0]["imageType"], "lesson_plan_image")
+            self.assertEqual(payload["assets"][0]["url"], "https://res.xrunda.com/test/l001-v01.webp")
+            self.assertEqual(payload["placements"][0]["sourceAnchor"]["teacherLineAfter"], 3)
+            self.assertEqual(payload["placements"][0]["sourceAnchor"]["beforeText"], "观察这张主图。")
+            self.assertEqual(payload["placements"][0]["sourceAnchor"]["afterText"], "说出图中的线索。")
+            self.assertEqual(payload["placements"][0]["sourceLocationText"], "第3行后单独显示")
+            self.assertEqual(payload["placements"][0]["sourceLocationDetail"], "单独显示")
+            self.assertEqual(
+                payload["placements"][0]["renderPlacement"],
+                {
+                    "authority": "teacher_visual_script",
+                    "anchorType": "teacher_source_anchor",
+                    "insertAfterText": "观察这张主图。",
+                    "insertBeforeText": "说出图中的线索。",
+                    "fallback": "none",
+                },
+            )
+
+    def test_initial_stops_before_delivery_check_and_uses_explicit_before_line(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp = Path(temp_dir)
+            teacher = temp / "final.md"
+            teacher_lines = [f"第{line_number}行占位文字" for line_number in range(1, 99)]
+            teacher_lines[87] = "A只处理背景过密这一处问题，也保留了已经合适的主题和风格方向。"
+            teacher_lines[88] = "<!-- 互动规格开始：这不是学生可见文字 -->"
+            teacher_lines[97] = "修改后的版本减少了背景小物件。图片缩小后，黄色潜水艇重新变得清楚。"
+            teacher.write_text("\n".join(teacher_lines) + "\n", encoding="utf-8")
+
+            visual_script = temp / "teacher-visual.md"
+            visual_script.write_text(
+                "# 阶段一教学必备视觉资产功能与衔接脚本\n\n"
+                "## 7. 第18课\n\n"
+                "源教案：`lesson018/final.md`  \n"
+                f"SHA-256：`{sha256(teacher)}`\n\n"
+                "### `L018-V03` 修改后的潜水艇画面\n\n"
+                "| 字段 | 内容 |\n|---|---|\n"
+                "| 图片用途 | 支持修改前后对比 |\n"
+                "| 教案位置 | 第88行后、下一条学生可见文字第98行前，与L018-V02以相同缩略尺寸并列显示 |\n"
+                "| 图片地址 | https://res.xrunda.com/test/l018-v03.webp |\n\n"
+                "## 8. 视觉资产交付检查\n\n"
+                "| 检查项 | 要求 |\n|---|---|\n"
+                "| 教案位置 | 每张图片同时匹配行号和文字锚点 |\n",
+                encoding="utf-8",
+            )
+            output = temp / "lesson018__S1__visual_asset_manifest.initial.json"
+
+            result = run(
+                VISUAL_GATE_RUNNER,
+                "--phase",
+                "initial",
+                "--lesson-id",
+                "lesson018",
+                "--visual-mode",
+                "visual_enhanced",
+                "--teacher-final",
+                teacher,
+                "--teacher-visual-script",
+                visual_script,
+                "--receipt-dir",
+                temp / "receipts",
+                "--output",
+                output,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            payload = json.loads(output.read_text(encoding="utf-8"))
+            placement = payload["placements"][0]
+            self.assertEqual(
+                placement["sourceLocationText"],
+                "第88行后、下一条学生可见文字第98行前，与L018-V02以相同缩略尺寸并列显示",
+            )
+            self.assertEqual(placement["sourceAnchor"]["teacherLineAfter"], 88)
+            self.assertEqual(
+                placement["sourceAnchor"]["beforeText"],
+                "A只处理背景过密这一处问题，也保留了已经合适的主题和风格方向。",
+            )
+            self.assertEqual(
+                placement["sourceAnchor"]["afterText"],
+                "修改后的版本减少了背景小物件。图片缩小后，黄色潜水艇重新变得清楚。",
+            )
+
+    def test_initial_blocks_teacher_sha_mismatch(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp = Path(temp_dir)
+            teacher, visual_script = self.write_teacher_inputs(temp, recorded_sha="0" * 64)
+            result, output = self.run_initial(temp, teacher, visual_script)
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            self.assertFalse(output.exists())
+            self.assertIn("TEACHER_VISUAL_SCRIPT_TEACHER_SHA_MISMATCH", result.stdout)
+
+    def test_request_binds_pages_and_reuses_canonical_page_type(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp = Path(temp_dir)
+            teacher, visual_script = self.write_teacher_inputs(temp)
+            initial_result, initial = self.run_initial(temp, teacher, visual_script)
+            self.assertEqual(initial_result.returncode, 0, initial_result.stdout + initial_result.stderr)
+            page_plan = self.write_page_plan(temp)
+            result, output = self.run_request(temp, initial, page_plan)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            payload = json.loads(output.read_text(encoding="utf-8"))
+            decisions = {item["pageNo"]: item for item in payload["pageDecisions"]}
+            self.assertEqual(decisions["P01"]["decision"], "lesson_plan_image")
+            self.assertEqual(decisions["P02"]["decision"], "courseware_image")
+            self.assertEqual(decisions["P02"]["pageType"], "拓展练习")
+            self.assertEqual(decisions["P03"]["decision"], "interaction_no_image")
+            p02_placement = next(item for item in payload["placements"] if item["pageNo"] == "P02")
+            self.assertEqual(p02_placement["renderPlacement"]["rule"], "extension_contextual_image")
+            self.assertEqual(p02_placement["renderPlacement"]["fallback"], "after_first_text_block")
+
+    def test_request_accepts_hash_bound_legacy_s4_receipt_without_visual_mode(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp = Path(temp_dir)
+            teacher, visual_script = self.write_teacher_inputs(temp)
+            initial_result, initial = self.run_initial(temp, teacher, visual_script)
+            self.assertEqual(initial_result.returncode, 0, initial_result.stdout + initial_result.stderr)
+            page_plan = self.write_page_plan(temp)
+
+            result, output = self.run_request(
+                temp,
+                initial,
+                page_plan,
+                receipt_visual_mode=None,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertTrue(output.is_file())
+
+    def test_request_blocks_explicit_s4_visual_mode_mismatch(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp = Path(temp_dir)
+            teacher, visual_script = self.write_teacher_inputs(temp)
+            initial_result, initial = self.run_initial(temp, teacher, visual_script)
+            self.assertEqual(initial_result.returncode, 0, initial_result.stdout + initial_result.stderr)
+            page_plan = self.write_page_plan(temp)
+
+            result, output = self.run_request(
+                temp,
+                initial,
+                page_plan,
+                receipt_visual_mode="text_only",
+            )
+
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            self.assertFalse(output.exists())
+            self.assertIn("VISUAL_MODE_DRIFT", result.stdout)
+
+    def test_request_binds_unique_surviving_anchor_when_transition_side_is_absent(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp = Path(temp_dir)
+            teacher, visual_script = self.write_teacher_inputs(temp)
+            initial_result, initial = self.run_initial(temp, teacher, visual_script)
+            self.assertEqual(initial_result.returncode, 0, initial_result.stdout + initial_result.stderr)
+            initial_payload = json.loads(initial.read_text(encoding="utf-8"))
+            absent_transition = "该过渡引导句未进入S4学生有效内容。"
+            initial_payload["placements"][0]["sourceAnchor"]["afterText"] = absent_transition
+            initial_payload["placements"][0]["renderPlacement"]["insertBeforeText"] = absent_transition
+            initial.write_text(
+                json.dumps(initial_payload, ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8",
+            )
+            page_plan = self.write_page_plan(temp)
+
+            result, output = self.run_request(temp, initial, page_plan)
+
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            payload = json.loads(output.read_text(encoding="utf-8"))
+            self.assertEqual(payload["placements"][0]["pageNo"], "P01")
+
+    def test_request_blocks_when_surviving_anchor_is_not_unique(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp = Path(temp_dir)
+            teacher, visual_script = self.write_teacher_inputs(temp)
+            initial_result, initial = self.run_initial(temp, teacher, visual_script)
+            self.assertEqual(initial_result.returncode, 0, initial_result.stdout + initial_result.stderr)
+            initial_payload = json.loads(initial.read_text(encoding="utf-8"))
+            absent_transition = "该过渡引导句未进入S4学生有效内容。"
+            initial_payload["placements"][0]["sourceAnchor"]["afterText"] = absent_transition
+            initial_payload["placements"][0]["renderPlacement"]["insertBeforeText"] = absent_transition
+            initial.write_text(
+                json.dumps(initial_payload, ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8",
+            )
+            page_plan = self.write_page_plan(temp)
+            page_plan.write_text(
+                page_plan.read_text(encoding="utf-8").replace(
+                    "完成一个课后作品。",
+                    "观察这张主图。\n\n完成一个课后作品。",
+                ),
+                encoding="utf-8",
+            )
+
+            result, output = self.run_request(temp, initial, page_plan)
+
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            self.assertFalse(output.exists())
+            self.assertIn("LESSON_PLAN_IMAGE_ANCHOR_INVALID", result.stdout)
+
+    def test_request_defers_reviewable_courseware_placement_until_image_review(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp = Path(temp_dir)
+            teacher, visual_script = self.write_teacher_inputs(temp)
+            initial_result, initial = self.run_initial(temp, teacher, visual_script)
+            self.assertEqual(initial_result.returncode, 0, initial_result.stdout + initial_result.stderr)
+            page_plan = self.write_page_plan(temp)
+            result, output = self.run_request(temp, initial, page_plan)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            payload = json.loads(output.read_text(encoding="utf-8"))
+            placement = next(item for item in payload["placements"] if item["pageNo"] == "P02")
+            self.assertEqual(placement["placementStatus"], "pending_visual_review")
+            self.assertEqual(placement["renderPlacement"]["decisionStatus"], "candidate_only")
+            self.assertTrue(placement["renderPlacement"]["terminalPlacementForbidden"])
+
+    def test_request_suppresses_teacher_image_on_interaction_page(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp = Path(temp_dir)
+            teacher, visual_script = self.write_teacher_inputs(temp)
+            initial_result, initial = self.run_initial(temp, teacher, visual_script)
+            self.assertEqual(initial_result.returncode, 0, initial_result.stdout + initial_result.stderr)
+            page_plan = self.write_page_plan(temp)
+            text = page_plan.read_text(encoding="utf-8")
+            text = text.replace("观察这张主图。\n说出图中的线索。", "没有教案图片。")
+            text = text.replace("```json", "观察这张主图。\n说出图中的线索。\n\n```json")
+            page_plan.write_text(text, encoding="utf-8")
+            result, output = self.run_request(temp, initial, page_plan)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            payload = json.loads(output.read_text(encoding="utf-8"))
+            placement = payload["placements"][0]
+            self.assertEqual(placement["pageNo"], "P03")
+            self.assertEqual(placement["placementStatus"], "suppressed_on_interaction_page")
+            decision = next(item for item in payload["pageDecisions"] if item["pageNo"] == "P03")
+            self.assertEqual(decision["decision"], "interaction_no_image")
+            self.assertEqual(decision["assetIds"], [])
+
+    def test_request_recognizes_transformed_interaction_anchor_fragment(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp = Path(temp_dir)
+            teacher, visual_script = self.write_teacher_inputs(temp)
+            initial_result, initial = self.run_initial(temp, teacher, visual_script)
+            self.assertEqual(initial_result.returncode, 0, initial_result.stdout + initial_result.stderr)
+            initial_payload = json.loads(initial.read_text(encoding="utf-8"))
+            initial_payload["placements"][0]["sourceAnchor"] = {
+                "teacherLineAfter": 82,
+                "beforeText": "答案是：A—B—C。",
+                "afterText": "小狐狸先画卡，接着卡片被风吹上树枝，最后小鸟把卡送回来。三个事件前后相连，故事才完整。",
+            }
+            initial_payload["placements"][0]["sourceLocationText"] = "第82行后单独显示"
+            initial_payload["placements"][0]["sourceLocationDetail"] = "单独显示"
+            initial_payload["placements"][0]["renderPlacement"] = {
+                "authority": "teacher_visual_script",
+                "anchorType": "teacher_source_anchor",
+                "insertAfterText": "答案是：A—B—C。",
+                "insertBeforeText": "小狐狸先画卡，接着卡片被风吹上树枝，最后小鸟把卡送回来。三个事件前后相连，故事才完整。",
+                "fallback": "none",
+            }
+            initial.write_text(json.dumps(initial_payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+            page_plan = self.write_page_plan(temp)
+            text = page_plan.read_text(encoding="utf-8")
+            text = text.replace("观察这张主图。\n说出图中的线索。", "没有教案图片。")
+            text = text.replace(
+                '"answer":["A"]',
+                '"answer":["A"],"explanation":"正确顺序是A—B—C：小狐狸先画卡，接着卡片被风吹上树枝，最后小鸟把卡送回来。"',
+            )
+            page_plan.write_text(text, encoding="utf-8")
+            result, output = self.run_request(temp, initial, page_plan)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            payload = json.loads(output.read_text(encoding="utf-8"))
+            self.assertEqual(payload["placements"][0]["pageNo"], "P03")
+            self.assertEqual(payload["placements"][0]["placementStatus"], "suppressed_on_interaction_page")
+
+    def test_resolved_accepts_only_requested_courseware_metadata(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp = Path(temp_dir)
+            teacher, visual_script = self.write_teacher_inputs(temp)
+            initial_result, initial = self.run_initial(temp, teacher, visual_script)
+            self.assertEqual(initial_result.returncode, 0, initial_result.stdout + initial_result.stderr)
+            page_plan = self.write_page_plan(temp)
+            request_result, request = self.run_request(temp, initial, page_plan)
+            self.assertEqual(request_result.returncode, 0, request_result.stdout + request_result.stderr)
+            external = temp / "lesson001__external__page_plan_visual_return.md"
+            external.write_text(
+                page_plan.read_text(encoding="utf-8").replace(
+                    "完成一个课后作品。",
+                    "完成一个课后作品。\n\n- 课件配图地址：https://res.xrunda.com/test/l001-p02.webp\n"
+                    "- 课件配图宽度：1200\n- 课件配图高度：800\n- 课件配图 alt：课后作品示意图",
+                ),
+                encoding="utf-8",
+            )
+            output = temp / "lesson001__S1__visual_asset_manifest.resolved.json"
+            review = self.write_task_placement_review(temp, request, external)
+            result = run(
+                VISUAL_GATE_RUNNER,
+                "--phase",
+                "resolved",
+                "--lesson-id",
+                "lesson001",
+                "--visual-mode",
+                "visual_enhanced",
+                "--request-manifest",
+                request,
+                "--page-plan",
+                page_plan,
+                "--external-return",
+                external,
+                "--placement-review",
+                review,
+                "--receipt-dir",
+                temp / "receipts",
+                "--output",
+                output,
+            )
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            payload = json.loads(output.read_text(encoding="utf-8"))
+            courseware = next(item for item in payload["assets"] if item["imageType"] == "courseware_image")
+            self.assertEqual(courseware["url"], "https://res.xrunda.com/test/l001-p02.webp")
+            self.assertEqual(courseware["width"], 1200)
+            self.assertEqual(courseware["height"], 800)
+            self.assertEqual(payload["externalReturn"]["sha256"], sha256(external))
+
+    def test_resolved_freezes_model_reviewed_task_fallback_before_s5(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp = Path(temp_dir)
+            teacher, visual_script = self.write_teacher_inputs(temp)
+            initial_result, initial = self.run_initial(temp, teacher, visual_script)
+            self.assertEqual(initial_result.returncode, 0, initial_result.stdout + initial_result.stderr)
+            page_plan = self.write_page_plan(temp)
+            request_result, request = self.run_request(temp, initial, page_plan)
+            self.assertEqual(request_result.returncode, 0, request_result.stdout + request_result.stderr)
+            external = temp / "lesson001__external__page_plan_visual_return.md"
+            external.write_text(
+                page_plan.read_text(encoding="utf-8").replace(
+                    "完成一个课后作品。",
+                    "完成一个课后作品。\n\n- 课件配图地址：https://res.xrunda.com/test/l001-p02.webp",
+                ),
+                encoding="utf-8",
+            )
+            output = temp / "lesson001__S1__visual_asset_manifest.resolved.json"
+            review = self.write_task_placement_review(temp, request, external)
+            result = run(
+                VISUAL_GATE_RUNNER,
+                "--phase", "resolved",
+                "--lesson-id", "lesson001",
+                "--visual-mode", "visual_enhanced",
+                "--request-manifest", request,
+                "--page-plan", page_plan,
+                "--external-return", external,
+                "--placement-review", review,
+                "--receipt-dir", temp / "receipts",
+                "--output", output,
+            )
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            payload = json.loads(output.read_text(encoding="utf-8"))
+            placement = next(item for item in payload["placements"] if item["pageNo"] == "P02")
+            self.assertEqual(placement["placementStatus"], "reviewed")
+            self.assertTrue(placement["visualReview"]["imageReviewed"])
+            self.assertTrue(placement["visualReview"]["fallbackUsed"])
+            self.assertEqual(placement["renderPlacement"]["insertAfter"], "first_text_block")
+            self.assertTrue(placement["renderPlacement"]["terminalPlacementForbidden"])
+
+    def test_resolved_allows_image_text_overlap_and_records_it_without_blocking(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp = Path(temp_dir)
+            teacher, visual_script = self.write_teacher_inputs(temp)
+            initial_result, initial = self.run_initial(temp, teacher, visual_script)
+            self.assertEqual(initial_result.returncode, 0, initial_result.stdout + initial_result.stderr)
+            page_plan = self.write_page_plan(temp)
+            request_result, request = self.run_request(temp, initial, page_plan)
+            self.assertEqual(request_result.returncode, 0, request_result.stdout + request_result.stderr)
+            external = temp / "lesson001__external__page_plan_visual_return.md"
+            external.write_text(
+                page_plan.read_text(encoding="utf-8").replace(
+                    "完成一个课后作品。",
+                    "完成一个课后作品。\n\n- 课件配图地址：https://res.xrunda.com/test/l001-p02.webp",
+                ),
+                encoding="utf-8",
+            )
+            review = self.write_task_placement_review(temp, request, external)
+            review_payload = json.loads(review.read_text(encoding="utf-8"))
+            review_payload["reviews"][0].pop("embeddedTextOverlapDetected")
+            review_payload["reviews"][0]["embeddedTextConflict"] = True
+            review.write_text(
+                json.dumps(review_payload, ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8",
+            )
+            output = temp / "lesson001__S1__visual_asset_manifest.resolved.json"
+            result = run(
+                VISUAL_GATE_RUNNER,
+                "--phase", "resolved",
+                "--lesson-id", "lesson001",
+                "--visual-mode", "visual_enhanced",
+                "--request-manifest", request,
+                "--page-plan", page_plan,
+                "--external-return", external,
+                "--placement-review", review,
+                "--receipt-dir", temp / "receipts",
+                "--output", output,
+            )
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            payload = json.loads(output.read_text(encoding="utf-8"))
+            placement = next(item for item in payload["placements"] if item["pageNo"] == "P02")
+            self.assertTrue(placement["visualReview"]["embeddedTextOverlapDetected"])
+            self.assertNotIn("embeddedTextConflict", placement["visualReview"])
+
+    def test_resolved_ignores_courseware_candidate_on_lesson_plan_image_page(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp = Path(temp_dir)
+            teacher, visual_script = self.write_teacher_inputs(temp)
+            initial_result, initial = self.run_initial(temp, teacher, visual_script)
+            self.assertEqual(initial_result.returncode, 0, initial_result.stdout + initial_result.stderr)
+            page_plan = self.write_page_plan(temp)
+            request_result, request = self.run_request(temp, initial, page_plan)
+            self.assertEqual(request_result.returncode, 0, request_result.stdout + request_result.stderr)
+            external = temp / "lesson001__external__page_plan_visual_return.md"
+            external_text = page_plan.read_text(encoding="utf-8")
+            external_text = external_text.replace(
+                "说出图中的线索。",
+                "说出图中的线索。\n\n- 课件配图地址：https://res.xrunda.com/test/ignored-p01.webp",
+            )
+            external_text = external_text.replace(
+                "完成一个课后作品。",
+                "完成一个课后作品。\n\n- 课件配图地址：https://res.xrunda.com/test/l001-p02.webp",
+            )
+            external.write_text(external_text, encoding="utf-8")
+            output = temp / "lesson001__S1__visual_asset_manifest.resolved.json"
+            review = self.write_task_placement_review(temp, request, external)
+            result = run(
+                VISUAL_GATE_RUNNER,
+                "--phase", "resolved",
+                "--lesson-id", "lesson001",
+                "--visual-mode", "visual_enhanced",
+                "--request-manifest", request,
+                "--page-plan", page_plan,
+                "--external-return", external,
+                "--placement-review", review,
+                "--receipt-dir", temp / "receipts",
+                "--output", output,
+            )
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            payload = json.loads(output.read_text(encoding="utf-8"))
+            lesson_plan = next(item for item in payload["assets"] if item["imageType"] == "lesson_plan_image")
+            courseware = next(item for item in payload["assets"] if item["imageType"] == "courseware_image")
+            self.assertEqual(lesson_plan["url"], "https://res.xrunda.com/test/l001-v01.webp")
+            self.assertEqual(courseware["url"], "https://res.xrunda.com/test/l001-p02.webp")
+            self.assertEqual(payload["externalReturn"]["ignoredCoursewarePages"], ["P01"])
+            self.assertTrue(payload["checks"]["lessonPlanImagePriorityApplied"])
+
+    def test_resolved_accepts_cross_chain_body_drift_with_matching_page_types(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp = Path(temp_dir)
+            teacher, visual_script = self.write_teacher_inputs(temp)
+            initial_result, initial = self.run_initial(temp, teacher, visual_script)
+            self.assertEqual(initial_result.returncode, 0, initial_result.stdout + initial_result.stderr)
+            page_plan = self.write_page_plan(temp)
+            request_result, request = self.run_request(temp, initial, page_plan)
+            self.assertEqual(request_result.returncode, 0, request_result.stdout + request_result.stderr)
+            external = temp / "drift.md"
+            external.write_text(
+                page_plan.read_text(encoding="utf-8").replace(
+                    "完成一个课后作品。",
+                    "旧链中经过局部调整的课后作品说明。\n\n"
+                    "- 课件配图地址：https://res.xrunda.com/test/l001-p02.webp",
+                ),
+                encoding="utf-8",
+            )
+            output = temp / "resolved.json"
+            review = self.write_task_placement_review(temp, request, external)
+            result = run(
+                VISUAL_GATE_RUNNER,
+                "--phase", "resolved",
+                "--lesson-id", "lesson001",
+                "--visual-mode", "visual_enhanced",
+                "--request-manifest", request,
+                "--page-plan", page_plan,
+                "--external-return", external,
+                "--placement-review", review,
+                "--receipt-dir", temp / "receipts",
+                "--output", output,
+            )
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            payload = json.loads(output.read_text(encoding="utf-8"))
+            self.assertEqual(payload["externalReturn"]["bindingMode"], "cross_chain_page_metadata")
+            self.assertFalse(payload["checks"]["externalReturnPagePlanExactAfterMetadataRemoval"])
+            self.assertTrue(payload["checks"]["externalReturnPageSetAndTypesMatch"])
+
+    def test_resolved_blocks_cross_chain_page_type_mismatch(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp = Path(temp_dir)
+            teacher, visual_script = self.write_teacher_inputs(temp)
+            initial_result, initial = self.run_initial(temp, teacher, visual_script)
+            self.assertEqual(initial_result.returncode, 0, initial_result.stdout + initial_result.stderr)
+            page_plan = self.write_page_plan(temp)
+            request_result, request = self.run_request(temp, initial, page_plan)
+            self.assertEqual(request_result.returncode, 0, request_result.stdout + request_result.stderr)
+            external = temp / "wrong-page-type.md"
+            external.write_text(
+                page_plan.read_text(encoding="utf-8")
+                .replace("- 页面类型：课后任务", "- 页面类型：课程小结")
+                .replace(
+                    "完成一个课后作品。",
+                    "完成一个课后作品。\n\n"
+                    "- 课件配图地址：https://res.xrunda.com/test/l001-p02.webp",
+                ),
+                encoding="utf-8",
+            )
+            review = self.write_task_placement_review(temp, request, external)
+
+            result = run(
+                VISUAL_GATE_RUNNER,
+                "--phase", "resolved",
+                "--lesson-id", "lesson001",
+                "--visual-mode", "visual_enhanced",
+                "--request-manifest", request,
+                "--page-plan", page_plan,
+                "--external-return", external,
+                "--placement-review", review,
+                "--receipt-dir", temp / "receipts",
+                "--output", temp / "resolved.json",
+            )
+
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            self.assertIn("EXTERNAL_RETURN_PAGE_TYPE_MISMATCH", result.stdout)
+
+    def test_stage_gate_blocks_visual_mode_drift(self) -> None:
+        fixture = FIXTURES / "transition-boundary"
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp = Path(temp_dir)
+            working = fixture / "page_plan_working_full.md"
+            question = fixture / "question_processed_full.md"
+            prior = temp / "s3.json"
+            prior.write_text(
+                json.dumps(
+                    {
+                        "contract": "RunS_V3.5.0-S1-S6-R36-20260731",
+                        "lesson_id": "lesson001",
+                        "stage": "S3",
+                        "visualMode": "text_only",
+                        "status": "PASS",
+                        "inputs": [{"role": "working_plan", "path": str(working.resolve()), "sha256": sha256(working)}],
+                        "output": {"role": "question_processed", "path": str(question.resolve()), "sha256": sha256(question)},
+                    },
+                    ensure_ascii=False,
+                ),
+                encoding="utf-8",
+            )
+            result = run(
+                GATE_RUNNER,
+                "--stage", "S4",
+                "--lesson-id", "lesson001",
+                "--visual-mode", "visual_enhanced",
+                "--receipt-dir", temp / "receipts",
+                "--prior-receipt", prior,
+                "--working-plan", working,
+                "--question-processed", question,
+                "--output", temp / "page_plan_full.md",
+            )
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            self.assertIn("VISUAL_MODE_DRIFT", result.stdout)
+
+
+class VisualS5ProjectionTests(unittest.TestCase):
+    def write_s5_inputs(self, temp: Path) -> tuple[Path, Path]:
+        page_plan = temp / "page_plan_full.md"
+        page_plan.write_text(
+            "## P01\n- 页面类型：课程开篇\n- 胶囊文案：课程开篇\n- 页面动作：nextPage\n"
+            "- 来源块：course_info_header\n- 内容块类型：课程信息头\n- 布局意图：六项课程信息按原顺序展示。\n"
+            "- 过渡句位置：none\n- 过渡句原文：无\n\n### 有效内容\n\n"
+            "课包名称：测试课包\n单元名称：测试单元\n课程编号：第1课\n课程标题：视觉测试\n课程目标：理解配图规则\n知识点：教案图；课件图\n\n"
+            "## P02\n- 页面类型：知识讲解\n- 胶囊文案：知识讲解\n- 页面动作：nextPage\n"
+            "- 来源块：B02\n- 内容块类型：段落\n- 布局意图：按原文展示。\n"
+            "- 过渡句位置：none\n- 过渡句原文：无\n\n### 有效内容\n\n"
+            "图片呈现可见信息。\n\n"
+            "- 画面A：小狐狸在窗边画生日卡。\n"
+            "- 画面B：生日卡被风吹到树枝上。\n\n"
+            "文字补充画面外的信息。\n\n"
+            "## P03\n- 页面类型：互动题目\n- 胶囊文案：试一试\n- 页面动作：nextPage\n"
+            "- 来源块：B03\n- 内容块类型：题目\n- 布局意图：组件展示。\n"
+            "- 过渡句位置：none\n- 过渡句原文：无\n- 组件类型：galaxy_select_question\n\n### 有效内容\n\n"
+            "```json\n{\"type\":\"galaxy_select_question\",\"componentId\":\"L001-I01\",\"content\":{\"questions\":[{\"question\":\"请选择\",\"options\":[\"A\",\"B\"],\"isMultiple\":false,\"answerIndex\":[0],\"answer\":[\"A\"]}]}}\n```\n\n"
+            "## P04\n- 页面类型：拓展练习\n- 胶囊文案：拓展练习\n- 页面动作：complete\n"
+            "- 来源块：B04\n- 内容块类型：任务\n- 布局意图：按原文展示。\n"
+            "- 过渡句位置：none\n- 过渡句原文：无\n\n### 有效内容\n\n"
+            "## 完成图文作品\n\n按顺序组合图片和文字。\n\n"
+            "**固定材料：**课程配图；课程文字。\n\n"
+            "```text\n请按顺序组合课程配图和课程文字。\n```\n",
+            encoding="utf-8",
+        )
+        external = temp / "already-consumed-and-removed.md"
+        resolved = temp / "lesson001__S1__visual_asset_manifest.resolved.json"
+        resolved.write_text(
+            json.dumps(
+                {
+                    "schemaVersion": "1.1",
+                    "lessonId": "lesson001",
+                    "visualMode": "visual_enhanced",
+                    "ownerStage": "S1",
+                    "lifecycleState": "resolved",
+                    "sourceTeacherFinal": {"path": "/frozen/final.md", "sha256": "1" * 64},
+                    "sourceTeacherVisualScript": {"path": "/frozen/visual.md", "sha256": "2" * 64},
+                    "sourcePagePlan": {"path": str(page_plan.resolve()), "sha256": sha256(page_plan)},
+                    "externalReturn": {"path": str(external.resolve()), "sha256": "3" * 64},
+                    "policy": {
+                        "lessonPlanImagePriority": True,
+                        "coursewareImageOnlyWithoutLessonPlanImage": True,
+                        "coursewareImageOnInteractionPage": False,
+                        "maximumCoursewareImagesPerPage": 1,
+                        "missingUrlFallbackAllowed": False,
+                    },
+                    "assets": [
+                        {"assetId": "L001-P01-C01", "imageType": "courseware_image", "url": "https://res.xrunda.com/test/p01.webp", "width": 1200, "height": 800, "alt": "课程开篇图", "teachingPurpose": None, "sourceAuthority": "external_courseware_return", "assetStatus": "ready"},
+                        {"assetId": "L001-V01", "imageType": "lesson_plan_image", "url": "https://res.xrunda.com/test/v01.webp", "width": None, "height": None, "alt": "画面一", "teachingPurpose": "比较画面", "sourceAuthority": "teacher_visual_script", "assetStatus": "ready"},
+                        {"assetId": "L001-V02", "imageType": "lesson_plan_image", "url": "https://res.xrunda.com/test/v02.webp", "width": 900, "height": 1200, "alt": "画面二", "teachingPurpose": "比较画面", "sourceAuthority": "teacher_visual_script", "assetStatus": "ready"},
+                        {"assetId": "L001-P04-C01", "imageType": "courseware_image", "url": "https://res.xrunda.com/test/p04.webp", "width": None, "height": None, "alt": None, "teachingPurpose": None, "sourceAuthority": "external_courseware_return", "assetStatus": "ready"},
+                    ],
+                    "placements": [
+                        {"placementId": "P01-C", "assetId": "L001-P01-C01", "sourceAnchor": None, "sourceLocationText": None, "sourceLocationDetail": None, "renderPlacement": {"authority": "page_type_contract", "anchorType": "page_type_rule", "rule": "course_intro_primary_image", "inside": "course_overview", "insertBefore": "lesson_chip", "replaces": "existing_intro_decorative_image_slot", "fallback": "before_course_title", "decisionStatus": "final_fixed", "terminalPlacementForbidden": True}, "pageNo": "P01", "displayMode": "single", "groupId": None, "order": None, "displayLabel": None, "placementStatus": "active", "visualReview": {"imageReviewed": False, "reviewNotRequiredReason": "fixed_page_type_placement", "fallbackUsed": False}},
+                        {"placementId": "P02-V1", "assetId": "L001-V01", "sourceAnchor": {"teacherLineAfter": 1, "beforeText": "图片呈现可见信息。", "afterText": "- 画面A：小狐狸在窗边画生日卡。"}, "sourceLocationText": "第1行后与下一张图并列", "sourceLocationDetail": "与下一张图并列", "renderPlacement": {"authority": "teacher_visual_script", "anchorType": "teacher_source_anchor", "insertAfterText": "图片呈现可见信息。", "insertBeforeText": "- 画面A：小狐狸在窗边画生日卡。", "fallback": "none"}, "pageNo": "P02", "displayMode": "group_item", "groupId": "L001-G1", "order": 1, "displayLabel": "画面 A", "placementStatus": "active"},
+                        {"placementId": "P02-V2", "assetId": "L001-V02", "sourceAnchor": {"teacherLineAfter": 1, "beforeText": "图片呈现可见信息。", "afterText": "- 画面A：小狐狸在窗边画生日卡。"}, "sourceLocationText": "第1行后与上一张图并列", "sourceLocationDetail": "与上一张图并列", "renderPlacement": {"authority": "teacher_visual_script", "anchorType": "teacher_source_anchor", "insertAfterText": "图片呈现可见信息。", "insertBeforeText": "- 画面A：小狐狸在窗边画生日卡。", "fallback": "none"}, "pageNo": "P02", "displayMode": "group_item", "groupId": "L001-G1", "order": 2, "displayLabel": "画面 B", "placementStatus": "active"},
+                        {"placementId": "P03-V1-SUPPRESSED", "assetId": "L001-V01", "sourceAnchor": {"teacherLineAfter": 2, "beforeText": "请选择。", "afterText": "查看答案。"}, "sourceLocationText": "第2行后复用", "sourceLocationDetail": "复用", "renderPlacement": {"authority": "teacher_visual_script", "anchorType": "teacher_source_anchor", "insertAfterText": "请选择。", "insertBeforeText": "查看答案。", "fallback": "none"}, "pageNo": "P03", "displayMode": "reuse", "groupId": None, "order": None, "displayLabel": None, "placementStatus": "suppressed_on_interaction_page", "suppressionReason": "interaction_component_contract_forbids_course_images"},
+                        {"placementId": "P04-C", "assetId": "L001-P04-C01", "sourceAnchor": None, "sourceLocationText": None, "sourceLocationDetail": None, "renderPlacement": {"authority": "model_visual_review", "anchorType": "reviewed_semantic_anchor", "rule": "extension_contextual_image", "insertAfter": "first_text_block", "fallback": "after_first_text_block", "terminalPlacementForbidden": True}, "pageNo": "P04", "displayMode": "single", "groupId": None, "order": None, "displayLabel": None, "placementStatus": "reviewed", "visualReview": {"imageReviewed": True, "semanticRelation": "图片支持理解任务目标。", "embeddedTextOverlapDetected": False, "fallbackUsed": True}},
+                    ],
+                    "pageDecisions": [
+                        {"pageNo": "P01", "pageType": "课程开篇", "decision": "courseware_image", "reason": "non_interactive_without_lesson_plan_image", "requiredAssetCount": 1, "assetIds": ["L001-P01-C01"], "status": "resolved"},
+                        {"pageNo": "P02", "pageType": "知识讲解", "decision": "lesson_plan_image", "reason": "teacher_visual_script_anchor_bound_to_page", "requiredAssetCount": 2, "assetIds": ["L001-V01", "L001-V02"], "status": "ready"},
+                        {"pageNo": "P03", "pageType": "互动题目", "decision": "interaction_no_image", "reason": "interaction_component_contract_forbids_course_images", "requiredAssetCount": 0, "assetIds": [], "status": "not_applicable"},
+                        {"pageNo": "P04", "pageType": "拓展练习", "decision": "courseware_image", "reason": "non_interactive_without_lesson_plan_image", "requiredAssetCount": 1, "assetIds": ["L001-P04-C01"], "status": "resolved"},
+                    ],
+                    "checks": {},
+                    "blockingPoints": [],
+                },
+                ensure_ascii=False,
+                indent=2,
+            ) + "\n",
+            encoding="utf-8",
+        )
+        return page_plan, resolved
+
+    def test_text_only_explicit_mode_keeps_s5_bytes_unchanged(self) -> None:
+        fixture = FIXTURES / "summary-status-preview" / "page_plan_full.md"
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp = Path(temp_dir)
+            legacy = temp / "legacy.json"
+            explicit = temp / "explicit.json"
+            legacy_result = run(S5_GENERATOR, "--lesson-id", "lesson001", "--page-plan", fixture, "--output", legacy)
+            explicit_result = run(S5_GENERATOR, "--lesson-id", "lesson001", "--visual-mode", "text_only", "--page-plan", fixture, "--output", explicit)
+            self.assertEqual(legacy_result.returncode, 0, legacy_result.stdout + legacy_result.stderr)
+            self.assertEqual(explicit_result.returncode, 0, explicit_result.stdout + explicit_result.stderr)
+            self.assertEqual(legacy.read_bytes(), explicit.read_bytes())
+            self.assertNotIn("visual", explicit.read_text(encoding="utf-8"))
+
+    def test_visual_enhanced_projects_resolved_manifest_without_external_read(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp = Path(temp_dir)
+            page_plan, resolved = self.write_s5_inputs(temp)
+            output = temp / "effective_content_full.json"
+            result = run(S5_GENERATOR, "--lesson-id", "lesson001", "--visual-mode", "visual_enhanced", "--page-plan", page_plan, "--visual-manifest", resolved, "--output", output)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            payload = json.loads(output.read_text(encoding="utf-8"))
+            self.assertEqual(payload["visualMode"], "visual_enhanced")
+            self.assertEqual(payload["sourceVisualManifest"], str(resolved.resolve()))
+            self.assertEqual(payload["sourceVisualManifestSha256"], sha256(resolved))
+            self.assertEqual(payload["pages"][0]["visual"]["imageType"], "courseware_image")
+            self.assertEqual(payload["pages"][1]["visual"]["displayMode"], "group")
+            self.assertEqual([asset["displayLabel"] for asset in payload["pages"][1]["visual"]["assets"]], ["画面 A", "画面 B"])
+            self.assertEqual(
+                [asset["pairedStudentText"] for asset in payload["pages"][1]["visual"]["assets"]],
+                ["画面A：小狐狸在窗边画生日卡。", "画面B：生日卡被风吹到树枝上。"],
+            )
+            self.assertEqual(
+                [asset["pairedSource"] for asset in payload["pages"][1]["visual"]["assets"]],
+                [
+                    {"blockIndex": 1, "itemIndex": 0, "blockType": "unordered_list"},
+                    {"blockIndex": 1, "itemIndex": 1, "blockType": "unordered_list"},
+                ],
+            )
+            self.assertEqual(
+                payload["pages"][0]["visual"]["assets"][0]["placement"],
+                {
+                    "authority": "page_type_contract",
+                    "anchorType": "page_type_rule",
+                    "rule": "course_intro_primary_image",
+                    "inside": "course_overview",
+                    "insertBefore": "lesson_chip",
+                    "replaces": "existing_intro_decorative_image_slot",
+                    "fallback": "before_course_title",
+                    "decisionStatus": "final_fixed",
+                    "terminalPlacementForbidden": True,
+                },
+            )
+            self.assertEqual(
+                payload["pages"][1]["visual"]["assets"][0]["placement"]["insertAfterText"],
+                "图片呈现可见信息。",
+            )
+            self.assertEqual(
+                payload["pages"][1]["visual"]["assets"][0]["placement"]["insertBeforeText"],
+                "- 画面A：小狐狸在窗边画生日卡。",
+            )
+            self.assertEqual(
+                payload["pages"][0]["visual"]["presentation"],
+                {
+                    "sizeRole": "primary_content_image",
+                    "widthPolicy": "content_width",
+                    "heightPolicy": "natural_ratio",
+                    "objectFit": "contain",
+                    "borderRadiusPx": 16,
+                    "verticalSpacingPx": 16,
+                    "thumbnailForbidden": True,
+                    "standaloneCard": False,
+                    "lightboxRequired": True,
+                    "groupLayout": "vertical_stack",
+                    "terminalPlacementForbidden": True,
+                },
+            )
+            self.assertNotIn("visual", payload["pages"][2])
+            validation = run(VALIDATOR, "--page-plan", page_plan, "--visual-mode", "visual_enhanced", "--visual-manifest", resolved, output)
+            self.assertEqual(validation.returncode, 0, validation.stdout + validation.stderr)
+
+    def test_visual_s5_blocks_manifest_bound_to_stale_s4(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp = Path(temp_dir)
+            page_plan, resolved = self.write_s5_inputs(temp)
+            payload = json.loads(resolved.read_text(encoding="utf-8"))
+            payload["sourcePagePlan"]["sha256"] = "0" * 64
+            resolved.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+            result = run(S5_GENERATOR, "--lesson-id", "lesson001", "--visual-mode", "visual_enhanced", "--page-plan", page_plan, "--visual-manifest", resolved, "--output", temp / "effective.json")
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            self.assertIn("VISUAL_MANIFEST_PAGE_PLAN_HASH_MISMATCH", result.stderr)
+
+    def test_visual_s5_gate_verifies_visual_receipt_hash(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp = Path(temp_dir)
+            page_plan, resolved = self.write_s5_inputs(temp)
+            s4_receipt = temp / "s4.json"
+            s4_receipt.write_text(json.dumps({"contract": "RunS_V3.5.0-S1-S6-R36-20260731", "lesson_id": "lesson001", "stage": "S4", "visualMode": "visual_enhanced", "status": "PASS", "output": {"role": "page_plan", "path": str(page_plan.resolve()), "sha256": sha256(page_plan)}}), encoding="utf-8")
+            visual_receipt = temp / "visual.json"
+            visual_receipt.write_text(json.dumps({"contract": "RunS_V3.5.0-S1-S6-R36-20260731", "lessonId": "lesson001", "lesson_id": "lesson001", "visualMode": "visual_enhanced", "ownerStage": "S1", "phase": "resolved", "status": "PASS", "output": {"role": "visual_manifest_resolved", "path": str(resolved.resolve()), "sha256": "0" * 64}}), encoding="utf-8")
+            result = run(GATE_RUNNER, "--stage", "S5", "--lesson-id", "lesson001", "--visual-mode", "visual_enhanced", "--receipt-dir", temp / "receipts", "--prior-receipt", s4_receipt, "--page-plan", page_plan, "--visual-manifest", resolved, "--visual-receipt", visual_receipt, "--output", temp / "effective.json")
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            self.assertIn("VISUAL_RECEIPT_OUTPUT_HASH_MISMATCH", result.stdout)
+
+    def test_visual_validator_blocks_any_interaction_image_projection(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp = Path(temp_dir)
+            page_plan, resolved = self.write_s5_inputs(temp)
+            output = temp / "effective.json"
+            result = run(S5_GENERATOR, "--lesson-id", "lesson001", "--visual-mode", "visual_enhanced", "--page-plan", page_plan, "--visual-manifest", resolved, "--output", output)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            payload = json.loads(output.read_text(encoding="utf-8"))
+            payload["pages"][2]["visual"] = {"imageType": "courseware_image", "displayMode": "single", "assets": []}
+            output.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+            validation = run(VALIDATOR, "--page-plan", page_plan, "--visual-mode", "visual_enhanced", "--visual-manifest", resolved, output)
+            self.assertEqual(validation.returncode, 1, validation.stdout + validation.stderr)
+            self.assertIn("V35_S5_INTERACTION_IMAGE_FORBIDDEN", validation.stdout)
+
+    def test_visual_pair_bindings_are_optional_but_cannot_be_partial(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp = Path(temp_dir)
+            page_plan, resolved = self.write_s5_inputs(temp)
+            output = temp / "effective.json"
+            generated = run(S5_GENERATOR, "--lesson-id", "lesson001", "--visual-mode", "visual_enhanced", "--page-plan", page_plan, "--visual-manifest", resolved, "--output", output)
+            self.assertEqual(generated.returncode, 0, generated.stdout + generated.stderr)
+            payload = json.loads(output.read_text(encoding="utf-8"))
+            assets = payload["pages"][1]["visual"]["assets"]
+            frozen_pair = {
+                "pairedStudentText": assets[0]["pairedStudentText"],
+                "pairedSource": assets[0]["pairedSource"],
+            }
+            for asset in assets:
+                asset.pop("pairedStudentText", None)
+                asset.pop("pairedSource", None)
+            output.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+            compatible = run(VALIDATOR, "--page-plan", page_plan, "--visual-mode", "visual_enhanced", "--visual-manifest", resolved, output)
+            self.assertEqual(compatible.returncode, 0, compatible.stdout + compatible.stderr)
+            assets[0].update(frozen_pair)
+            output.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+            partial = run(VALIDATOR, "--page-plan", page_plan, "--visual-mode", "visual_enhanced", "--visual-manifest", resolved, output)
+            self.assertEqual(partial.returncode, 1, partial.stdout + partial.stderr)
+            self.assertIn("V35_S5_VISUAL_TEXT_PAIRING_INVALID", partial.stdout)
+
+
+class VisualS6ProjectionTests(VisualS5ProjectionTests):
+    def build_visual_s5(self, temp: Path) -> Path:
+        page_plan, resolved = self.write_s5_inputs(temp)
+        effective = temp / "effective_content_full.json"
+        result = run(
+            S5_GENERATOR,
+            "--lesson-id", "lesson001",
+            "--visual-mode", "visual_enhanced",
+            "--page-plan", page_plan,
+            "--visual-manifest", resolved,
+            "--output", effective,
+        )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        page_plan.unlink()
+        resolved.unlink()
+        return effective
+
+    def test_s6_visual_enhanced_consumes_only_s5_and_projects_page_shapes(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp = Path(temp_dir)
+            effective = self.build_visual_s5(temp)
+            output = temp / "whole_course.json"
+            result = run(
+                ASSEMBLER,
+                "--lesson-id", "lesson001",
+                "--effective-content", effective,
+                "--output", output,
+            )
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            payload = json.loads(output.read_text(encoding="utf-8"))
+            self.assertEqual(payload["visualMode"], "visual_enhanced")
+            self.assertEqual(payload["pages"][0]["page_data"]["visualAsset"]["url"], "https://res.xrunda.com/test/p01.webp")
+            self.assertEqual(
+                payload["pages"][0]["page_data"]["visualAsset"]["placement"]["rule"],
+                "course_intro_primary_image",
+            )
+            self.assertEqual(
+                payload["pages"][0]["page_data"]["introDensityContract"]["minimumUnlockRowHeightPx"],
+                44,
+            )
+            self.assertTrue(payload["pages"][0]["page_data"]["visualPresentation"]["thumbnailForbidden"])
+            self.assertEqual(
+                [asset["displayLabel"] for asset in payload["pages"][1]["page_data"]["planVisualAssets"]],
+                ["画面 A", "画面 B"],
+            )
+            self.assertEqual(
+                [asset["pairedStudentText"] for asset in payload["pages"][1]["page_data"]["planVisualAssets"]],
+                ["画面A：小狐狸在窗边画生日卡。", "画面B：生日卡被风吹到树枝上。"],
+            )
+            self.assertEqual(
+                [asset["pairedSource"] for asset in payload["pages"][1]["page_data"]["planVisualAssets"]],
+                [
+                    {"blockIndex": 1, "itemIndex": 0, "blockType": "unordered_list"},
+                    {"blockIndex": 1, "itemIndex": 1, "blockType": "unordered_list"},
+                ],
+            )
+            self.assertEqual(payload["pages"][3]["page_data"]["visualAsset"]["alt"], "")
+            self.assertNotIn("visualAsset", payload["pages"][2]["page_data"])
+            self.assertNotIn("planVisualAssets", payload["pages"][2]["page_data"])
+            for page in (payload["pages"][0], payload["pages"][1], payload["pages"][3]):
+                prompt = page["prompt"]
+                expected_trigger = "hero-image-button" if page["page_no"] == "P01" else "image-zoom-trigger"
+                self.assertIn(expected_trigger, prompt)
+                self.assertIn("visual-lightbox", prompt)
+                self.assertIn("Escape", prompt)
+                self.assertIn("object-fit: contain", prompt)
+                self.assertIn("正文主配图", prompt)
+                self.assertIn("禁止缩略图", prompt)
+                self.assertNotIn("window.open", prompt)
+                self.assertNotIn('target="_blank"', prompt)
+            for marker in (
+                "pairedStudentText",
+                "visual-paired-list",
+                "visual-paired-item",
+                "visual-paired-copy",
+            ):
+                self.assertIn(marker, payload["pages"][1]["prompt"])
+
+            check = run(
+                STATIC_CHECKER,
+                "--s6-contract",
+                "--lesson-id", "lesson001",
+                "--effective-content", effective,
+                "--whole-course", output,
+            )
+            self.assertEqual(check.returncode, 0, check.stdout + check.stderr)
+            self.assertIn("IMPORT_READY_STATIC", check.stdout)
+
+    def test_s6_prompt_version_changes_with_visual_url_alt_and_order(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp = Path(temp_dir)
+            effective = self.build_visual_s5(temp)
+            first = temp / "first.json"
+            result = run(ASSEMBLER, "--lesson-id", "lesson001", "--effective-content", effective, "--output", first)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            payload = json.loads(effective.read_text(encoding="utf-8"))
+            assets = payload["pages"][1]["visual"]["assets"]
+            assets[0]["url"] = "https://res.xrunda.com/test/v01-revised.webp"
+            assets[0]["alt"] = "更新后的画面一"
+            payload["pages"][1]["visual"]["assets"] = list(reversed(assets))
+            effective.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+            second = temp / "second.json"
+            result = run(ASSEMBLER, "--lesson-id", "lesson001", "--effective-content", effective, "--output", second)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            first_page = json.loads(first.read_text(encoding="utf-8"))["pages"][1]
+            second_page = json.loads(second.read_text(encoding="utf-8"))["pages"][1]
+            self.assertNotEqual(first_page["page_data"]["prompt_version"], second_page["page_data"]["prompt_version"])
+            self.assertNotEqual(first_page["page_data"]["prompt_instance_sha256"], second_page["page_data"]["prompt_instance_sha256"])
+
+    def test_dynamic_html_visual_contract_accepts_exact_assets_and_blocks_duplicates(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp = Path(temp_dir)
+            effective = self.build_visual_s5(temp)
+            payload = json.loads(effective.read_text(encoding="utf-8"))
+            blocks = payload["pages"][1]["effective_content"]["blocks"]
+            source_before = blocks[0]["text"]
+            source_after = blocks[-1]["text"]
+            html = temp / "page.html"
+            html.write_text(
+                '<!doctype html><html><head><style>.visual-image{width:100%;max-width:920px;height:auto;object-fit: contain;}.visual-gallery{display:block}.visual-lightbox-stage{display:flex;align-items:center;justify-content:center}.visual-lightbox-close{position:fixed;left:50%;border-radius:50%;}</style></head><body>'
+                f'<article class="knowledge-content"><p>{source_before}</p>'
+                '<section class="visual-gallery" data-visual-group-layout="vertical_stack" data-visual-placement-terminal="forbidden">'
+                '<ul class="visual-paired-list">'
+                '<li class="visual-paired-item" data-visual-pair-asset-id="L001-V01"><button type="button" class="image-zoom-trigger"><img class="visual-image" src="https://res.xrunda.com/test/v01.webp" alt="画面一"></button><span>画面 A</span><p class="visual-paired-copy">画面A：小狐狸在窗边画生日卡。</p></li>'
+                '<li class="visual-paired-item" data-visual-pair-asset-id="L001-V02"><button type="button" class="image-zoom-trigger"><img class="visual-image" src="https://res.xrunda.com/test/v02.webp" alt="画面二"></button><span>画面 B</span><p class="visual-paired-copy">画面B：生日卡被风吹到树枝上。</p></li>'
+                f'</ul></section><p>{source_after}</p></article>'
+                '<div class="visual-lightbox" hidden><div class="visual-lightbox-dialog"><div class="visual-lightbox-stage"><img class="visual-lightbox-image" alt=""></div><button type="button" class="visual-lightbox-close" aria-label="关闭大图"><span aria-hidden="true">×</span></button></div></div>'
+                '<script>function resetVisualTransform(){};function positionVisualClose(){var imageRect=document.querySelector(".visual-lightbox-image").getBoundingClientRect();return imageRect.bottom;}var stage=document.querySelector(".visual-lightbox-stage");stage.addEventListener("touchstart",function(){});stage.addEventListener("touchmove",function(){var scale=Math.max(1,Math.min(4,2));});document.addEventListener("keydown",function(event){if(event.key==="Escape"){};});</script>'
+                '</body></html>',
+                encoding="utf-8",
+            )
+            valid = run(DYNAMIC_HTML_VALIDATOR, "--effective-content", effective, "--page-no", "P02", "--html", html)
+            self.assertEqual(valid.returncode, 0, valid.stdout + valid.stderr)
+            html.write_text(html.read_text(encoding="utf-8").replace("</section>", '<img src="https://res.xrunda.com/test/v01.webp" alt="画面一"></section>', 1), encoding="utf-8")
+            invalid = run(DYNAMIC_HTML_VALIDATOR, "--effective-content", effective, "--page-no", "P02", "--html", html)
+            self.assertEqual(invalid.returncode, 1, invalid.stdout + invalid.stderr)
+            self.assertIn("DYNAMIC_HTML_VISUAL_URL_CARDINALITY", invalid.stdout)
+
+    def test_dynamic_html_visual_contract_blocks_detached_group_copy(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp = Path(temp_dir)
+            effective = self.build_visual_s5(temp)
+            payload = json.loads(effective.read_text(encoding="utf-8"))
+            blocks = payload["pages"][1]["effective_content"]["blocks"]
+            html = temp / "page.html"
+            html.write_text(
+                '<!doctype html><html><head><style>.visual-image{width:100%;height:auto;object-fit: contain;}.visual-gallery{display:block}.visual-lightbox-stage{display:flex;align-items:center;justify-content:center}.visual-lightbox-close{position:fixed;left:50%;border-radius:50%;}</style></head><body>'
+                f'<article class="knowledge-content"><p>{blocks[0]["text"]}</p>'
+                '<section class="visual-gallery" data-visual-group-layout="vertical_stack" data-visual-placement-terminal="forbidden">'
+                '<button type="button" class="image-zoom-trigger"><img class="visual-image" src="https://res.xrunda.com/test/v01.webp" alt="画面一"></button><span>画面 A</span>'
+                '<button type="button" class="image-zoom-trigger"><img class="visual-image" src="https://res.xrunda.com/test/v02.webp" alt="画面二"></button><span>画面 B</span></section>'
+                '<ul><li>画面A：小狐狸在窗边画生日卡。</li><li>画面B：生日卡被风吹到树枝上。</li></ul>'
+                f'<p>{blocks[-1]["text"]}</p></article>'
+                '<div class="visual-lightbox" hidden><div class="visual-lightbox-dialog"><div class="visual-lightbox-stage"><img class="visual-lightbox-image" alt=""></div><button type="button" class="visual-lightbox-close" aria-label="关闭大图"><span aria-hidden="true">×</span></button></div></div>'
+                '<script>function resetVisualTransform(){};function positionVisualClose(){var imageRect=document.querySelector(".visual-lightbox-image").getBoundingClientRect();return imageRect.bottom;}var stage=document.querySelector(".visual-lightbox-stage");stage.addEventListener("touchstart",function(){});stage.addEventListener("touchmove",function(){var scale=Math.max(1,Math.min(4,2));});document.addEventListener("keydown",function(event){if(event.key==="Escape"){};});</script>'
+                '</body></html>',
+                encoding="utf-8",
+            )
+            invalid = run(DYNAMIC_HTML_VALIDATOR, "--effective-content", effective, "--page-no", "P02", "--html", html)
+            self.assertEqual(invalid.returncode, 1, invalid.stdout + invalid.stderr)
+            self.assertIn("DYNAMIC_HTML_VISUAL_TEXT_PAIRING_INVALID", invalid.stdout)
+
+    def test_dynamic_html_visual_contract_blocks_horizontal_terminal_gallery_and_old_close_button(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp = Path(temp_dir)
+            effective = self.build_visual_s5(temp)
+            payload = json.loads(effective.read_text(encoding="utf-8"))
+            source = "".join(
+                str(block.get("text") or "")
+                for block in payload["pages"][1]["effective_content"]["blocks"]
+                if isinstance(block, dict)
+            )
+            html = temp / "page.html"
+            html.write_text(
+                '<!doctype html><html><head><style>.visual-image{width:33%;height:auto;object-fit: contain;}.visual-gallery{display:flex}.visual-lightbox-close{position:absolute;top:82%;right:10px}</style></head><body>'
+                f'<article class="knowledge-content"><p>{source}</p>'
+                '<section class="visual-gallery"><button type="button" class="image-zoom-trigger"><img class="visual-image" src="https://res.xrunda.com/test/v01.webp" alt="画面一"></button><span>画面 A</span><button type="button" class="image-zoom-trigger"><img class="visual-image" src="https://res.xrunda.com/test/v02.webp" alt="画面二"></button><span>画面 B</span></section></article>'
+                '<div class="visual-lightbox" hidden><div class="visual-lightbox-dialog"><div class="visual-lightbox-stage"><img class="visual-lightbox-image" alt=""></div><button type="button" class="visual-lightbox-close">关闭</button></div></div>'
+                '<script>function resetVisualTransform(){};var stage=document.querySelector(".visual-lightbox-stage");stage.addEventListener("touchstart",function(){});stage.addEventListener("touchmove",function(){var scale=Math.max(1,Math.min(4,2));});document.addEventListener("keydown",function(event){if(event.key==="Escape"){};});</script>'
+                '</body></html>',
+                encoding="utf-8",
+            )
+            invalid = run(
+                DYNAMIC_HTML_VALIDATOR,
+                "--effective-content", effective,
+                "--page-no", "P02",
+                "--html", html,
+            )
+            self.assertEqual(invalid.returncode, 1, invalid.stdout + invalid.stderr)
+            issue_codes = {item["code"] for item in json.loads(invalid.stdout)["issues"]}
+            self.assertIn("DYNAMIC_HTML_VISUAL_GROUP_LAYOUT_INVALID", issue_codes)
+            self.assertIn("DYNAMIC_HTML_VISUAL_TERMINAL_PLACEMENT", issue_codes)
+            self.assertIn("DYNAMIC_HTML_VISUAL_LIGHTBOX_CONTRACT", issue_codes)
+
+    def test_dynamic_html_visual_contract_rejects_modal_caption_and_missing_touch_zoom(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp = Path(temp_dir)
+            effective = self.build_visual_s5(temp)
+            payload = json.loads(effective.read_text(encoding="utf-8"))
+            source = "".join(
+                str(block.get("text") or "")
+                for block in payload["pages"][1]["effective_content"]["blocks"]
+                if isinstance(block, dict)
+            )
+            html = temp / "page.html"
+            html.write_text(
+                '<!doctype html><html><head><style>.visual-image{width:100%;height:auto;object-fit: contain;}</style></head><body>'
+                '<section class="visual-gallery">'
+                '<button type="button" class="image-zoom-trigger"><img class="visual-image" src="https://res.xrunda.com/test/v01.webp" alt="画面一"></button>'
+                '<span class="visual-caption">画面 A</span>'
+                '<button type="button" class="image-zoom-trigger"><img class="visual-image" src="https://res.xrunda.com/test/v02.webp" alt="画面二"></button>'
+                '<span class="visual-caption">画面 B</span></section>'
+                '<div class="visual-lightbox" hidden><div class="visual-lightbox-dialog">'
+                '<div class="visual-lightbox-stage"><img class="visual-lightbox-image" alt=""><span class="visual-caption">重复说明</span></div>'
+                '<button type="button" class="visual-lightbox-close">关闭</button></div></div>'
+                f'<article class="knowledge-content"><p>{source}</p></article>'
+                '<script>document.addEventListener("keydown",function(event){if(event.key==="Escape"){};});</script>'
+                '</body></html>',
+                encoding="utf-8",
+            )
+            invalid = run(
+                DYNAMIC_HTML_VALIDATOR,
+                "--effective-content", effective,
+                "--page-no", "P02",
+                "--html", html,
+            )
+            self.assertEqual(invalid.returncode, 1, invalid.stdout + invalid.stderr)
+            self.assertIn("DYNAMIC_HTML_VISUAL_LIGHTBOX_CONTRACT", invalid.stdout)
+
+    def test_visual_oneshots_and_demos_are_chrome68_compatible(self) -> None:
+        static_spec = importlib.util.spec_from_file_location("visual_static_checker", STATIC_CHECKER)
+        dynamic_spec = importlib.util.spec_from_file_location("visual_dynamic_checker", DYNAMIC_HTML_VALIDATOR)
+        self.assertIsNotNone(static_spec)
+        self.assertIsNotNone(dynamic_spec)
+        static_module = importlib.util.module_from_spec(static_spec)
+        dynamic_module = importlib.util.module_from_spec(dynamic_spec)
+        assert static_spec.loader is not None
+        assert dynamic_spec.loader is not None
+        static_spec.loader.exec_module(static_module)
+        dynamic_spec.loader.exec_module(dynamic_module)
+        visual_oneshots = [
+            path
+            for number in range(9, 15)
+            for path in (SKILL_ROOT / "templates" / "oneshots").glob(f"{number:02d}_*.md")
+        ]
+        visual_demos = sorted((SKILL_ROOT / "templates" / "demos" / "visual_enhanced").glob("*.html"))
+        self.assertEqual(len(visual_oneshots), 6)
+        self.assertEqual(len(visual_demos), 6)
+        for path in visual_oneshots:
+            self.assertEqual(static_module.chrome68_prompt_incompatibilities(path.read_text(encoding="utf-8")), [], path.name)
+        for path in visual_demos:
+            self.assertEqual(dynamic_module.chrome68_incompatibilities(path.read_text(encoding="utf-8")), [], path.name)
+
+    def test_non_intro_visual_templates_use_full_width_shared_type_and_touch_lightbox(self) -> None:
+        oneshots = [
+            path
+            for number in range(10, 15)
+            for path in (SKILL_ROOT / "templates" / "oneshots").glob(f"{number:02d}_*.md")
+        ]
+        demos = [
+            path
+            for path in sorted((SKILL_ROOT / "templates" / "demos" / "visual_enhanced").glob("*.html"))
+            if path.name != "course_intro_demo.html"
+        ]
+        self.assertEqual(len(oneshots), 5)
+        self.assertEqual(len(demos), 5)
+        required_markers = (
+            "--runs-type-h1-size",
+            "--runs-type-h2-size",
+            "--runs-type-body-size",
+            "--runs-type-list-size",
+            "--runs-type-caption-size",
+            "visual-lightbox-dialog",
+            "visual-lightbox-stage",
+            "touchstart",
+            "touchmove",
+            "resetVisualTransform",
+        )
+        for path in oneshots + demos:
+            text = path.read_text(encoding="utf-8")
+            for marker in required_markers:
+                self.assertIn(marker, text, f"{path.name}: missing {marker}")
+            self.assertNotRegex(text, r">\s*查看大图\s*<", path.name)
+            self.assertNotRegex(
+                text,
+                r"visual-lightbox[^\n]{0,400}visual-caption",
+                f"{path.name}: modal must not repeat captions",
+            )
+            self.assertIn("圆形", text, f"{path.name}: missing round icon-only close contract")
+            self.assertIn("纵向中点", text, f"{path.name}: missing close-control midpoint contract")
+            self.assertIn("positionVisualClose", text, f"{path.name}: missing calculated close-control placement")
+            self.assertIn("getBoundingClientRect", text, f"{path.name}: missing actual-image placement measurement")
+            if path.suffix == ".html" or path.name.startswith(("10_", "13_")):
+                self.assertIn("width: 46px", text, f"{path.name}: close control must use the compact icon size")
+                self.assertIn("height: 46px", text, f"{path.name}: close control must use the compact icon size")
+                self.assertIn("top: 82%", text, f"{path.name}: close control must sit between the image stage and page bottom")
+                self.assertRegex(
+                    text,
+                    r'<button type="button" class="visual-lightbox-close"(?: id="visualLightboxClose")? aria-label="关闭大图"><span aria-hidden="true">×</span></button>',
+                    f"{path.name}: close control must be the icon-only reference button",
+                )
+                self.assertNotRegex(text, r">\s*关闭\s*<", f"{path.name}: close control must not show a text label")
+        for number in (10, 13):
+            path = next(
+                (SKILL_ROOT / "templates" / "oneshots").glob(f"{number:02d}_*.md")
+            )
+            self.assertNotIn("width: calc(100% - 48px)", path.read_text(encoding="utf-8"))
+        for name in ("scene_intro_demo.html", "course_summary_demo.html"):
+            self.assertNotIn(
+                "width: calc(100% - 48px)",
+                (SKILL_ROOT / "templates" / "demos" / "visual_enhanced" / name).read_text(encoding="utf-8"),
+            )
+
+    def test_knowledge_visual_template_requires_frozen_order_adjacent_image_copy_pairs(self) -> None:
+        oneshot = next((SKILL_ROOT / "templates" / "oneshots").glob("11_*.md"))
+        demo = SKILL_ROOT / "templates" / "demos" / "visual_enhanced" / "knowledge_demo.html"
+        for path in (oneshot, demo):
+            text = path.read_text(encoding="utf-8")
+            self.assertIn("visual-paired-list", text, f"{path.name}: missing paired group list")
+            self.assertIn("visual-paired-item", text, f"{path.name}: missing image-copy pair item")
+            self.assertIn("visual-paired-copy", text, f"{path.name}: missing adjacent source copy")
+            self.assertIn("冻结顺序", text, f"{path.name}: group must follow frozen S5 order")
+            self.assertNotIn("B、C、A", text, f"{path.name}: hidden storyboard reordering is forbidden")
+            self.assertIn("纵向", text, f"{path.name}: group images must be vertical")
+            self.assertNotIn("width: 33.333%", text, f"{path.name}: group thumbnails are forbidden")
+
+    def test_course_intro_visual_templates_use_top_hero_reference_style(self) -> None:
+        oneshot = next((SKILL_ROOT / "templates" / "oneshots").glob("09_*.md"))
+        demo = SKILL_ROOT / "templates" / "demos" / "visual_enhanced" / "course_intro_demo.html"
+        text_only_demo = SKILL_ROOT / "templates" / "demos" / "course_intro_demo.html"
+        prompt_match = re.search(r"```text\n(.*?)\n```", oneshot.read_text(encoding="utf-8"), re.S)
+        self.assertIsNotNone(prompt_match)
+        assert prompt_match is not None
+        html_match = re.search(r"<!doctype html>\n<html.*?</html>", prompt_match.group(1), re.S)
+        self.assertIsNotNone(html_match)
+        assert html_match is not None
+        text_only_html = text_only_demo.read_text(encoding="utf-8")
+
+        def css_rule_body(html_text: str, selector: str) -> str:
+            match = re.search(re.escape(selector) + r"\s*\{(.*?)\}", html_text, re.S)
+            self.assertIsNotNone(match, f"missing CSS rule: {selector}")
+            assert match is not None
+            return re.sub(r"\s+", " ", match.group(1)).strip()
+
+        shared_intro_selectors = (
+            ".content-card h3",
+            ".core-question-panel h3",
+            "#knowledgeList li",
+            ".knowledge-index",
+        )
+        for name, html_text in (("oneshot", html_match.group(0)), ("demo", demo.read_text(encoding="utf-8"))):
+            for marker in (
+                'class="course-overview"',
+                'id="visualHero"',
+                'class="hero-image-button"',
+                'class="hero-image"',
+                'class="visual-lightbox-stage"',
+                'class="visual-lightbox-image-wrap"',
+                "touchstart",
+                "touchmove",
+                "resetVisualTransform",
+            ):
+                self.assertIn(marker, html_text, f"{name}: missing {marker}")
+            self.assertLess(html_text.index('id="visualHero"'), html_text.index('id="lessonChip"'))
+            self.assertLess(html_text.index('id="lessonChip"'), html_text.index('id="courseTitle"'))
+            self.assertLess(html_text.index('id="courseTitle"'), html_text.index('id="learningGoal"'))
+            self.assertLess(html_text.index('id="learningGoal"'), html_text.index('id="knowledgeList"'))
+            self.assertLess(html_text.index('class="visual-lightbox-stage"'), html_text.index('class="visual-lightbox-close"'))
+            self.assertNotIn('id="visualGallery"', html_text)
+            self.assertNotIn("intro-illustration", html_text)
+            self.assertNotIn('class="course-path"', html_text)
+            self.assertNotIn('id="packageName"', html_text)
+            self.assertNotIn('id="unitName"', html_text)
+            self.assertNotIn('getElementById("packageName")', html_text)
+            self.assertNotIn('getElementById("unitName")', html_text)
+            self.assertNotRegex(html_text, r">\s*查看大图\s*<")
+            self.assertRegex(
+                html_text,
+                r'class="learning-goal-heading"[^>]*>\s*<img class="core-question-icon"[\s\S]*?<h3 id="learningGoalTitle">学习目标</h3>',
+            )
+            heading_rule = css_rule_body(html_text, ".learning-goal-heading")
+            self.assertIn("display: flex", heading_rule)
+            self.assertIn("justify-content: center", heading_rule)
+            icon_rule = css_rule_body(html_text, ".core-question-icon")
+            self.assertIn("position: static", icon_rule)
+            self.assertIn("width: 28px", icon_rule)
+            goal_rule = css_rule_body(html_text, "#learningGoal")
+            self.assertIn("text-align: left", goal_rule)
+            self.assertIn("font-size: 14px", goal_rule)
+            self.assertIn("line-height: 23px", goal_rule)
+            for selector in shared_intro_selectors:
+                self.assertEqual(
+                    css_rule_body(html_text, selector),
+                    css_rule_body(text_only_html, selector),
+                    f"{name}: {selector} must reuse the text-only intro style",
+                )
+
+    def test_course_intro_visual_placement_targets_first_visible_identity(self) -> None:
+        scripts_dir = str(SKILL_ROOT / "scripts")
+        sys.path.insert(0, scripts_dir)
+        try:
+            spec = importlib.util.spec_from_file_location(
+                "course_intro_visual_placement_contract",
+                SKILL_ROOT / "scripts" / "visual_placement_contract.py",
+            )
+            self.assertIsNotNone(spec)
+            assert spec is not None and spec.loader is not None
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+        finally:
+            sys.path.remove(scripts_dir)
+        placement = module.courseware_render_placement("课程开篇")
+        self.assertEqual(placement["inside"], "course_overview")
+        self.assertEqual(placement["insertBefore"], "lesson_chip")
+        self.assertNotIn("course_identity", placement.values())
+
+    def test_course_intro_visual_demo_uses_reviewable_sample_image(self) -> None:
+        demo = SKILL_ROOT / "templates" / "demos" / "visual_enhanced" / "course_intro_demo.html"
+        html_text = demo.read_text(encoding="utf-8")
+        self.assertIn(
+            "https://res.xrunda.com/ai-test/Galaxy/knowledge/20260804/72/1785848574637-62cf93816f772a4e.webp",
+            html_text,
+        )
+        self.assertNotIn("https://res.xrunda.com/test/baseline/p01.webp", html_text)
+
+    def test_visual_template_integrity_checks_reject_diff_markers_and_clipped_gallery(self) -> None:
+        static_spec = importlib.util.spec_from_file_location("visual_integrity_static_checker", STATIC_CHECKER)
+        dynamic_spec = importlib.util.spec_from_file_location("visual_integrity_dynamic_checker", DYNAMIC_HTML_VALIDATOR)
+        self.assertIsNotNone(static_spec)
+        self.assertIsNotNone(dynamic_spec)
+        static_module = importlib.util.module_from_spec(static_spec)
+        dynamic_module = importlib.util.module_from_spec(dynamic_spec)
+        assert static_spec.loader is not None
+        assert dynamic_spec.loader is not None
+        static_spec.loader.exec_module(static_module)
+        dynamic_spec.loader.exec_module(dynamic_module)
+
+        diff_marked = (
+            "<style>\n+    .visual-gallery { width: 100%; }\n</style>"
+            "<script>\n+    const VISUAL_DATA = Object.freeze({});\n</script>"
+        )
+        clipped_gallery = (
+            '<main class="runs-intro-page">'
+            '<div class="intro-scroll"><div class="intro-inner"></div></div>'
+            '<section class="visual-gallery" id="visualGallery"></section>'
+            '</main>'
+        )
+
+        self.assertIn("diff marker", static_module.chrome68_prompt_incompatibilities(diff_marked))
+        self.assertIn("diff marker", dynamic_module.chrome68_incompatibilities(diff_marked))
+        self.assertIn(
+            "visual gallery outside intro-scroll",
+            static_module.chrome68_prompt_incompatibilities(clipped_gallery),
+        )
 
 
 if __name__ == "__main__":

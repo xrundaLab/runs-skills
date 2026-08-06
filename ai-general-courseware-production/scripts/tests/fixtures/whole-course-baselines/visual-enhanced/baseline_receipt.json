@@ -1,0 +1,10 @@
+{
+  "baselineId": "lesson022-visual-enhanced-v1",
+  "visualMode": "visual_enhanced",
+  "status": "PASS",
+  "formedVersion": "0.2.23-r36",
+  "purpose": "Test-owned deterministic S5-to-S6 image projection with reviewed/fixed placement evidence, terminal-placement prohibition, vertical image groups with optional adjacent source-copy pairing, and centered same-page lightbox controls; not visual acceptance or release authorization.",
+  "effectiveContentSha256": "fe7107b8bd508c9e3f3d00a42b50bd2581dd0261e6a9b7b3dc6a82d1322e5a73",
+  "expectedWholeCourseSha256": "34e3d35bfd3f4178fb44a3660969aa8fa5e24ec311543d5f43bcedc9fe12c5e3",
+  "staticStatus": "IMPORT_READY_STATIC"
+}

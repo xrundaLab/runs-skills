@@ -69,6 +69,7 @@ def find_input(receipt: dict[str, Any], role: str) -> dict[str, str] | None:
 def verify_prior(
     stage: str,
     lesson_id: str,
+    visual_mode: str,
     prior_path: Path | None,
     upstream: Path,
     working_plan: Path | None,
@@ -91,6 +92,8 @@ def verify_prior(
         raise ValueError("PRIOR_RECEIPT_LESSON_MISMATCH")
     if prior.get("stage") != expected_stage:
         raise ValueError("PRIOR_RECEIPT_STAGE_MISMATCH")
+    if prior.get("visualMode") != visual_mode:
+        raise ValueError("VISUAL_MODE_DRIFT")
     if prior.get("status") != "PASS":
         raise ValueError("PRIOR_GATE_NOT_PASS")
     prior_output = prior.get("output")
@@ -111,6 +114,39 @@ def verify_prior(
         if recorded_working.get("sha256") != sha256(resolved_working):
             raise ValueError("PRIOR_WORKING_PLAN_HASH_MISMATCH")
     return prior, {"path": str(resolved), "sha256": sha256(resolved)}
+
+
+def verify_visual_receipt(
+    lesson_id: str,
+    visual_manifest: Path,
+    visual_receipt: Path,
+) -> dict[str, str]:
+    resolved_receipt = visual_receipt.resolve()
+    if not resolved_receipt.is_file():
+        raise ValueError("VISUAL_RECEIPT_MISSING")
+    try:
+        receipt = json.loads(resolved_receipt.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError):
+        raise ValueError("VISUAL_RECEIPT_INVALID")
+    if receipt.get("contract") != CONTRACT:
+        raise ValueError("VISUAL_RECEIPT_CONTRACT_MISMATCH")
+    if (receipt.get("lessonId") or receipt.get("lesson_id")) != lesson_id:
+        raise ValueError("VISUAL_RECEIPT_LESSON_MISMATCH")
+    if receipt.get("visualMode") != "visual_enhanced":
+        raise ValueError("VISUAL_MODE_DRIFT")
+    if receipt.get("ownerStage") != "S1" or receipt.get("phase") != "resolved":
+        raise ValueError("VISUAL_RECEIPT_PHASE_MISMATCH")
+    if receipt.get("status") != "PASS":
+        raise ValueError("VISUAL_GATE_NOT_PASS")
+    output = receipt.get("output")
+    if not isinstance(output, dict):
+        raise ValueError("VISUAL_RECEIPT_OUTPUT_MISSING")
+    resolved_manifest = visual_manifest.resolve()
+    if output.get("path") != str(resolved_manifest):
+        raise ValueError("VISUAL_RECEIPT_OUTPUT_PATH_MISMATCH")
+    if output.get("sha256") != sha256(resolved_manifest):
+        raise ValueError("VISUAL_RECEIPT_OUTPUT_HASH_MISMATCH")
+    return {"path": str(resolved_receipt), "sha256": sha256(resolved_receipt)}
 
 
 def run_command(command: list[str]) -> subprocess.CompletedProcess[str]:
@@ -204,11 +240,14 @@ def main() -> int:
     )
     parser.add_argument("--stage", required=True, choices=("S2", "S3", "S4", "S5", "S6"))
     parser.add_argument("--lesson-id", required=True)
+    parser.add_argument("--visual-mode")
     parser.add_argument("--receipt-dir", required=True, type=Path)
     parser.add_argument("--prior-receipt", type=Path)
     parser.add_argument("--working-plan", type=Path)
     parser.add_argument("--question-processed", type=Path)
     parser.add_argument("--page-plan", type=Path)
+    parser.add_argument("--visual-manifest", type=Path)
+    parser.add_argument("--visual-receipt", type=Path)
     parser.add_argument("--effective-content", type=Path)
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
@@ -227,6 +266,10 @@ def main() -> int:
     exit_code: int | None = None
 
     try:
+        if args.visual_mode is None:
+            raise ValueError("VISUAL_MODE_NOT_SELECTED")
+        if args.visual_mode not in {"text_only", "visual_enhanced"}:
+            raise ValueError("VISUAL_MODE_INVALID")
         working = required_path(args.working_plan, "working_plan") if stage in {"S2", "S3", "S4"} else None
         question = required_path(args.question_processed, "question_processed") if stage in {"S3", "S4"} else None
         page_plan = required_path(args.page_plan, "page_plan") if stage == "S5" else None
@@ -241,6 +284,7 @@ def main() -> int:
             _, prior_record = verify_prior(
                 stage,
                 args.lesson_id,
+                args.visual_mode,
                 args.prior_receipt,
                 upstream,
                 working,
@@ -268,12 +312,48 @@ def main() -> int:
             if args.output is None:
                 raise ValueError("ARGUMENT_MISSING:output")
             inputs = [artifact("page_plan", page_plan)]
+            visual_manifest: Path | None = None
+            visual_receipt_record: dict[str, str] | None = None
+            if args.visual_mode == "visual_enhanced":
+                visual_manifest = required_path(args.visual_manifest, "visual_manifest")
+                visual_receipt = required_path(args.visual_receipt, "visual_receipt")
+                visual_receipt_record = verify_visual_receipt(
+                    args.lesson_id, visual_manifest, visual_receipt
+                )
+                inputs.extend(
+                    [
+                        artifact("visual_manifest", visual_manifest),
+                        artifact("visual_receipt", visual_receipt),
+                    ]
+                )
+            elif args.visual_manifest is not None or args.visual_receipt is not None:
+                raise ValueError("VISUAL_INPUT_FORBIDDEN_IN_TEXT_ONLY")
             final_output = args.output.resolve()
             temporary = temp_output(final_output)
-            commands = [
-                [sys.executable, str(GENERATORS / "build_effective_content.py"), "--lesson-id", args.lesson_id, "--page-plan", str(page_plan), "--output", str(temporary)],
-                [sys.executable, str(VALIDATORS / "validate_v35_effective_content.py"), "--page-plan", str(page_plan), str(temporary)],
+            generator_command = [
+                sys.executable,
+                str(GENERATORS / "build_effective_content.py"),
+                "--lesson-id",
+                args.lesson_id,
+                "--visual-mode",
+                args.visual_mode,
+                "--page-plan",
+                str(page_plan),
             ]
+            validator_command = [
+                sys.executable,
+                str(VALIDATORS / "validate_v35_effective_content.py"),
+                "--page-plan",
+                str(page_plan),
+                "--visual-mode",
+                args.visual_mode,
+            ]
+            if visual_manifest is not None:
+                generator_command.extend(["--visual-manifest", str(visual_manifest)])
+                validator_command.extend(["--visual-manifest", str(visual_manifest)])
+            generator_command.extend(["--output", str(temporary)])
+            validator_command.append(str(temporary))
+            commands = [generator_command, validator_command]
         else:
             if args.output is None:
                 raise ValueError("ARGUMENT_MISSING:output")
@@ -317,6 +397,7 @@ def main() -> int:
     payload = {
         "contract": CONTRACT,
         "lesson_id": args.lesson_id,
+        "visualMode": args.visual_mode,
         "stage": stage,
         "attempt": attempt,
         "status": status,

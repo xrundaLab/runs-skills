@@ -2,9 +2,10 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "AI General Courseware Production R36 Stage Artifact Map",
   "type": "object",
-  "required": ["lesson_id", "course_info", "teacher_final"],
+  "required": ["lesson_id", "visualMode", "course_info", "teacher_final"],
   "properties": {
     "lesson_id": {"type": "string", "pattern": "^lesson[0-9]{3,}$"},
+    "visualMode": {"enum": ["text_only", "visual_enhanced"]},
     "course_info": {
       "type": "object",
       "required": ["packageName", "unitName", "lessonNumber", "courseName", "courseIntroduction", "knowledgePoints"],
@@ -17,7 +18,32 @@
         "knowledgePoints": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}}
       }
     },
-    "teacher_final": {"type": "object", "required": ["path"], "properties": {"path": {"type": "string", "minLength": 1}}}
+    "teacher_final": {"type": "object", "required": ["path"], "properties": {"path": {"type": "string", "minLength": 1}}},
+    "teacher_visual_script": {"type": "object", "required": ["path"], "properties": {"path": {"type": "string", "minLength": 1}}}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"visualMode": {"const": "visual_enhanced"}}},
+      "then": {"required": ["teacher_visual_script"]}
+    }
+  ],
+  "$defs": {
+    "visualPlacement": {
+      "description": "S1-owned insertion placement. Lesson-plan images use teacher_source_anchor. Fixed page types use page_type_rule; knowledge, case, and task courseware images become final only after model_visual_review of the external return.",
+      "type": "object",
+      "required": ["authority", "anchorType", "fallback"],
+      "properties": {
+        "authority": {"enum": ["teacher_visual_script", "page_type_contract", "model_visual_review"]},
+        "anchorType": {"enum": ["teacher_source_anchor", "page_type_rule", "reviewed_semantic_anchor"]},
+        "fallback": {"type": "string", "minLength": 1},
+        "terminalPlacementForbidden": {"const": true}
+      }
+    },
+    "visualPresentation": {
+      "description": "Minimal main-content image presentation; never a thumbnail or tiny decorative image. Every group uses vertical_stack and every placement forbids terminal content insertion.",
+      "type": "object",
+      "required": ["sizeRole", "widthPolicy", "heightPolicy", "objectFit", "borderRadiusPx", "verticalSpacingPx", "thumbnailForbidden", "standaloneCard", "lightboxRequired"]
+    }
   },
   "$comment": "This quick schema does not replace the complete S1-S6 contract or bundled validators."
 }

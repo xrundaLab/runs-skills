@@ -2,6 +2,29 @@
 
 Freeze one `runs_batch_manifest.yaml` before S1. It records only the resolved user-provided sources and output destination; it does not replace the S1 `source_manifest.json` generated under this bundled Skill contract.
 
+Every run must explicitly freeze `visualMode: text_only` or `visualMode: visual_enhanced`. A Gate or manifest freeze attempted without the confirmed selection is `BLOCKED:VISUAL_MODE_NOT_SELECTED`; a later Gate receipt that differs from the frozen mode is `BLOCKED:VISUAL_MODE_DRIFT`. An initial natural-language request that omits the selection is handled by the startup-confirmation protocol below and is not itself a Gate attempt. `text_only` must not read a teacher visual script. `visual_enhanced` requires one explicitly named teacher visual script per lesson and freezes its absolute path and SHA-256 before S1.
+
+## Startup confirmation before preflight
+
+When the user has authorized a run but omitted `visualMode`, do not stop with a receipt-like blocker and do not create files. Return `STARTUP_MODE_SELECTION_NEEDED` and present exactly:
+
+1. 配图增强模式（推荐）
+2. 纯文字模式
+
+Ask the user to 回复数字 `1` 或 `2`. Do not infer the selection from the supplied files, choose on the user's behalf, or hide the non-recommended option. Do not recommend or confirm an output root in the same message as the mode selection.
+
+Map the confirmed selection only in technical state: `1` → `visual_enhanced`; `2` → `text_only`. Do not present `text_only` or `visual_enhanced` as user-facing choice labels.
+
+After mode selection, if `output_root` is absent, return `STARTUP_OUTPUT_CONFIRMATION_NEEDED` with one concrete, collision-free absolute `recommendedOutputRoot`, normally derived from the target lesson, internal mode slug, requested final stage, and current timestamp. Ask one concise confirmation question. For example, recommend an output root shaped like `<absolute-workspace>/runs_prompt_updates/<lesson_id>_<mode>_s1_s4_<YYYYMMDD-HHMMSS>` and print the resolved absolute path, not the placeholder.
+
+The three-input set describes semantic course sources. A separately supplied teacher visual script is a valid conditional input in 配图增强模式, not a forbidden fourth semantic source. Inspect only enough of its declared scope after mode selection to determine whether it contains the target lesson:
+
+- if it contains the target lesson, recommend `visual_enhanced` and freeze it only after confirmation;
+- if it does not contain a section for the target lesson, explain that it is irrelevant to this lesson and recommend excluding it from that lesson; do not label the file unsupported or illegal;
+- if an unknown extra file has no registered role, explain that it will not be used as a semantic source and ask whether to exclude it.
+
+Only after the user confirms the mode and then the output root may the manifest preflight begin. Missing operational choices at either conversational step must not report `BLOCKED_INPUT` or a Gate blocker. True source failures discovered after confirmation still use the existing blocker contract.
+
 ## Three-input mode
 
 The minimum self-contained source set is exactly:
@@ -17,6 +40,7 @@ The invocation must name the target `lesson_id` and a fresh output root. Select 
 ```yaml
 contract: "RunS_V3.5.0-S1-S6-R36-20260731"
 source_mode: "local" # local | github
+visualMode: "text_only" # text_only | visual_enhanced; explicit, never inferred
 output_root: "/absolute/path/to/a-new-output-directory"
 lessons:
   - lesson_id: "lesson012"
@@ -30,6 +54,8 @@ lessons:
         - "..."
     teacher_final:
       path: "/absolute/path/to/lesson012/final.md" # local only
+    teacher_visual_script: # required only for visual_enhanced; forbidden as a text_only input
+      path: "/absolute/path/to/lesson012/teacher-visual-script.md"
     student_structure: # optional; S2 structural check only
       path: "/absolute/path/to/lesson012/student.md"
 ```
@@ -43,6 +69,7 @@ Use only a full commit SHA. The repository can contain a CSV, YAML, or XLSX cour
 ```yaml
 contract: "RunS_V3.5.0-S1-S6-R36-20260731"
 source_mode: "github"
+visualMode: "visual_enhanced"
 github:
   repo: "owner/repository"
   commit: "0123456789abcdef0123456789abcdef01234567"
@@ -61,6 +88,8 @@ lessons:
         - "..."
     teacher_final:
       path: "lessons/lesson012/final.md" # repository-relative
+    teacher_visual_script:
+      path: "lessons/lesson012/teacher-visual-script.md" # required for visual_enhanced
     student_structure:
       path: "lessons/lesson012/student.md" # optional, repository-relative
 ```
@@ -69,4 +98,4 @@ Retrieve only the manifest, table when declared, and paths named by this manifes
 
 ## Preflight result
 
-Report `READY_FOR_S1` only after every lesson has a readable teacher source, all six values, a unique `lesson_id`, and a writable fresh output directory. Otherwise report `BLOCKED_INPUT` with the missing fields grouped by lesson. Do not create stage artifacts during a manifest-only preflight.
+Report `READY_FOR_S1` only after the mode and output root have been confirmed, every lesson has a readable teacher source, all six values, a unique `lesson_id`, and a writable fresh output directory. In `visual_enhanced`, also require a readable teacher visual script whose path and SHA can be frozen; in `text_only`, do not open or freeze that script. After confirmation, report `BLOCKED_INPUT` only for actual missing, unreadable, conflicting, or ambiguous required sources, grouped by lesson. Do not create stage artifacts during a manifest-only preflight.
