@@ -6,20 +6,21 @@ This contract is owned by S1 and applies only when the frozen run manifest selec
 
 The one logical image-management artifact is retained as three non-overwriting snapshots:
 
-- `lessonNNN__S1__visual_asset_manifest.initial.json`: freezes the teacher visual script, teacher `final.md` SHA, lesson-plan assets, lesson-plan URLs, exact `教案位置` text, source anchors, render placements, reuse, and group order. It does not assign S4 page numbers.
+- `lessonNNN__S1__visual_asset_manifest.initial.json`: freezes the teacher visual script and teacher `final.md` SHA. When the shared script contains the target lesson, it freezes lesson-plan assets, lesson-plan URLs, exact `教案位置` text, source anchors, render placements, reuse, and group order. When the script has no target-lesson section, it freezes an explicit courseware-only state with empty assets/placements and does not block. A present but malformed lesson section still blocks. Initial never assigns S4 page numbers.
 - `lessonNNN__S1__visual_asset_manifest.request.json`: after S4 PASS, binds every lesson-plan anchor to one final non-interactive page and gives every S4 page exactly one decision: `lesson_plan_image`, `courseware_image`, or `interaction_no_image`. Fixed page types already carry final page-type placement; knowledge, case, and task pages carry only `candidate_only` placement with `placementStatus: pending_visual_review`.
 - `lessonNNN__S1__visual_placement_review.json`: after the explicitly named external return exists, the executing model visually inspects each returned courseware image for knowledge, case, and task pages, records the semantic relationship and embedded-text conflict result, and freezes either exact neighboring text anchors or the allowed fallback. It is hash-bound to the request and external return.
 - `lessonNNN__S1__visual_asset_manifest.resolved.json`: after validating the external return and required placement review, copies only approved courseware metadata and freezes reviewed placement evidence. This is the only visual manifest S5 may read.
 
 Each Gate invocation preserves `visual_manifest_gate_receipt_attempt-NNN.json` and updates `visual_manifest_gate_receipt.json`. Snapshot outputs are never overwritten. `text_only` writes only the receipt status `SKIPPED_BY_VISUAL_MODE` and creates no visual manifest.
 
-Request binding accepts a legacy S4 PASS receipt that has no `visualMode` key only as a narrow compatibility case: the initial manifest must explicitly be `visual_enhanced`, and the receipt contract, lesson, stage, output absolute path, and output SHA-256 must all match the supplied S4 plan. A receipt that contains any explicit non-`visual_enhanced` value still stops with `VISUAL_MODE_DRIFT`. Do not rewrite or backfill the immutable legacy receipt.
+Request binding accepts a legacy S4 PASS receipt that has no `visualMode` key only as a narrow compatibility case: the initial manifest must explicitly be `visual_enhanced`, and the receipt contract, lesson, stage, output absolute path, and output SHA-256 must all match the supplied S4 plan. S5 accepts the same legacy omission only when the resolved manifest and its PASS receipt are supplied and remain strictly bound to that exact S4 path and SHA-256. A receipt that contains any explicit non-`visual_enhanced` value still stops with `VISUAL_MODE_DRIFT`. Do not rewrite or backfill the immutable legacy receipt.
 
 ## Authority and decisions
 
 - `lesson_plan_image` URL and classification authority: the teacher visual script.
 - `courseware_image` URL and classification authority: the frozen request plus validated external return.
 - Lesson-plan images have priority. One page cannot mix the two course-image classes.
+- A lesson whose frozen initial records no target lesson section has no lesson-plan images; request therefore classifies every non-interactive page as `courseware_image` without inventing teacher assets.
 - Interactive component pages remain image-free and override both image classes. A teacher placement uniquely recognized inside an interaction page is retained in the request/resolved audit trail with `placementStatus: suppressed_on_interaction_page`, but it is excluded from that page's assets and the page decision remains `interaction_no_image`. A genuinely missing or ambiguous surviving anchor still blocks as `LESSON_PLAN_IMAGE_ANCHOR_INVALID`.
 - Formal post-class page type is always `拓展练习`; `课后任务` and `课后练习` are teacher-source aliases only. Visual tools reuse `scripts/page_type_contract.py`.
 

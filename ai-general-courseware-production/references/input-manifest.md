@@ -2,7 +2,7 @@
 
 Freeze one `runs_batch_manifest.yaml` before S1. It records only the resolved user-provided sources and output destination; it does not replace the S1 `source_manifest.json` generated under this bundled Skill contract.
 
-Every run must explicitly freeze `visualMode: text_only` or `visualMode: visual_enhanced`. A Gate or manifest freeze attempted without the confirmed selection is `BLOCKED:VISUAL_MODE_NOT_SELECTED`; a later Gate receipt that differs from the frozen mode is `BLOCKED:VISUAL_MODE_DRIFT`. An initial natural-language request that omits the selection is handled by the startup-confirmation protocol below and is not itself a Gate attempt. `text_only` must not read a teacher visual script. `visual_enhanced` requires one explicitly named teacher visual script per lesson and freezes its absolute path and SHA-256 before S1.
+Every run must explicitly freeze `visualMode: text_only` or `visualMode: visual_enhanced`. A Gate or manifest freeze attempted without the confirmed selection is `BLOCKED:VISUAL_MODE_NOT_SELECTED`; a later Gate receipt that differs from the frozen mode is `BLOCKED:VISUAL_MODE_DRIFT`. An initial natural-language request that omits the selection is handled by the startup-confirmation protocol below and is not itself a Gate attempt. `text_only` must not read a teacher visual script. `visual_enhanced` requires one explicitly named teacher visual script source and freezes its absolute path and SHA-256 before S1; the same batch script may serve multiple lessons. A missing target-lesson section means that lesson declares zero teacher-owned lesson-plan images and proceeds with courseware images only. It is not a missing-input blocker.
 
 ## Startup confirmation before preflight
 
@@ -20,7 +20,7 @@ After mode selection, if `output_root` is absent, return `STARTUP_OUTPUT_CONFIRM
 The three-input set describes semantic course sources. A separately supplied teacher visual script is a valid conditional input in 配图增强模式, not a forbidden fourth semantic source. Inspect only enough of its declared scope after mode selection to determine whether it contains the target lesson:
 
 - if it contains the target lesson, recommend `visual_enhanced` and freeze it only after confirmation;
-- if it does not contain a section for the target lesson, explain that it is irrelevant to this lesson and recommend excluding it from that lesson; do not label the file unsupported or illegal;
+- if it does not contain a section for the target lesson, explain that the lesson has no declared teacher-owned lesson-plan images and will proceed in 配图增强模式 with courseware images only; freeze the shared script path/SHA and do not fabricate an empty lesson section;
 - if an unknown extra file has no registered role, explain that it will not be used as a semantic source and ask whether to exclude it.
 
 Only after the user confirms the mode and then the output root may the manifest preflight begin. Missing operational choices at either conversational step must not report `BLOCKED_INPUT` or a Gate blocker. True source failures discovered after confirmation still use the existing blocker contract.
@@ -54,7 +54,7 @@ lessons:
         - "..."
     teacher_final:
       path: "/absolute/path/to/lesson012/final.md" # local only
-    teacher_visual_script: # required only for visual_enhanced; forbidden as a text_only input
+    teacher_visual_script: # required only for visual_enhanced; may be a shared batch file with no section for this lesson
       path: "/absolute/path/to/lesson012/teacher-visual-script.md"
     student_structure: # optional; S2 structural check only
       path: "/absolute/path/to/lesson012/student.md"
@@ -89,7 +89,7 @@ lessons:
     teacher_final:
       path: "lessons/lesson012/final.md" # repository-relative
     teacher_visual_script:
-      path: "lessons/lesson012/teacher-visual-script.md" # required for visual_enhanced
+      path: "inputs/teacher-visual-script.md" # required for visual_enhanced; shared batch source allowed
     student_structure:
       path: "lessons/lesson012/student.md" # optional, repository-relative
 ```

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "skill": "ai-general-courseware-production",
-  "currentVersion": "0.2.23-r36",
+  "currentVersion": "0.2.24-r36",
   "releasedVersions": [
     "0.1.0-r36"
   ],
@@ -275,6 +275,27 @@
         "regression:student-visible-source-single-projection",
         "regression:s2-s3-s4-business-contracts-unchanged",
         "static:dual-mode-IMPORT_READY_STATIC",
+        "validator:validate_skill_version-local"
+      ],
+      "supersededByVersion": "0.2.24-r36",
+      "restoredFromVersion": null,
+      "rollbackStatus": "not_restored"
+    },
+    {
+      "version": "0.2.24-r36",
+      "formedAt": "2026-08-07T09:40:42+08:00",
+      "status": "release_candidate",
+      "summary": "Allow visual-enhanced lessons with no target section in a shared teacher visual script to freeze an explicit zero-lesson-plan-image initial manifest and classify every non-interactive S4 page for courseware imagery, while preserving strict validation for every present lesson section and leaving S2/S3/S4 unchanged.",
+      "traceabilityLevel": "source_exact",
+      "payloadSha256": "b026784a962ca8307c9fc30bd4568f1b3dad2233ea84a788a69e715cd7e1ef64",
+      "sourceRef": "skill-ai-general-courseware-production-v0.2.24-r36",
+      "issue": "xrundaLab/runs-ai-monorepo#639",
+      "validationEvidence": [
+        "issue:runs-ai-monorepo#639",
+        "regression:courseware-only-lesson-with-shared-visual-script",
+        "regression:present-lesson-section-remains-strict",
+        "unit:test_generation_gates",
+        "unit:test_skill_versioning",
         "validator:validate_skill_version-local"
       ],
       "supersededByVersion": null,

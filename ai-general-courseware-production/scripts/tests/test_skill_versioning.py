@@ -183,7 +183,7 @@ class SkillVersionTests(unittest.TestCase):
         self.assertNotIn("tag", merged_candidate)
 
         current = formal_entries[registry["currentVersion"]]
-        self.assertEqual(registry["currentVersion"], "0.2.23-r36")
+        self.assertEqual(registry["currentVersion"], "0.2.24-r36")
         self.assertEqual(current["traceabilityLevel"], "source_exact")
 
     def test_parse_version_accepts_current_contract(self) -> None:

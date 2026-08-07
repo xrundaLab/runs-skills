@@ -15,7 +15,7 @@
 - 原始教师版 `final.md` 只读。学生版只在 S2 作结构辅助核查，不能成为课程语义真源。
 - 产物发生内容变更时，从发生变更的阶段开始，按阶段顺序重新冻结和验证；不得只补下游文件。
 - 单阶段执行可显式引用其他输出根或旧兼容版本中已经 PASS 的上游产物与回执；被选中的 S4 正文继续作为本次完整内容权威，不得因为存在更新目录而自动切换，也不得要求无变化的 S1—S4 重跑。只有当前合同新增或改变的下游快照需要重新生成。
-- 启动时必须显式冻结 `visualMode: text_only | visual_enhanced`。缺失为 `BLOCKED:VISUAL_MODE_NOT_SELECTED`；新生成的 S2—S6 Gate receipt 与冻结模式不一致为 `BLOCKED:VISUAL_MODE_DRIFT`。模式不得在运行中切换。仅对早于该字段的旧 S4 PASS 回执保留窄兼容：S1 initial 必须明确为 `visual_enhanced`，且旧回执的合同、课程、阶段、输出绝对路径和 SHA-256 全部与当前 S4 匹配；回执若已含 `visualMode` 但值不一致，仍然阻断。
+- 启动时必须显式冻结 `visualMode: text_only | visual_enhanced`。缺失为 `BLOCKED:VISUAL_MODE_NOT_SELECTED`；新生成的 S2—S6 Gate receipt 与冻结模式不一致为 `BLOCKED:VISUAL_MODE_DRIFT`。模式不得在运行中切换。仅对早于该字段的旧 S4 PASS 回执保留窄兼容：生成 request 时，S1 initial 必须明确为 `visual_enhanced`；进入 S5 时，必须另有与同一 S4 绝对路径和 SHA-256 严格绑定的 resolved 图片管理文件及 PASS 回执。两种情况都要求旧 S4 回执的合同、课程、阶段、输出绝对路径和 SHA-256 全部匹配；回执若已含 `visualMode` 但值不一致，仍然阻断，不得改写或回填旧回执。
 
 | 阶段 | 唯一/主要输入 | 唯一输出 | 放行条件 |
 | --- | --- | --- | --- |
@@ -72,8 +72,8 @@ S1 只读取以下两类输入：
 现有三个 S1 内容产物的职责、文件名和正文 SHA 规则不因配图模式改变。图片管理是并列的 S1 逻辑产物，使用 `scripts/orchestrator/run_visual_manifest_gate.py`：
 
 - `text_only`：不读取视觉脚本、不生成 visual manifest，仅写 `status: SKIPPED_BY_VISUAL_MODE` 的视觉回执。
-- `visual_enhanced / initial`：校验教师视觉脚本登记的教师 SHA 等于本次 `final.md` SHA，冻结教案图片 ID、HTTPS URL、用途、`教案位置`完整原文、每次位置细节、源行号、前后文本锚点、教师权威 render placement、复用关系和连续组图顺序。最终 S4 页码必须为空。
-- `visual_enhanced / request`：仅在 S4 PASS 后读取 initial、原始 S4 与其回执，把每条教案锚点唯一绑定到最终页；非互动页按教案图最高优先级决定 `lesson_plan_image | courseware_image`。互动页始终为 `interaction_no_image`；其内部被唯一识别的教师 placement 只以 `suppressed_on_interaction_page` 留在图片管理审计链，不进入页面资产。若 S4 合法省略过渡侧的一条锚点，只有在该侧全文零命中、保留下来的另一侧恰好唯一命中一页时，才允许按单边证据绑定，且不得改写 initial 中的教师 placement；保留侧多页命中、两侧跨页命中或两侧都缺失仍阻断。题目处理导致前后文合并时，只允许使用唯一、长度至少 12 字的原锚点句段识别互动页。正式页型复用 `scripts/page_type_contract.py`。
+- `visual_enhanced / initial`：先冻结教师视觉脚本的绝对路径与 SHA。脚本存在目标课章节时，校验其中登记的教师 SHA 等于本次 `final.md` SHA，并冻结教案图片 ID、HTTPS URL、用途、`教案位置`完整原文、每次位置细节、源行号、前后文本锚点、教师权威 render placement、复用关系和连续组图顺序；目标课章节存在但字段、图片或锚点不完整仍阻断。共享脚本完全没有目标课章节时，合法冻结 `assets: []`、`placements: []`、`teacherVisualScriptLessonPresent: false` 与 `lessonPlanImagesDeclared: false`，表示该课没有教师声明的教案图；不得伪造空章节或图片。最终 S4 页码必须为空。
+- `visual_enhanced / request`：仅在 S4 PASS 后读取 initial、原始 S4 与其回执，把每条教案锚点唯一绑定到最终页；非互动页按教案图最高优先级决定 `lesson_plan_image | courseware_image`。空教案图 initial 直接让所有非互动页进入 `courseware_image`，互动页仍为 `interaction_no_image`。互动页内部被唯一识别的教师 placement 只以 `suppressed_on_interaction_page` 留在图片管理审计链，不进入页面资产。若 S4 合法省略过渡侧的一条锚点，只有在该侧全文零命中、保留下来的另一侧恰好唯一命中一页时，才允许按单边证据绑定，且不得改写 initial 中的教师 placement；保留侧多页命中、两侧跨页命中或两侧都缺失仍阻断。题目处理导致前后文合并时，只允许使用唯一、长度至少 12 字的原锚点句段识别互动页。正式页型复用 `scripts/page_type_contract.py`。
 - `visual_enhanced / resolved`：读取 request、被选中的 S4 与显式外部回传；只提取允许的课件图片元数据，把已请求课件图的 URL、尺寸、alt 和可选生成版本写入新快照。外部回传正文不是内容权威：同链时登记 `bindingMode: exact_page_plan`；跨链时只要有序页号集合和规范化页型与当前 S4 一致，即登记 `bindingMode: cross_chain_page_metadata` 并把图片元数据重新绑定到当前 request/S4。被选中的 S4 正文始终完整进入后续 S5，旧回传正文永不投影。页集合/页型错位、当前 request 决策冲突或当前 S4 placement review 无效仍阻断。同事可在所有非互动页回传候选课件图；request 已判定为教案图的页面按教案图优先规则忽略该候选，并在 resolved provenance 登记被忽略页码。外部文件仅作为本次 finalizer 输入及 provenance，不成为 S5 输入。
 
 三个快照为 `lessonNNN__S1__visual_asset_manifest.initial.json`、`.request.json`、`.resolved.json`，均不可覆盖；每次调用保留不可变 attempt 回执。完整字段与外部回传合同见 `references/visual-return-contract.md` 及 `references/schemas/visual-asset-manifest.schema.json`。

@@ -2106,6 +2106,50 @@ class VisualManifestGateTests(unittest.TestCase):
                 },
             )
 
+    def test_initial_allows_courseware_only_lesson_when_visual_script_has_no_lesson_section(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp = Path(temp_dir)
+            teacher, _ = self.write_teacher_inputs(temp)
+            visual_script = temp / "teacher-visual.md"
+            visual_script.write_text(
+                "# 阶段一教学必备视觉资产功能与衔接脚本\n\n"
+                "## 1. 第9课\n\n"
+                "源教案：`lesson009/final.md`  \n"
+                f"SHA-256：`{'0' * 64}`\n\n"
+                "### `L009-V01` 仅属于第9课的教案图\n\n"
+                "| 字段 | 内容 |\n|---|---|\n"
+                "| 图片用途 | 第9课示例 |\n"
+                "| 教案位置 | 第1行后单独显示 |\n"
+                "| 图片地址 | https://res.xrunda.com/test/l009-v01.webp |\n",
+                encoding="utf-8",
+            )
+
+            initial_result, initial = self.run_initial(temp, teacher, visual_script)
+
+            self.assertEqual(initial_result.returncode, 0, initial_result.stdout + initial_result.stderr)
+            initial_payload = json.loads(initial.read_text(encoding="utf-8"))
+            self.assertEqual(initial_payload["assets"], [])
+            self.assertEqual(initial_payload["placements"], [])
+            self.assertFalse(initial_payload["checks"]["teacherVisualScriptLessonPresent"])
+            self.assertFalse(initial_payload["checks"]["lessonPlanImagesDeclared"])
+
+            page_plan = self.write_page_plan(temp)
+            request_result, request = self.run_request(temp, initial, page_plan)
+
+            self.assertEqual(request_result.returncode, 0, request_result.stdout + request_result.stderr)
+            decisions = {
+                item["pageNo"]: item["decision"]
+                for item in json.loads(request.read_text(encoding="utf-8"))["pageDecisions"]
+            }
+            self.assertEqual(
+                decisions,
+                {
+                    "P01": "courseware_image",
+                    "P02": "courseware_image",
+                    "P03": "interaction_no_image",
+                },
+            )
+
     def test_initial_stops_before_delivery_check_and_uses_explicit_before_line(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             temp = Path(temp_dir)
@@ -2825,6 +2869,122 @@ class VisualS5ProjectionTests(unittest.TestCase):
             result = run(GATE_RUNNER, "--stage", "S5", "--lesson-id", "lesson001", "--visual-mode", "visual_enhanced", "--receipt-dir", temp / "receipts", "--prior-receipt", s4_receipt, "--page-plan", page_plan, "--visual-manifest", resolved, "--visual-receipt", visual_receipt, "--output", temp / "effective.json")
             self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
             self.assertIn("VISUAL_RECEIPT_OUTPUT_HASH_MISMATCH", result.stdout)
+
+    def test_visual_s5_gate_accepts_hash_bound_legacy_s4_receipt_without_visual_mode(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp = Path(temp_dir)
+            page_plan, resolved = self.write_s5_inputs(temp)
+            s4_receipt = temp / "s4.json"
+            s4_receipt.write_text(
+                json.dumps(
+                    {
+                        "contract": "RunS_V3.5.0-S1-S6-R36-20260731",
+                        "lesson_id": "lesson001",
+                        "stage": "S4",
+                        "status": "PASS",
+                        "output": {
+                            "role": "page_plan",
+                            "path": str(page_plan.resolve()),
+                            "sha256": sha256(page_plan),
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+            visual_receipt = temp / "visual.json"
+            visual_receipt.write_text(
+                json.dumps(
+                    {
+                        "contract": "RunS_V3.5.0-S1-S6-R36-20260731",
+                        "lessonId": "lesson001",
+                        "lesson_id": "lesson001",
+                        "visualMode": "visual_enhanced",
+                        "ownerStage": "S1",
+                        "phase": "resolved",
+                        "status": "PASS",
+                        "output": {
+                            "role": "visual_manifest_resolved",
+                            "path": str(resolved.resolve()),
+                            "sha256": sha256(resolved),
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            result = run(
+                GATE_RUNNER,
+                "--stage", "S5",
+                "--lesson-id", "lesson001",
+                "--visual-mode", "visual_enhanced",
+                "--receipt-dir", temp / "receipts",
+                "--prior-receipt", s4_receipt,
+                "--page-plan", page_plan,
+                "--visual-manifest", resolved,
+                "--visual-receipt", visual_receipt,
+                "--output", temp / "effective.json",
+            )
+
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_visual_s5_gate_blocks_explicit_legacy_s4_visual_mode_mismatch(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp = Path(temp_dir)
+            page_plan, resolved = self.write_s5_inputs(temp)
+            s4_receipt = temp / "s4.json"
+            s4_receipt.write_text(
+                json.dumps(
+                    {
+                        "contract": "RunS_V3.5.0-S1-S6-R36-20260731",
+                        "lesson_id": "lesson001",
+                        "stage": "S4",
+                        "visualMode": "text_only",
+                        "status": "PASS",
+                        "output": {
+                            "role": "page_plan",
+                            "path": str(page_plan.resolve()),
+                            "sha256": sha256(page_plan),
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+            visual_receipt = temp / "visual.json"
+            visual_receipt.write_text(
+                json.dumps(
+                    {
+                        "contract": "RunS_V3.5.0-S1-S6-R36-20260731",
+                        "lessonId": "lesson001",
+                        "lesson_id": "lesson001",
+                        "visualMode": "visual_enhanced",
+                        "ownerStage": "S1",
+                        "phase": "resolved",
+                        "status": "PASS",
+                        "output": {
+                            "role": "visual_manifest_resolved",
+                            "path": str(resolved.resolve()),
+                            "sha256": sha256(resolved),
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            result = run(
+                GATE_RUNNER,
+                "--stage", "S5",
+                "--lesson-id", "lesson001",
+                "--visual-mode", "visual_enhanced",
+                "--receipt-dir", temp / "receipts",
+                "--prior-receipt", s4_receipt,
+                "--page-plan", page_plan,
+                "--visual-manifest", resolved,
+                "--visual-receipt", visual_receipt,
+                "--output", temp / "effective.json",
+            )
+
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            self.assertIn("VISUAL_MODE_DRIFT", result.stdout)
 
     def test_visual_validator_blocks_any_interaction_image_projection(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

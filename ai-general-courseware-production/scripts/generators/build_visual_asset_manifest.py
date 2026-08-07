@@ -41,14 +41,12 @@ def lesson_number(lesson_id: str) -> int:
     return int(match.group(1))
 
 
-def lesson_section(text: str, number: int) -> str:
+def lesson_section(text: str, number: int) -> str | None:
     pattern = re.compile(
         rf"(?ms)^##\s+\d+\.\s+第0*{number}课\s*$\n(.*?)(?=^##\s+\d+\.\s+|\Z)"
     )
     match = pattern.search(text)
-    if not match:
-        raise ValueError("TEACHER_VISUAL_SCRIPT_LESSON_MISSING")
-    return match.group(1)
+    return match.group(1) if match else None
 
 
 def parse_table(block: str) -> dict[str, str]:
@@ -101,6 +99,33 @@ def build_manifest(lesson_id: str, teacher_final: Path, visual_script: Path) -> 
     teacher_sha = sha256(teacher_final)
     script_text = visual_script.read_text(encoding="utf-8")
     section = lesson_section(script_text, number)
+    if section is None:
+        return {
+            "schemaVersion": "1.1",
+            "lessonId": lesson_id,
+            "visualMode": "visual_enhanced",
+            "ownerStage": "S1",
+            "lifecycleState": "initial",
+            "sourceTeacherFinal": {"path": str(teacher_final), "sha256": teacher_sha},
+            "sourceTeacherVisualScript": {"path": str(visual_script), "sha256": sha256(visual_script)},
+            "sourcePagePlan": None,
+            "externalReturn": None,
+            "policy": dict(POLICY),
+            "assets": [],
+            "placements": [],
+            "pageDecisions": [],
+            "checks": {
+                "teacherVisualScriptLessonPresent": False,
+                "lessonPlanImagesDeclared": False,
+                "teacherFinalShaMatchesVisualScript": None,
+                "lessonPlanAssetIdsUnique": True,
+                "lessonPlanUrlsComplete": True,
+                "sourceAnchorsComplete": True,
+                "sourceLocationTextFrozen": True,
+                "renderPlacementsComplete": True,
+            },
+            "blockingPoints": [],
+        }
     sha_match = re.search(r"SHA-256：`?([0-9a-f]{64})`?", section)
     if not sha_match:
         raise ValueError("TEACHER_VISUAL_SCRIPT_TEACHER_SHA_MISSING")
@@ -210,6 +235,8 @@ def build_manifest(lesson_id: str, teacher_final: Path, visual_script: Path) -> 
         "placements": placements,
         "pageDecisions": [],
         "checks": {
+            "teacherVisualScriptLessonPresent": True,
+            "lessonPlanImagesDeclared": True,
             "teacherFinalShaMatchesVisualScript": True,
             "lessonPlanAssetIdsUnique": True,
             "lessonPlanUrlsComplete": True,

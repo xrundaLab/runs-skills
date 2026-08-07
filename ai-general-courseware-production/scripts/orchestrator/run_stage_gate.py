@@ -92,7 +92,13 @@ def verify_prior(
         raise ValueError("PRIOR_RECEIPT_LESSON_MISMATCH")
     if prior.get("stage") != expected_stage:
         raise ValueError("PRIOR_RECEIPT_STAGE_MISMATCH")
-    if prior.get("visualMode") != visual_mode:
+    prior_visual_mode = prior.get("visualMode")
+    legacy_visual_s4 = (
+        stage == "S5"
+        and visual_mode == "visual_enhanced"
+        and "visualMode" not in prior
+    )
+    if prior_visual_mode != visual_mode and not legacy_visual_s4:
         raise ValueError("VISUAL_MODE_DRIFT")
     if prior.get("status") != "PASS":
         raise ValueError("PRIOR_GATE_NOT_PASS")
