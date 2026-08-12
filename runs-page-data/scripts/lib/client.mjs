@@ -229,8 +229,22 @@ export async function apiRequest(path, { method = 'GET', body, json = false, con
 
   const response = await fetch(url, { method, headers, body: requestBody });
   const payload = await readJsonResponse(response);
-  if (!response.ok) throw new Error(errorMessage(payload, response));
+  if (!response.ok) {
+    // 业务码（如保存冲突的 40901）可能只出现在错误响应体里，挂到 error 上供调用方判定
+    const error = new Error(errorMessage(payload, response));
+    error.status = response.status;
+    error.payload = payload;
+    throw error;
+  }
   return payload;
+}
+
+const OK_CODES = [0, 200];
+
+function assertBusinessOk(response, action) {
+  if (!response || !OK_CODES.includes(Number(response.code))) {
+    throw new Error(response?.msg || response?.error || `${action}失败`);
+  }
 }
 
 export function buildCommitPayload(uploaded, { folderId, shouldIndex = false, fileCategory } = {}) {
@@ -578,4 +592,143 @@ export async function fetchComponentDetail(componentKeyId, config) {
     throw new Error(response?.msg || '获取组件详情失败');
   }
   return response.data || null;
+}
+
+/**
+ * 保存冲突的稳定业务码（business#80）。撞上这些码一律不能盲重试：
+ * 必须重新读详情、在最新内容上重放改动，再用新的 requestId 提交。
+ */
+export const SAVE_CONFLICT_REASONS = {
+  40901: { reason: 'STALE_REVISION', hint: '课件已被其他保存推进（可能是正在跑的任务或另一个编辑端）' },
+  40902: { reason: 'IDEMPOTENCY_CONFLICT', hint: '同一个 requestId 提交了不同内容' },
+  40903: { reason: 'VERSION_NOT_CURRENT', hint: '目标版本已不是当前工作版本' },
+  40904: { reason: 'VERSION_IMMUTABLE', hint: '目标版本已发布，不可再修改' },
+  40401: { reason: 'VERSION_NOT_FOUND', hint: '目标版本不存在（可能已被删除）' },
+};
+
+export class CoursewareSaveConflictError extends Error {
+  constructor({ code, reason, hint, message }) {
+    super(message);
+    this.name = 'CoursewareSaveConflictError';
+    this.code = code;
+    this.reason = reason;
+    this.hint = hint;
+  }
+}
+
+function toSaveConflict(payload) {
+  if (!payload || typeof payload !== 'object') return null;
+  const code = String(payload.code ?? '').trim();
+  const known = SAVE_CONFLICT_REASONS[code];
+  if (!known) return null;
+  const detail = payload.msg || payload.error || '';
+  return new CoursewareSaveConflictError({
+    code,
+    reason: known.reason,
+    hint: known.hint,
+    message: `保存冲突 ${code} ${known.reason}：${known.hint}${detail ? `（服务端：${detail}）` : ''}`,
+  });
+}
+
+/**
+ * GET v1/business/creator/courseware/current/{coursewareId}[?versionId=]
+ * 不带 versionId 时返回该课件的当前工作版本。
+ */
+export async function getCoursewareDetail({ coursewareId, versionId }, config) {
+  if (!coursewareId) throw new Error('缺少 coursewareId');
+  const query = versionId ? `?versionId=${encodeURIComponent(versionId)}` : '';
+  const response = await apiRequest(
+    `v1/business/creator/courseware/current/${encodeURIComponent(coursewareId)}${query}`,
+    { config },
+  );
+  assertBusinessOk(response, '获取课件详情');
+  if (!response.data) throw new Error('课件详情为空');
+  return response.data;
+}
+
+/**
+ * POST v1/business/creator/courseware/save
+ * 只发 UPDATE_VERSION：原位更新工作版本，请求体是完整页面快照，由 expectedRevision 做 CAS。
+ */
+export async function saveCourseware(payload, config) {
+  let response;
+  try {
+    response = await apiRequest('v1/business/creator/courseware/save', {
+      method: 'POST',
+      config,
+      json: true,
+      body: payload,
+    });
+  } catch (err) {
+    const conflict = toSaveConflict(err?.payload);
+    if (conflict) throw conflict;
+    throw err;
+  }
+  const conflict = toSaveConflict(response);
+  if (conflict) throw conflict;
+  assertBusinessOk(response, '保存课件');
+
+  const data = response.data ?? {};
+  return {
+    courseware: data.courseware ?? data,
+    pageIdMapping: data.pageIdMapping ?? {},
+    createdNewVersion: data.createdNewVersion === true,
+  };
+}
+
+/**
+ * POST v1/business/creator/courseware/rollback
+ * 语义是「把指定版本号克隆成 V(max+1) 的 DRAFT 当前工作版本」，历史行不会被改写。
+ * 接口只回成功与否，新版本身份必须再查一次详情。
+ */
+export async function rollbackCourseware({ coursewareId, version }, config) {
+  if (!coursewareId) throw new Error('缺少 coursewareId');
+  const versionNumber = Number(version);
+  if (!Number.isInteger(versionNumber) || versionNumber <= 0) {
+    throw new Error(`源版本号不合法：${version}`);
+  }
+  const response = await apiRequest('v1/business/creator/courseware/rollback', {
+    method: 'POST',
+    config,
+    json: true,
+    body: { coursewareId, version: versionNumber },
+  });
+  assertBusinessOk(response, '创建新版本');
+  return response.data ?? null;
+}
+
+/** GET v1/creator/courseware/flow/active：该课件是否还有未完成的 flow task。 */
+export async function getActiveFlowTask(coursewareId, config) {
+  if (!coursewareId) throw new Error('缺少 coursewareId');
+  const response = await apiRequest(
+    `v1/creator/courseware/flow/active?coursewareId=${encodeURIComponent(coursewareId)}`,
+    { config },
+  );
+  const data = response?.data ?? response;
+  return data?.task ?? null;
+}
+
+export const STAGE_ENDPOINTS = {
+  media: 'v1/creator/courseware/supplement-media',
+  html: 'v1/creator/courseware/generate-html',
+};
+
+/**
+ * 单阶段重跑：媒体补全 / HTML 生成。两个接口都会绑定当前工作版本并**同步等待**任务结束
+ * （服务端最多等 5 分钟），页数多时耗时较长属正常。
+ */
+export async function startStageTask(stage, coursewareId, config) {
+  const path = STAGE_ENDPOINTS[stage];
+  if (!path) throw new Error(`未知阶段：${stage}`);
+  const response = await apiRequest(path, {
+    method: 'POST',
+    config,
+    json: true,
+    body: { coursewareId },
+  });
+  const result = response?.data ?? response;
+  if (!result?.taskId) {
+    throw new Error(result?.error || result?.msg || result?.detail || '启动阶段任务失败');
+  }
+  return result;
 }

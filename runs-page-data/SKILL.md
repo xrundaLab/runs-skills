@@ -1,12 +1,21 @@
 ---
 name: runs-page-data
-description: 当需要把本地图片 / 音频 / 视频上传到 RunS 服务，或需要编排、校验、提交智课端页面 JSON（顶层 pages[] 导入结构）时使用。覆盖素材上传、资产清单、占位符替换、组件结构校验与课件任务提交。
+description: 当需要把本地图片 / 音频 / 视频上传到 RunS 服务，需要编排、校验、提交智课端页面 JSON（顶层 pages[] 导入结构），或需要修改某个已有课件（用户给出 /creator/<coursewareId> 链接或课件 ID）的页面数据时使用。覆盖素材上传、资产清单、占位符替换、组件结构校验、课件任务提交与已有课件的读—改—写。
 metadata: {"requires":{"bins":["node"]},"env":["XRUNS_COURSEWARE_BASE_URL","XRUNS_COURSEWARE_WEB_URL","XRUNS_COURSEWARE_TOKEN"]}
 ---
 
 # RunS 页面数据编排
 
-把「一堆本地图片 + 音频 + 文案」变成一份可批量导入、可直接解析的页面 JSON。
+把「一堆本地图片 + 音频 + 文案」变成一份可批量导入、可直接解析的页面 JSON；也负责改已经建好的课件。
+
+**先分清用户要哪一件事**：
+
+| 用户的说法 | 走哪条链路 |
+|------------|-----------|
+| 「把这门课上传 / 提交到 RunS」「用某模板生成课件」 | 新建：`pages:submit`，见「标准流程」 |
+| 「改一下 https://web.dev.xruns.cn/creator/xxx 的第 3 页」「把这个课件的某段文案换掉」 | 修改：`courseware:update`，见「修改已有课件」 |
+
+拿到 `/creator/<id>` 链接却去跑 `pages:submit`，会**新建一个课件**（另一个链接），而不是改用户给的那一个。
 
 ## 严格规则
 
@@ -19,9 +28,12 @@ metadata: {"requires":{"bins":["node"]},"env":["XRUNS_COURSEWARE_BASE_URL","XRUN
 - **不要把 page 级组件和其他组件放在同一页**。page 级组件独占整页，混放会被前端渲染规则判为非法。
 - **不要给素材开索引**。图片 / 音频 `should_index` 一律 `false`（脚本默认值），只有需要进知识库检索的文档才开。
 - **不要为了「先把素材备好」而整目录扫描上传**。`assets:upload --dir` 会把目录里所有匹配后缀的文件全部上传，页面 JSON 用不到的草稿、原图、废弃配音也一并进服务端——这是浪费额度也是污染清单。默认走 `pages:resolve` 按需上传（见「标准流程」），只上传页面 JSON 真正引用到的素材。
-- 不要在没有 `--yes` 的情况下认为已经提交成功；`pages:submit` 不带 `--yes` 只做校验预览。
+- 不要在没有 `--yes` 的情况下认为已经提交成功；`pages:submit` / `courseware:update` 不带 `--yes` 只做校验预览。
 - 不要绕过资产清单重复上传同一素材，清单是幂等与可追溯的唯一依据。
 - 不要直接提交缺少 `coursewareId` 的 flow task。脚本必须先调用 `create-with-template` 创建课程，再把返回的 ID 交给 creator 继续处理。
+- **不要用 `pages:submit` 去「改」已有课件**。它必然新建课件；把已有 coursewareId 交给 flow task 也只是整体重刷（页面全替换、pageId 全丢、媒体与 HTML 全量重跑）。改已有课件只能走 `courseware:update`。
+- **不要在课件还有未完成任务时写入**。`courseware:update` 会先查 `flow/active` 并在有任务时中止：任务的阶段 job 拿着 pinned 版本原位写库，这时插一次保存，要么自己被 CAS 拒，要么把任务顶成 `CONFLICTED`（生成结果直接作废）。让用户等任务跑完或去创作页中断，不要自己去 abort。
+- **不要手工拼保存请求或自己维护 revision**。`expectedRevision` 只能来自本次读回的详情，`courseware:update` 在一条命令里完成读—改—写；不要把版本号、pageId 存到文件里跨命令复用。
 
 ### 必须（MUST）
 
@@ -36,7 +48,9 @@ metadata: {"requires":{"bins":["node"]},"env":["XRUNS_COURSEWARE_BASE_URL","XRUN
 - 自带音频时把地址写进对应字段（`tts.content.url` / `infographic[].tts_url` / `immersive_explanation[].tts_url`）；**填了就不会被 media worker 重新生成**，留空才会触发 TTS。
 - 提交前先跑一次 `pages:validate --template-id <id>` 或 `pages:validate --template <name>`，用模板组件白名单确认这些组件在目标模板里确实可用。
 - 提交顺序固定为 **创建模板课程 → 携带 `coursewareId` 创建 flow task**；不要把 `category` / `parsePrompt` 从客户端透传给 creator。
-- 报告结果时如实说明：上传了几个、跳过几个、失败几个，校验有几个错误几个告警。
+- 改已有课件前**先 `courseware:pull` 看一眼**：页序、`pageId`、每页有哪些组件都以服务端为准，补丁要按 `pageId` 定位，不要按记忆或页序猜。
+- 改完之后**主动告诉用户「已生成的 HTML 和音频不会跟着变」**，并说明需要时可以加 `--regen-html` / `--regen-media` 重跑；fork 了新版本还要说明「线上仍读旧的已发布版本，需要重新发布」。
+- 报告结果时如实说明：上传了几个、跳过几个、失败几个，校验有几个错误几个告警；改课件还要说清改了哪几页、是原位更新还是 fork 了新版本、落库后的版本与 revision。
 
 ---
 
@@ -50,7 +64,9 @@ metadata: {"requires":{"bins":["node"]},"env":["XRUNS_COURSEWARE_BASE_URL","XRUN
 | **把 JSON 里的本地引用换成线上地址（同时按需上传，默认走这条）** | `pagedata.mjs pages:resolve` |
 | 手动上传指定的几个文件（显式列文件名） | `pagedata.mjs assets:upload a.png b.mp3` |
 | 校验页面 JSON 结构 | `pagedata.mjs pages:validate` |
-| 提交课件任务并追踪 | `pagedata.mjs pages:submit` |
+| 新建课件并提交生成任务 | `pagedata.mjs pages:submit` |
+| **看已有课件现在长什么样（只读）** | `pagedata.mjs courseware:pull <链接\|课件ID>` |
+| **改已有课件的页面数据** | `pagedata.mjs courseware:update <链接\|课件ID> <补丁.json>` |
 | 查组件 content 结构 | [references/component-schemas.md](./references/component-schemas.md) |
 | 查素材流水线细节 | [references/asset-pipeline.md](./references/asset-pipeline.md) |
 | 抄一份页面 JSON 模板 | [references/example-page-data.json](./references/example-page-data.json) |
@@ -199,6 +215,79 @@ node .agents/skills/runs-page-data/scripts/pagedata.mjs pages:submit ./page.reso
 
 ---
 
+## 修改已有课件
+
+用户给了 `/creator/<coursewareId>` 链接或课件 ID 要改内容时走这条。整条链路是**读—改—写在一条命令里闭环**：命令自己拉最新详情、合并你的改动、校验、提交，中间不落任何状态文件，因此不存在「版本号过期了要重新拉」这种用户流程。
+
+### 1. 先看现状
+
+```bash
+node .agents/skills/runs-page-data/scripts/pagedata.mjs courseware:pull \
+  https://web.dev.xruns.cn/creator/e7c6c8f9f0c44905aaa73edc403fab3c --out ./current.json
+```
+
+只读，不写任何东西。会打印版本状态、模板 ID，以及每页的 `pageId` / `renderType` / 组件数，并把课件导出成和页面 JSON 同构的 `{ title, pages[] }`——**补丁就照着这份文件里的 `pageId` 写**。
+
+链接第二段（`/creator/<id>/<version>`）是精确 versionId，不是 V1/V2 这种版本号；不带它就是当前工作版本。
+
+### 2. 写补丁，只写要改的页
+
+```json
+{
+  "pages": [
+    {
+      "pageId": "1893...",
+      "title": "光合作用的两个阶段",
+      "components": [{ "type": "infographic", "content": [{ "img_url": "@asset:images/step-1.png" }] }]
+    }
+  ]
+}
+```
+
+合并规则：
+
+- 按 `pageId` 定位（没有就按 `pageNumber`），**不做隐式按位置匹配**；
+- 只在**顶层字段**合并：补丁里出现的键覆盖，没出现的键保留服务端值 —— 已生成的 `output`（HTML）、`tts_url`（音频）因此不会被抹掉；
+- `components` 是整个数组替换，不做逐组件深合并；
+- 默认模式只能改已有页。**新增页、删除页、调整页序要用 `--replace`**：那时补丁就是完整页面列表，未出现的页会被删除（服务端保存语义就是「缺页 = 删页」）。
+
+补丁里可以照常写 `@asset:` 占位符，提交前先跑一次 `pages:resolve`（校验会拦下残留的本地引用）。
+
+### 3. 预览 → 写入
+
+```bash
+# 不带 --yes：只做合并、校验和差异预览，不写任何东西
+node .agents/skills/runs-page-data/scripts/pagedata.mjs courseware:update \
+  https://web.dev.xruns.cn/creator/e7c6c8f9f0c44905aaa73edc403fab3c ./patch.json
+
+# 确认后写入
+node .agents/skills/runs-page-data/scripts/pagedata.mjs courseware:update \
+  https://web.dev.xruns.cn/creator/e7c6c8f9f0c44905aaa73edc403fab3c ./patch.json --yes
+```
+
+命令内部按这个顺序执行，任何一步不过就地停下，不会留下半成品：
+
+1. **活跃任务闸门** —— `GET flow/active`，有未完成任务就中止并报出 `taskId`；
+2. **读目标版本**并判定可写性（唯一谓词：`isCurrentVersion && status=DRAFT && !isPublished`）：
+   - 可写 → **原位更新**当前工作版本；
+   - 只读（已发布 / 历史版本）→ **自动 fork**：`rollback` 把该版本克隆成新的 DRAFT 当前版本，回查确认版本号确实变大后，把补丁里的 `pageId` 按页序换算到新版本，再在新版本上更新；
+3. **按模板校验**（模板取课件详情里的 `templateId`，可用 `--template-id` / `--template` 覆盖）。存量课件常有早于当前模板契约的老页面，因此只有**本次改动到的页**的结构错误会阻断保存，未改动页的问题降级为 `!` 告警照常报出；
+4. **提交完整页面快照** `UPDATE_VERSION` + `expectedRevision` CAS。撞 `40901 STALE_REVISION` 会自动重读一次、在最新内容上重放同一份补丁并换新 `requestId` 再提交；其余冲突码（版本已发布 / 已不是当前版本）直接停下，重跑命令即可（那时会自动走 fork）。
+
+补丁与服务端内容完全一致时命令会直接结束，不做空写入（避免白白推进 revision）。
+
+### 4. 改完之后
+
+页面已生成的 HTML 和音频**不会**跟着内容自动更新。需要时显式重跑（服务端同步等待任务结束，页多会比较慢）：
+
+```bash
+node .agents/skills/runs-page-data/scripts/pagedata.mjs courseware:update <链接> ./patch.json --yes --regen-html
+```
+
+fork 出的新版本是 DRAFT，线上课程仍在读原来那个已发布版本，需要用户到创作页重新发布才会生效——这句一定要跟用户讲清楚。
+
+---
+
 ## 什么时候才用 `assets:upload`
 
 `pages:resolve` 已经覆盖了 99% 的上传需求，`assets:upload` 只是「手动补一发」的口子，用的时候**始终显式列出文件**：
@@ -237,6 +326,11 @@ node .agents/skills/runs-page-data/scripts/pagedata.mjs assets:upload \
 | 模板组件结构 | 只认组件详情接口的 `dataStructure`；字段和容器结构必须完整，额外字段与标量值放行 |
 | 音频是否重生 | `tts_url` / `url` 已填 → 保留；留空且 `tts_text` 非空 → media worker 调 TTS 生成 |
 | 默认音色 | `zh_female_yingyujiaoxue_uranus_bigtts` |
+| 改课件的写入语义 | 只有 `UPDATE_VERSION`；请求体是**完整页面快照**，缺页 = 删页 |
+| 版本可写谓词 | `isCurrentVersion && status === "DRAFT" && isPublished !== true`，三者缺一即只读 |
+| 只读版本怎么改 | `rollback` 克隆成新的 DRAFT 当前版本（`courseware:update` 自动完成），原已发布版本不受影响 |
+| 保存冲突码 | `40901` revision 过期（自动重放一次）／`40902` requestId 撞内容／`40903` 已非当前版本／`40904` 已发布，后三者不重试 |
+| 改完的媒体与 HTML | 不会自动更新，要显式 `--regen-media` / `--regen-html` |
 
 ---
 

@@ -3,21 +3,26 @@
  * RunS 页面数据 CLI —— 把本地图片 / 音频上传到 RunS，并编排、校验、提交页面 JSON。
  *
  * 命令：
- *   assets:upload   手动上传指定素材，产出可复用的资产清单（--dir 会整目录全传，慎用）
- *   pages:resolve   把页面 JSON 里的本地引用替换成 public_url（缺失的顺手上传，只传被引用的）
- *   pages:validate  按模板组件接口与 dataStructure 校验页面 JSON
- *   pages:submit    提交课件任务（structuredJson 内联 / 上传 JSON 直接解析）
+ *   assets:upload      手动上传指定素材，产出可复用的资产清单（--dir 会整目录全传，慎用）
+ *   pages:resolve      把页面 JSON 里的本地引用替换成 public_url（缺失的顺手上传，只传被引用的）
+ *   pages:validate     按模板组件接口与 dataStructure 校验页面 JSON
+ *   pages:submit       提交课件任务（structuredJson 内联 / 上传 JSON 直接解析）—— 新建课件
+ *   courseware:pull    把已有课件的当前内容导出成页面 JSON（只读）
+ *   courseware:update  改已有课件：读—改—写一条命令闭环，必要时自动 fork 新版本
  */
 import { readFile, writeFile, readdir, stat } from 'node:fs/promises';
 import { dirname, extname, join, resolve as resolvePath } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import {
+  CoursewareSaveConflictError,
   DEFAULT_BASE_URL,
   DEFAULT_WEB_URL,
   buildCoursewareUrl,
   listAllTemplates,
   createCoursewareWithTemplate,
+  getActiveFlowTask,
+  getCoursewareDetail,
   getFlowTask,
   getRuntimeConfig,
   guessMimeType,
@@ -29,10 +34,30 @@ import {
   missingTokenMessage,
   rankTemplatesByName,
   resolveTemplateByName,
+  rollbackCourseware,
+  saveCourseware,
   startFlowTask,
+  startStageTask,
   summarizeTemplates,
   uploadLocalFile,
 } from './lib/client.mjs';
+import {
+  buildCompositionModeMap,
+  buildSavePayload,
+  createRequestId,
+  describeVersion,
+  docFromDetail,
+  hasEffectiveChanges,
+  mergePatchPages,
+  normalizeCoursewareVersion,
+  pagesFromDetail,
+  parseCoursewareRef,
+  rebasePatchPages,
+  resolveVersionEditability,
+  splitReportByChangedPages,
+  summarizeChanges,
+  VERSION_REASON_LABELS,
+} from './lib/courseware.mjs';
 import {
   createManifest,
   findAsset,
@@ -47,10 +72,11 @@ import {
 import { applyAssetResolutions, collectAssetRefs, findResidualLocalRefs } from './lib/resolve.mjs';
 import { formatReport, validatePageData } from './lib/validate.mjs';
 const COMMANDS = new Set([
-  'config', 'ping', 'templates:list', 'assets:upload', 'pages:resolve', 'pages:validate', 'pages:submit', 'help',
+  'config', 'ping', 'templates:list', 'assets:upload', 'pages:resolve', 'pages:validate', 'pages:submit',
+  'courseware:pull', 'courseware:update', 'help',
 ]);
 const BOOLEAN_FLAGS = new Set([
-  'as-file', 'dry-run', 'force', 'help', 'no-upload', 'strict', 'watch', 'yes',
+  'as-file', 'dry-run', 'force', 'help', 'no-upload', 'regen-html', 'regen-media', 'replace', 'strict', 'watch', 'yes',
 ]);
 const DEFAULT_MANIFEST = 'assets.manifest.json';
 const DEFAULT_CONCURRENCY = 4;
@@ -143,6 +169,38 @@ export function parseSubmitArgs(args) {
     watch: Boolean(args.watch),
     yes: Boolean(args.yes),
     report: args.report ? String(args.report) : undefined,
+  };
+}
+
+function optionalStringFlag(args, flag) {
+  if (args[flag] === true) throw new Error(`--${flag} 缺少值`);
+  return typeof args[flag] === 'string' && args[flag].trim() ? args[flag].trim() : undefined;
+}
+
+export function parseCoursewareTarget(args, { position = 1 } = {}) {
+  const target = args._[position];
+  if (!target) throw new Error('缺少课件链接或课件 ID');
+  const ref = parseCoursewareRef(String(target));
+  // 显式 --version-id 覆盖链接里带的那一段
+  const versionId = optionalStringFlag(args, 'version-id') ?? ref.versionId;
+  return { coursewareId: ref.coursewareId, ...(versionId ? { versionId } : {}) };
+}
+
+export function parseCoursewareUpdateArgs(args) {
+  const target = parseCoursewareTarget(args);
+  const file = args._[2];
+  if (!file) throw new Error('缺少补丁 JSON 路径');
+  if (args.force) {
+    throw new Error('courseware:update 不支持 --force，模板 dataStructure 校验错误不能跳过');
+  }
+  return {
+    ...target,
+    file: String(file),
+    ...parseTemplateSelector(args),
+    replace: Boolean(args.replace),
+    yes: Boolean(args.yes),
+    regenMedia: Boolean(args['regen-media']),
+    regenHtml: Boolean(args['regen-html']),
   };
 }
 
@@ -501,7 +559,8 @@ function printResolvedTemplate(template) {
   }
 }
 
-async function runValidation(doc, args, { templateId } = {}) {
+/** 校验并回带模板上下文；courseware:update 还要用 templateComponents 派生 renderType。 */
+async function runValidationWithContext(doc, args, { templateId } = {}) {
   if (!templateId) throw new Error('组件校验必须提供 --template-id 或 --template');
   const config = getRuntimeConfig(args);
   const options = await loadTemplateContext(templateId, doc, config);
@@ -511,6 +570,11 @@ async function runValidation(doc, args, { templateId } = {}) {
   for (const item of residual) {
     report.errors.push({ path: item.path, message: `仍是本地素材引用 ${item.raw}，请先执行 pages:resolve` });
   }
+  return { report, ...options };
+}
+
+async function runValidation(doc, args, { templateId } = {}) {
+  const { report } = await runValidationWithContext(doc, args, { templateId });
   return report;
 }
 
@@ -687,6 +751,267 @@ async function handlePagesSubmit(args) {
   }
 }
 
+// rollback 建版与详情可读之间存在瞬时不一致，与前端 use-creator-data 采用同一组重试间隔
+const FORK_RETRY_DELAYS_MS = [300, 700];
+
+function printVersion(prefix, version, editability) {
+  console.log(`${prefix}${describeVersion(version)}`);
+  console.log(`  版本判定：${VERSION_REASON_LABELS[editability.reason] ?? editability.reason}`);
+}
+
+async function handleCoursewarePull(args) {
+  const target = parseCoursewareTarget(args);
+  const config = getRuntimeConfig(args);
+  const detail = await getCoursewareDetail(target, config);
+  const version = normalizeCoursewareVersion(detail);
+  const editability = resolveVersionEditability(version);
+  const doc = docFromDetail(detail);
+
+  const outPath = resolvePath(String(args.out || `courseware.${target.coursewareId}.json`));
+  await writeFile(outPath, `${JSON.stringify(doc, null, 2)}\n`, 'utf8');
+
+  console.log(
+    `课件：${doc.title || '(无标题)'}｜coursewareId=${target.coursewareId}`
+    + `｜templateId=${detail.templateId ?? '(未返回)'}`,
+  );
+  printVersion('版本：', version, editability);
+  console.log(`页面 ${doc.pages.length} 页：`);
+  for (const page of doc.pages) {
+    const components = Array.isArray(page.components) ? page.components.length : 0;
+    console.log(
+      `  #${page.pageNumber} pageId=${page.pageId ?? '(无)'}`
+      + ` renderType=${page.renderType ?? '(未设置)'} 组件 ${components} 个｜${page.title || '(无标题)'}`,
+    );
+  }
+  console.log(`已写出：${outPath}`);
+  console.log(`预览链接：${buildCoursewareUrl({ siteUrl: config.webUrl, coursewareId: target.coursewareId })}`);
+}
+
+/**
+ * fork：把只读版本克隆成新的当前工作版本。
+ * rollback 只回成功与否，因此必须回查详情并确认「版本号确实变大」——
+ * 否则可能把仍在返回的旧 current 当成新版本，改动就写错了地方。
+ */
+async function forkWorkingVersion({ coursewareId, sourceVersion, sourceHasPages, config }) {
+  const sourceNumber = Number(sourceVersion.version);
+  if (!Number.isInteger(sourceNumber) || sourceNumber <= 0) {
+    throw new Error('课件详情里缺少源版本号，无法创建新版本');
+  }
+  await rollbackCourseware({ coursewareId, version: sourceNumber }, config);
+
+  for (let attempt = 0; ; attempt += 1) {
+    const detail = await getCoursewareDetail({ coursewareId }, config);
+    const version = normalizeCoursewareVersion(detail);
+    const fetched = Number(version.version);
+    const isNewVersion = Number.isInteger(fetched) && fetched > sourceNumber;
+    const hasContent = !sourceHasPages || (Array.isArray(detail?.pages) && detail.pages.length > 0);
+    if (isNewVersion && hasContent) return { detail, version };
+
+    if (attempt >= FORK_RETRY_DELAYS_MS.length) {
+      throw new Error(
+        `新版本已创建，但服务端返回的内容还不完整（V${sourceNumber} → V${version.version ?? '?'}），`
+        + '本次未写入任何改动，请稍后重新执行',
+      );
+    }
+    await sleep(FORK_RETRY_DELAYS_MS[attempt]);
+  }
+}
+
+/** 合并补丁 → 组装完整快照 → 按模板校验；不发写请求。 */
+async function buildUpdatePlan({ detail, patchDoc, patchPages, options, args, templateId }) {
+  const serverPages = pagesFromDetail(detail);
+  const { pages, changes } = mergePatchPages(serverPages, patchPages, { replace: options.replace });
+  const title = typeof patchDoc?.title === 'string' && patchDoc.title.trim()
+    ? patchDoc.title
+    : (typeof detail?.title === 'string' ? detail.title : '');
+  const doc = { title, pages };
+
+  const effectiveTemplateId = templateId
+    || (detail?.templateId != null && String(detail.templateId).trim() ? String(detail.templateId) : '');
+  if (!effectiveTemplateId) {
+    throw new Error('课件详情里没有 templateId，无法按模板校验组件；请用 --template-id 或 --template 指定');
+  }
+
+  const { report, templateComponents } = await runValidationWithContext(doc, args, {
+    templateId: effectiveTemplateId,
+  });
+  return {
+    serverPages,
+    doc,
+    pages,
+    changes,
+    report,
+    templateComponents,
+    templateId: effectiveTemplateId,
+    ...splitReportByChangedPages(report, changes),
+  };
+}
+
+function printUpdatePlan(plan) {
+  const summary = summarizeChanges(plan.changes);
+  console.log(
+    `改动：更新 ${summary.updated}，新增 ${summary.added}，删除 ${summary.removed}，`
+    + `移动 ${summary.moved}，未变 ${summary.unchanged}（提交的是 ${plan.pages.length} 页完整快照）`,
+  );
+  for (const item of plan.changes) {
+    if (item.status === 'unchanged') continue;
+    const marks = { updated: '~', added: '+', removed: '-', moved: '→' };
+    const from = item.fromPageNumber ? `（原第 ${item.fromPageNumber} 页）` : '';
+    console.log(
+      `  ${marks[item.status] ?? '?'} #${item.pageNumber} pageId=${item.pageId ?? '(新页)'}`
+      + `${from}｜${item.title || '(无标题)'}`,
+    );
+  }
+  for (const item of plan.blocking) console.log(`  ✗ ${item.path || '根节点'}：${item.message}`);
+  for (const item of plan.untouched) {
+    console.log(`  ! ${item.path || '根节点'}：${item.message}（本次未改动该页，不阻断保存）`);
+  }
+  for (const item of plan.warnings) console.log(`  ! ${item.path || '根节点'}：${item.message}`);
+  if (plan.untouchedWarnings.length > 0) {
+    console.log(`  ! 另有 ${plan.untouchedWarnings.length} 条告警落在本次未改动的页上，已省略`);
+  }
+}
+
+async function handleCoursewareUpdate(args) {
+  const options = parseCoursewareUpdateArgs(args);
+  const config = getRuntimeConfig(args);
+  const patchDoc = await readJsonFile(resolvePath(options.file));
+  if (!Array.isArray(patchDoc?.pages)) throw new Error('补丁 JSON 缺少 pages 数组');
+  let patchPages = patchDoc.pages;
+
+  // 1. 活跃任务闸门：任务的阶段 job 会拿 pinned 版本原位写入，此时插一次保存
+  //    要么被 CAS 拒，要么把任务顶成 CONFLICTED（生成结果直接丢弃）。
+  const active = await getActiveFlowTask(options.coursewareId, config);
+  if (active) {
+    throw new Error(
+      `课件还有未完成的任务（taskId=${active.taskId} status=${active.status}`
+      + `${active.stage ? ` stage=${active.stage}` : ''}），现在写入会与任务互相覆盖。`
+      + '请等它跑完，或到创作页中断该任务后重试。',
+    );
+  }
+
+  // 2. 读取目标版本并判定路由：可写就原位更新，只读就 fork 新版本
+  let detail = await getCoursewareDetail(
+    { coursewareId: options.coursewareId, versionId: options.versionId },
+    config,
+  );
+  let version = normalizeCoursewareVersion(detail);
+  const editability = resolveVersionEditability(version);
+  const template = await resolveTemplateSelection(options, config);
+  if (template) printResolvedTemplate(template);
+
+  console.log(`课件：${detail.title || '(无标题)'}｜coursewareId=${options.coursewareId}`);
+  printVersion('目标版本：', version, editability);
+  if (editability.reason === 'no-identity') {
+    throw new Error('课件详情里没有精确版本 ID，无法安全写入；请确认课件是否正常');
+  }
+
+  const needFork = !editability.editable;
+  console.log(needFork
+    ? `路由：该版本只读 → 先基于 V${version.version ?? '?'} 创建新工作版本，再在新版本上更新`
+    : '路由：原位更新当前工作版本');
+
+  let plan = await buildUpdatePlan({
+    detail, patchDoc, patchPages, options, args, templateId: template?.templateId,
+  });
+  printUpdatePlan(plan);
+
+  if (plan.blocking.length > 0) {
+    console.log(`校验未通过（${plan.blocking.length} 个错误落在本次改动的页上），已终止，未写入任何内容。`);
+    process.exitCode = 1;
+    return;
+  }
+  if (!hasEffectiveChanges(plan.changes)) {
+    console.log('补丁与服务端内容完全一致，无需保存（不做空写入以免推进 revision）。');
+    return;
+  }
+  if (!options.yes) {
+    console.log('预览完成。确认无误后加 --yes 实际写入。');
+    return;
+  }
+
+  // 3. 只读版本先 fork：新版本的页是克隆出来的新行，补丁里的 pageId 要按页序换算过去
+  if (needFork) {
+    const sourcePages = plan.serverPages;
+    const forked = await forkWorkingVersion({
+      coursewareId: options.coursewareId,
+      sourceVersion: version,
+      sourceHasPages: sourcePages.length > 0,
+      config,
+    });
+    detail = forked.detail;
+    version = forked.version;
+    console.log(`已创建新工作版本：${describeVersion(version)}`);
+
+    patchPages = rebasePatchPages(patchPages, sourcePages, pagesFromDetail(detail));
+    plan = await buildUpdatePlan({
+      detail, patchDoc, patchPages, options, args, templateId: template?.templateId,
+    });
+    if (plan.blocking.length > 0) {
+      throw new Error('新版本上的校验未通过，已停止写入；新版本已创建，可修正补丁后重试');
+    }
+  }
+
+  // 4. 保存。撞 STALE_REVISION 说明期间有别的写入，重读一次并在最新内容上重放同一份补丁；
+  //    内容变了必须换新的 requestId，复用会被判成 IDEMPOTENCY_CONFLICT。
+  let saved;
+  for (let attempt = 0; ; attempt += 1) {
+    const payload = buildSavePayload({
+      coursewareId: options.coursewareId,
+      targetVersionId: version.versionId,
+      expectedRevision: version.revision,
+      requestId: createRequestId(),
+      pages: plan.pages,
+      title: plan.doc.title,
+      modeByType: buildCompositionModeMap(plan.templateComponents),
+    });
+    try {
+      saved = await saveCourseware(payload, config);
+      break;
+    } catch (err) {
+      const retriable = err instanceof CoursewareSaveConflictError
+        && err.reason === 'STALE_REVISION'
+        && attempt < 1;
+      if (!retriable) throw err;
+      console.log(`  ! ${err.message}`);
+      console.log('  重新读取最新内容并重放本次改动…');
+      detail = await getCoursewareDetail(
+        { coursewareId: options.coursewareId, versionId: version.versionId },
+        config,
+      );
+      version = normalizeCoursewareVersion(detail);
+      plan = await buildUpdatePlan({
+        detail, patchDoc, patchPages, options, args, templateId: template?.templateId,
+      });
+      if (plan.blocking.length > 0) {
+        throw new Error('重放到最新内容后校验未通过，已停止写入');
+      }
+    }
+  }
+
+  const savedVersion = normalizeCoursewareVersion(saved.courseware);
+  console.log(`已保存：${describeVersion(savedVersion)}｜落库 ${plan.pages.length} 页`);
+  if (saved.createdNewVersion) {
+    console.log('  ! 服务端在 UPDATE 语义下建了新版本，请到创作页确认版本历史');
+  }
+  console.log(`预览链接：${buildCoursewareUrl({ siteUrl: config.webUrl, coursewareId: options.coursewareId })}`);
+  if (needFork) {
+    console.log('提示：新版本是 DRAFT，线上仍在读原来那个已发布版本，需要在创作页重新发布才会生效。');
+  }
+  console.log('提示：页面已生成的 HTML（pageData.output）与音频不会自动跟着改，需要时用 --regen-html / --regen-media 重跑。');
+
+  // 5. 可选的单阶段重跑：服务端同步等待任务结束，页数多时会比较久
+  for (const [flag, stage, label] of [
+    [options.regenMedia, 'media', '媒体补全'],
+    [options.regenHtml, 'html', 'HTML 生成'],
+  ]) {
+    if (!flag) continue;
+    console.log(`触发${label}…`);
+    const task = await startStageTask(stage, options.coursewareId, config);
+    console.log(`  ✓ ${label}完成：taskId=${task.taskId}`);
+  }
+}
+
 /** 打印生效配置及其来源，不发任何请求。 */
 function printConfig(config) {
   const source = (key) => {
@@ -790,7 +1115,7 @@ function printHelp() {
     --template <name>                模板名称，必填；自动查询并解析 ID
     --strict                         告警也视为失败
 
-  pages:submit <page.json>           提交课件任务（默认只预览）
+  pages:submit <page.json>           新建课件并提交生成任务（默认只预览）
     --template-id <id>               业务模板 ID；与 --template 二选一
     --template <name>                模板名称；自动查询并解析 ID，与 --template-id 二选一
     --yes                            确认提交（不加则只做校验预览）
@@ -798,6 +1123,21 @@ function printHelp() {
     --batch-no <no>                  指定批次号
     --watch                          轮询任务状态到终态
     --report <路径>                  写出 .csv / .json 报告
+
+  courseware:pull <链接|课件ID>       导出已有课件的当前内容（只读，不写任何东西）
+    --version-id <id>                指定精确版本；默认取当前工作版本
+    --out <路径>                     输出文件，默认 courseware.<coursewareId>.json
+
+  courseware:update <链接|课件ID> <补丁.json>
+                                     改已有课件（默认只预览）。默认按 pageId / pageNumber
+                                     只覆盖补丁里出现的页与顶层字段，其余原样保留
+    --replace                        补丁即完整页面列表：未出现的页会被删除，可增页、可改页序
+    --version-id <id>                指定精确版本；默认取当前工作版本
+    --template-id <id> / --template <name>
+                                     覆盖校验用的模板；默认取课件详情里的 templateId
+    --yes                            确认写入（不加则只做合并预览与校验）
+    --regen-media                    写入后重跑媒体补全（同步等待，较慢）
+    --regen-html                     写入后重跑 HTML 生成（同步等待，较慢）
 
   templates:list                    查询当前用户可用的模板及其业务模板 ID
     --keyword <name>                 按模板名称模糊过滤并排序（会遍历模板列表）
@@ -833,6 +1173,8 @@ async function main(argv) {
   if (command === 'pages:resolve') return handlePagesResolve(args);
   if (command === 'pages:validate') return handlePagesValidate(args);
   if (command === 'pages:submit') return handlePagesSubmit(args);
+  if (command === 'courseware:pull') return handleCoursewarePull(args);
+  if (command === 'courseware:update') return handleCoursewareUpdate(args);
   return printHelp();
 }
 

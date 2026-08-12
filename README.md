@@ -41,6 +41,14 @@
 
 4. 技能会按固定流程执行：**确定模板 → 编排页面 JSON → 解析占位符并按需上传 → 校验 → 提交**，每步产物落盘，任一步失败不进入下一步。
 
+5. 要改的是**已经建好的课件**（用户给出 `/creator/<coursewareId>` 链接或课件 ID）时走另一条链路，不会新建课件：
+
+   ```
+   利用 runs-page-data skill，把 https://web.dev.xruns.cn/creator/e7c6c8f9f0c44905aaa73edc403fab3c 第 3 页的正文换成……
+   ```
+
+   技能会先导出课件现状，再按 `pageId` 合并改动、按模板校验、以完整页面快照原位更新当前工作版本；目标版本已发布或是历史版本时自动 fork 出新的工作版本再改。课件有未完成任务时会停下来，不与任务抢写。
+
 详细规则、命令、组件 schema 见 [runs-page-data/SKILL.md](./runs-page-data/SKILL.md)。
 
 ## ai-general-courseware-production

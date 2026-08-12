@@ -8,10 +8,26 @@ import {
   createBatchNo,
   parseArgv,
   parseAssetsUploadArgs,
+  parseCoursewareTarget,
+  parseCoursewareUpdateArgs,
   parseSubmitArgs,
   parseTemplateSelector,
   summarizePageData,
 } from './pagedata.mjs';
+import {
+  buildSavePayload,
+  derivePageRenderType,
+  docFromDetail,
+  hasEffectiveChanges,
+  mergePatchPages,
+  normalizeCoursewareVersion,
+  pagesFromDetail,
+  parseCoursewareRef,
+  rebasePatchPages,
+  resolveVersionEditability,
+  splitReportByChangedPages,
+  summarizeChanges,
+} from './lib/courseware.mjs';
 import {
   applyAssetResolutions,
   collectAssetRefs,
@@ -723,4 +739,261 @@ test('buildCommitPayload 默认不触发索引，并透传归档字段', () => {
   const archived = buildCommitPayload(uploaded, { folderId: 'f1', fileCategory: 'image' });
   assert.equal(archived.folder_id, 'f1');
   assert.equal(archived.file_category, 'image');
+});
+
+// ---- 已有课件的读—改—写 ----
+
+const detailFixture = () => ({
+  id: 991,
+  coursewareId: 'cw1',
+  version: 3,
+  revision: 12,
+  status: 'DRAFT',
+  isCurrentVersion: true,
+  isPublished: false,
+  title: '光合作用',
+  templateId: 'tpl1',
+  pages: [
+    {
+      pageId: 101,
+      pageNumber: 1,
+      title: '开场',
+      renderType: 'component',
+      pageData: JSON.stringify({
+        tag: '课程导入',
+        title: '开场',
+        components: [{ type: 'course_intro', content: { courseName: '光合作用' } }],
+        output: '<html>已生成</html>',
+      }),
+    },
+    {
+      pageId: 102,
+      pageNumber: 2,
+      title: '讲解',
+      renderType: 'html',
+      pageData: { tag: '知识讲解', title: '讲解', components: [{ type: 'text', content: '正文' }] },
+    },
+  ],
+});
+
+test('parseCoursewareRef 解析预览链接、版本段与裸 ID', () => {
+  assert.deepEqual(
+    parseCoursewareRef('https://web.dev.xruns.cn/creator/e7c6c8f9f0c44905aaa73edc403fab3c'),
+    { coursewareId: 'e7c6c8f9f0c44905aaa73edc403fab3c' },
+  );
+  assert.deepEqual(
+    parseCoursewareRef('https://web.dev.xruns.cn/creator/cw1/778899?tab=1#p2'),
+    { coursewareId: 'cw1', versionId: '778899' },
+  );
+  assert.deepEqual(parseCoursewareRef('  cw1  '), { coursewareId: 'cw1' });
+  assert.deepEqual(parseCoursewareRef('creator/cw1/778899'), { coursewareId: 'cw1', versionId: '778899' });
+  assert.throws(() => parseCoursewareRef('https://web.dev.xruns.cn/templates/tpl1'), /无法从/);
+  assert.throws(() => parseCoursewareRef(''), /缺少课件链接或课件 ID/);
+});
+
+test('parseCoursewareTarget 让 --version-id 覆盖链接里的版本段', () => {
+  const target = parseCoursewareTarget(
+    parseArgv(['courseware:pull', 'https://web.dev.xruns.cn/creator/cw1/1', '--version-id', '2']),
+  );
+  assert.deepEqual(target, { coursewareId: 'cw1', versionId: '2' });
+  assert.throws(
+    () => parseCoursewareTarget(parseArgv(['courseware:pull', 'cw1', '--version-id'])),
+    /--version-id 缺少值/,
+  );
+});
+
+test('parseCoursewareUpdateArgs 校验必填项并拒绝 --force', () => {
+  assert.throws(() => parseCoursewareUpdateArgs(parseArgv(['courseware:update', 'cw1'])), /缺少补丁 JSON 路径/);
+  assert.throws(
+    () => parseCoursewareUpdateArgs(parseArgv(['courseware:update', 'cw1', 'p.json', '--force'])),
+    /不支持 --force/,
+  );
+
+  const options = parseCoursewareUpdateArgs(
+    parseArgv(['courseware:update', 'cw1', 'p.json', '--replace', '--yes', '--regen-html']),
+  );
+  assert.equal(options.coursewareId, 'cw1');
+  assert.equal(options.file, 'p.json');
+  assert.equal(options.replace, true);
+  assert.equal(options.yes, true);
+  assert.equal(options.regenHtml, true);
+  assert.equal(options.regenMedia, false);
+});
+
+test('版本可写性只在「当前 + DRAFT + 未发布」时放行', () => {
+  const base = { versionId: '1', status: 'DRAFT', isCurrentVersion: true, isPublished: false };
+  assert.equal(resolveVersionEditability(base).editable, true);
+  assert.equal(resolveVersionEditability({ ...base, isPublished: true }).reason, 'published');
+  assert.equal(resolveVersionEditability({ ...base, status: 'PUBLISHED' }).reason, 'published');
+  assert.equal(resolveVersionEditability({ ...base, isCurrentVersion: false }).reason, 'historical');
+  assert.equal(resolveVersionEditability({ ...base, status: 'FROZEN' }).reason, 'historical');
+  assert.equal(resolveVersionEditability({}).reason, 'no-identity');
+  // 兼容期旧响应只有 versionId：按可写处理，真正的守卫是服务端 40903/40904
+  assert.deepEqual(resolveVersionEditability({ versionId: '1' }), { editable: true, reason: 'unknown' });
+});
+
+test('normalizeCoursewareVersion 把身份字段统一成字符串', () => {
+  const version = normalizeCoursewareVersion(detailFixture());
+  assert.equal(version.versionId, '991');
+  assert.equal(version.version, '3');
+  assert.equal(version.revision, '12');
+  assert.equal(version.isPublished, false);
+});
+
+test('pagesFromDetail 展开 pageData 字符串并保留已生成内容与身份字段', () => {
+  const pages = pagesFromDetail(detailFixture());
+  assert.equal(pages.length, 2);
+  assert.deepEqual(pages[0].pageId, '101');
+  assert.equal(pages[0].pageNumber, 1);
+  assert.equal(pages[0].renderType, 'component');
+  assert.equal(pages[0].output, '<html>已生成</html>');
+  assert.equal(pages[0].tag, '课程导入');
+  assert.equal(docFromDetail(detailFixture()).title, '光合作用');
+});
+
+test('默认合并只覆盖补丁出现的页与顶层字段，其余原样保留', () => {
+  const serverPages = pagesFromDetail(detailFixture());
+  const { pages, changes } = mergePatchPages(serverPages, [{ pageId: '102', title: '新讲解' }]);
+
+  assert.equal(pages.length, 2);
+  assert.equal(pages[0].title, '开场');
+  assert.equal(pages[1].title, '新讲解');
+  // 没提到的字段保留服务端值：output / components 不会被抹掉
+  assert.deepEqual(pages[1].components, [{ type: 'text', content: '正文' }]);
+  assert.equal(pages[0].output, '<html>已生成</html>');
+  assert.deepEqual(summarizeChanges(changes), { updated: 1, added: 0, removed: 0, moved: 0, unchanged: 1 });
+  assert.equal(hasEffectiveChanges(changes), true);
+});
+
+test('默认模式不允许增删页，且拒绝不存在的 pageId', () => {
+  const serverPages = pagesFromDetail(detailFixture());
+  assert.throws(
+    () => mergePatchPages(serverPages, [{ title: '新页' }]),
+    /没有匹配到服务端页面/,
+  );
+  assert.throws(
+    () => mergePatchPages(serverPages, [{ pageId: '999', title: 'x' }]),
+    /pageId=999 在服务端不存在/,
+  );
+  assert.throws(
+    () => mergePatchPages(serverPages, [{ pageId: '101', title: 'a' }, { pageNumber: 1, title: 'b' }]),
+    /命中了同一页/,
+  );
+  assert.throws(() => mergePatchPages(serverPages, []), /pages 为空/);
+});
+
+test('内容一致的补丁不算改动，避免空写入推进 revision', () => {
+  const serverPages = pagesFromDetail(detailFixture());
+  const { changes } = mergePatchPages(serverPages, [{ pageId: '101', title: '开场' }]);
+  assert.equal(hasEffectiveChanges(changes), false);
+});
+
+test('--replace 用补丁定页集合与页序：未出现的页删除、无身份的页新增', () => {
+  const serverPages = pagesFromDetail(detailFixture());
+  const { pages, changes } = mergePatchPages(
+    serverPages,
+    [{ title: '插到最前面的新页', components: [] }, { pageId: '101' }],
+    { replace: true },
+  );
+
+  assert.equal(pages.length, 2);
+  assert.equal(pages[0].pageId, undefined);
+  assert.equal(pages[0].pageNumber, 1);
+  assert.equal(pages[1].pageId, '101');
+  assert.equal(pages[1].pageNumber, 2);
+  // 命中已有页时仍是浅合并，已生成的 output 不会因为 --replace 丢掉
+  assert.equal(pages[1].output, '<html>已生成</html>');
+  assert.deepEqual(summarizeChanges(changes), { updated: 0, added: 1, removed: 1, moved: 1, unchanged: 0 });
+});
+
+test('buildSavePayload 组装 UPDATE_VERSION 全量快照并剥离身份字段', () => {
+  const modeByType = new Map([['course_intro', 'page'], ['text', 'block']]);
+  const payload = buildSavePayload({
+    coursewareId: 'cw1',
+    targetVersionId: 991,
+    expectedRevision: 12,
+    requestId: 'req-1',
+    title: '光合作用',
+    pages: [
+      ...pagesFromDetail(detailFixture()),
+      { title: '新页', components: [{ type: 'text', content: 'x' }] },
+    ],
+    modeByType,
+  });
+
+  assert.equal(payload.operation, 'UPDATE_VERSION');
+  assert.equal(payload.targetVersionId, '991');
+  assert.equal(payload.expectedRevision, '12');
+  assert.equal(payload.title, '光合作用');
+  // 已持久化页用 pageId 兼作 pageKey，新页按页序派生
+  assert.deepEqual(payload.pages.map((page) => page.pageKey), ['101', '102', 'page-3']);
+  assert.equal(payload.pages[2].pageId, undefined);
+  assert.deepEqual(payload.pages.map((page) => page.pageNumber), [1, 2, 3]);
+  // renderType 按模板 compositionMode 重新派生
+  assert.deepEqual(payload.pages.map((page) => page.renderType), ['component', 'html', 'html']);
+  // 身份字段不能混进 pageData，已生成内容要留在里面
+  assert.equal(payload.pages[0].pageData.pageId, undefined);
+  assert.equal(payload.pages[0].pageData.pageNumber, undefined);
+  assert.equal(payload.pages[0].pageData.renderType, undefined);
+  assert.equal(payload.pages[0].pageData.output, '<html>已生成</html>');
+});
+
+test('buildSavePayload 在缺少版本身份时拒绝组装', () => {
+  const pages = pagesFromDetail(detailFixture());
+  assert.throws(
+    () => buildSavePayload({ coursewareId: 'cw1', expectedRevision: '1', requestId: 'r', pages }),
+    /缺少 targetVersionId/,
+  );
+  assert.throws(
+    () => buildSavePayload({ coursewareId: 'cw1', targetVersionId: '1', requestId: 'r', pages }),
+    /缺少 expectedRevision/,
+  );
+});
+
+test('空页与无模板上下文时透传原有 renderType，不被重置成 html', () => {
+  assert.equal(derivePageRenderType([], new Map()), undefined);
+  const payload = buildSavePayload({
+    coursewareId: 'cw1',
+    targetVersionId: '1',
+    expectedRevision: '1',
+    requestId: 'r',
+    pages: [{ title: '空页', prompt: '生成一页', renderType: 'component' }],
+    modeByType: new Map(),
+  });
+  assert.equal(payload.pages[0].renderType, 'component');
+});
+
+test('rebasePatchPages 按页序把补丁 pageId 换算到 fork 出的新版本', () => {
+  const source = pagesFromDetail(detailFixture());
+  const target = [{ pageId: '201' }, { pageId: '202' }];
+  assert.deepEqual(
+    rebasePatchPages([{ pageId: '102', title: '新讲解' }, { title: '无身份页' }], source, target),
+    [{ pageId: '202', title: '新讲解' }, { title: '无身份页' }],
+  );
+  assert.throws(() => rebasePatchPages([{ pageId: '101' }], source, [{ pageId: '201' }]), /页数/);
+});
+
+test('只有改动到的页的结构错误才阻断保存', () => {
+  const report = {
+    errors: [
+      { path: 'pages[0].components[0].content', message: '与模板 dataStructure 不一致' },
+      { path: 'pages[1].components[0].content', message: '与模板 dataStructure 不一致' },
+      { path: 'title', message: '缺少课程标题 title' },
+    ],
+    warnings: [
+      { path: 'pages[0].tag', message: '建议填写页面分类标签 tag' },
+      { path: 'pages[1].tag', message: '建议填写页面分类标签 tag' },
+    ],
+  };
+  const changes = [
+    { status: 'unchanged', pageNumber: 1 },
+    { status: 'updated', pageNumber: 2 },
+  ];
+
+  const split = splitReportByChangedPages(report, changes);
+  assert.deepEqual(split.blocking.map((item) => item.path), ['pages[1].components[0].content', 'title']);
+  assert.deepEqual(split.untouched.map((item) => item.path), ['pages[0].components[0].content']);
+  // 告警同样按「这次改没改这一页」拆分，未改动页的告警不刷屏
+  assert.deepEqual(split.warnings.map((item) => item.path), ['pages[1].tag']);
+  assert.deepEqual(split.untouchedWarnings.map((item) => item.path), ['pages[0].tag']);
 });
