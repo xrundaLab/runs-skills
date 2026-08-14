@@ -42,6 +42,8 @@ import {
   uploadLocalFile,
 } from './lib/client.mjs';
 import {
+  assessForkCandidate,
+  assertSupportedCoursewarePatchFields,
   buildCompositionModeMap,
   buildSavePayload,
   createRequestId,
@@ -789,27 +791,43 @@ async function handleCoursewarePull(args) {
 
 /**
  * fork：把只读版本克隆成新的当前工作版本。
- * rollback 只回成功与否，因此必须回查详情并确认「版本号确实变大」——
- * 否则可能把仍在返回的旧 current 当成新版本，改动就写错了地方。
+ * rollback 只回成功与否，因此必须记录操作前 current，再回查确认 versionId、版本号、
+ * current 状态与源页数；否则可能把仍在返回的旧 current 当成新版本写错。
  */
-async function forkWorkingVersion({ coursewareId, sourceVersion, sourceHasPages, config }) {
+async function forkWorkingVersion({ coursewareId, sourceVersion, sourcePageCount, config }) {
   const sourceNumber = Number(sourceVersion.version);
   if (!Number.isInteger(sourceNumber) || sourceNumber <= 0) {
     throw new Error('课件详情里缺少源版本号，无法创建新版本');
   }
+
+  // rollback 只回成功与否。先记住操作前 current，避免历史源版本 V1 的回查把旧 current V2
+  // 误当成新版本（V2 同样满足 `version > sourceVersion`）。
+  const previousDetail = await getCoursewareDetail({ coursewareId }, config);
+  const previousCurrentVersion = normalizeCoursewareVersion(previousDetail);
+  if (!previousCurrentVersion.versionId || !previousCurrentVersion.version) {
+    throw new Error('操作前当前版本缺少 versionId / version，无法安全确认 fork 结果');
+  }
   await rollbackCourseware({ coursewareId, version: sourceNumber }, config);
 
+  let lastAssessment = { reasons: ['尚未回读'] };
   for (let attempt = 0; ; attempt += 1) {
     const detail = await getCoursewareDetail({ coursewareId }, config);
     const version = normalizeCoursewareVersion(detail);
-    const fetched = Number(version.version);
-    const isNewVersion = Number.isInteger(fetched) && fetched > sourceNumber;
-    const hasContent = !sourceHasPages || (Array.isArray(detail?.pages) && detail.pages.length > 0);
-    if (isNewVersion && hasContent) return { detail, version };
+    const candidatePageCount = Array.isArray(detail?.pages) ? detail.pages.length : -1;
+    lastAssessment = assessForkCandidate({
+      sourceVersion,
+      previousCurrentVersion,
+      candidateVersion: version,
+      sourcePageCount,
+      candidatePageCount,
+    });
+    if (lastAssessment.ready) return { detail, version };
 
     if (attempt >= FORK_RETRY_DELAYS_MS.length) {
       throw new Error(
-        `新版本已创建，但服务端返回的内容还不完整（V${sourceNumber} → V${version.version ?? '?'}），`
+        `新版本已创建，但尚未回读到唯一且完整的新 current（源 V${sourceNumber}，`
+        + `操作前 V${previousCurrentVersion.version}，当前回读 V${version.version ?? '?'}；`
+        + `${lastAssessment.reasons.join('；')}），`
         + '本次未写入任何改动，请稍后重新执行',
       );
     }
@@ -821,9 +839,11 @@ async function forkWorkingVersion({ coursewareId, sourceVersion, sourceHasPages,
 async function buildUpdatePlan({ detail, patchDoc, patchPages, options, args, templateId }) {
   const serverPages = pagesFromDetail(detail);
   const { pages, changes } = mergePatchPages(serverPages, patchPages, { replace: options.replace });
+  const serverTitle = typeof detail?.title === 'string' ? detail.title : '';
   const title = typeof patchDoc?.title === 'string' && patchDoc.title.trim()
     ? patchDoc.title
-    : (typeof detail?.title === 'string' ? detail.title : '');
+    : serverTitle;
+  const titleChanged = title.trim() !== serverTitle.trim();
   const doc = { title, pages };
 
   const effectiveTemplateId = templateId
@@ -840,6 +860,8 @@ async function buildUpdatePlan({ detail, patchDoc, patchPages, options, args, te
     doc,
     pages,
     changes,
+    serverTitle,
+    titleChanged,
     report,
     templateComponents,
     templateId: effectiveTemplateId,
@@ -853,6 +875,9 @@ function printUpdatePlan(plan) {
     `改动：更新 ${summary.updated}，新增 ${summary.added}，删除 ${summary.removed}，`
     + `移动 ${summary.moved}，未变 ${summary.unchanged}（提交的是 ${plan.pages.length} 页完整快照）`,
   );
+  if (plan.titleChanged) {
+    console.log(`  ~ 课件标题：${plan.serverTitle || '(无标题)'} → ${plan.doc.title}`);
+  }
   for (const item of plan.changes) {
     if (item.status === 'unchanged') continue;
     const marks = { updated: '~', added: '+', removed: '-', moved: '→' };
@@ -876,6 +901,7 @@ async function handleCoursewareUpdate(args) {
   const options = parseCoursewareUpdateArgs(args);
   const config = getRuntimeConfig(args);
   const patchDoc = await readJsonFile(resolvePath(options.file));
+  assertSupportedCoursewarePatchFields(patchDoc);
   if (!Array.isArray(patchDoc?.pages)) throw new Error('补丁 JSON 缺少 pages 数组');
   let patchPages = patchDoc.pages;
 
@@ -921,7 +947,7 @@ async function handleCoursewareUpdate(args) {
     process.exitCode = 1;
     return;
   }
-  if (!hasEffectiveChanges(plan.changes)) {
+  if (!hasEffectiveChanges(plan.changes, { titleChanged: plan.titleChanged })) {
     console.log('补丁与服务端内容完全一致，无需保存（不做空写入以免推进 revision）。');
     return;
   }
@@ -936,7 +962,7 @@ async function handleCoursewareUpdate(args) {
     const forked = await forkWorkingVersion({
       coursewareId: options.coursewareId,
       sourceVersion: version,
-      sourceHasPages: sourcePages.length > 0,
+      sourcePageCount: sourcePages.length,
       config,
     });
     detail = forked.detail;
@@ -996,7 +1022,7 @@ async function handleCoursewareUpdate(args) {
   }
   console.log(`预览链接：${buildCoursewareUrl({ siteUrl: config.webUrl, coursewareId: options.coursewareId })}`);
   if (needFork) {
-    console.log('提示：新版本是 DRAFT，线上仍在读原来那个已发布版本，需要在创作页重新发布才会生效。');
+    console.log('提示：新版本是 DRAFT，尚未发布；需要在创作页发布后才能作为已发布版本生效。');
   }
   console.log('提示：页面已生成的 HTML（pageData.output）与音频不会自动跟着改，需要时用 --regen-html / --regen-media 重跑。');
 
@@ -1130,7 +1156,8 @@ function printHelp() {
 
   courseware:update <链接|课件ID> <补丁.json>
                                      改已有课件（默认只预览）。默认按 pageId / pageNumber
-                                     只覆盖补丁里出现的页与顶层字段，其余原样保留
+                                     只覆盖补丁里出现的页字段，其余原样保留；补丁文档
+                                     顶层只支持 title / pages，其他字段直接报错
     --replace                        补丁即完整页面列表：未出现的页会被删除，可增页、可改页序
     --version-id <id>                指定精确版本；默认取当前工作版本
     --template-id <id> / --template <name>

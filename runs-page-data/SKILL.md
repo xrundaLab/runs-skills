@@ -1,6 +1,6 @@
 ---
 name: runs-page-data
-description: 当需要把本地图片 / 音频 / 视频上传到 RunS 服务，需要编排、校验、提交智课端页面 JSON（顶层 pages[] 导入结构），或需要修改某个已有课件（用户给出 /creator/<coursewareId> 链接或课件 ID）的页面数据时使用。覆盖素材上传、资产清单、占位符替换、组件结构校验、课件任务提交与已有课件的读—改—写。
+description: 当需要把本地图片 / 音频 / 视频上传到 RunS 服务，需要编排、校验、提交智课端页面 JSON（顶层 pages[] 导入结构），或需要修改某个已有课件（用户给出 creator 课件链接或课件 ID）的页面数据时使用。覆盖素材上传、资产清单、占位符替换、组件结构校验、课件任务提交与已有课件的读—改—写。
 metadata: {"requires":{"bins":["node"]},"env":["XRUNS_COURSEWARE_BASE_URL","XRUNS_COURSEWARE_WEB_URL","XRUNS_COURSEWARE_TOKEN"]}
 ---
 
@@ -49,7 +49,7 @@ metadata: {"requires":{"bins":["node"]},"env":["XRUNS_COURSEWARE_BASE_URL","XRUN
 - 提交前先跑一次 `pages:validate --template-id <id>` 或 `pages:validate --template <name>`，用模板组件白名单确认这些组件在目标模板里确实可用。
 - 提交顺序固定为 **创建模板课程 → 携带 `coursewareId` 创建 flow task**；不要把 `category` / `parsePrompt` 从客户端透传给 creator。
 - 改已有课件前**先 `courseware:pull` 看一眼**：页序、`pageId`、每页有哪些组件都以服务端为准，补丁要按 `pageId` 定位，不要按记忆或页序猜。
-- 改完之后**主动告诉用户「已生成的 HTML 和音频不会跟着变」**，并说明需要时可以加 `--regen-html` / `--regen-media` 重跑；fork 了新版本还要说明「线上仍读旧的已发布版本，需要重新发布」。
+- 改完之后**主动告诉用户「已生成的 HTML 和音频不会跟着变」**，并说明需要时可以加 `--regen-html` / `--regen-media` 重跑；fork 了新版本还要说明「新版本是尚未发布的 DRAFT，需要发布后才能作为已发布版本生效」，不要在未核实版本历史时断言线上正在读取某个旧版本。
 - 报告结果时如实说明：上传了几个、跳过几个、失败几个，校验有几个错误几个告警；改课件还要说清改了哪几页、是原位更新还是 fork 了新版本、落库后的版本与 revision。
 
 ---
@@ -71,7 +71,7 @@ metadata: {"requires":{"bins":["node"]},"env":["XRUNS_COURSEWARE_BASE_URL","XRUN
 | 查素材流水线细节 | [references/asset-pipeline.md](./references/asset-pipeline.md) |
 | 抄一份页面 JSON 模板 | [references/example-page-data.json](./references/example-page-data.json) |
 
-脚本入口：`.agents/skills/runs-page-data/scripts/pagedata.mjs`（Node 18+，无第三方依赖）。
+脚本入口：`skills/runs-page-data/scripts/pagedata.mjs`（Node 18+，无第三方依赖）。
 
 ---
 
@@ -92,10 +92,10 @@ metadata: {"requires":{"bins":["node"]},"env":["XRUNS_COURSEWARE_BASE_URL","XRUN
 ### 首次配置
 
 ```bash
-cp .agents/skills/runs-page-data/.env.example .agents/skills/runs-page-data/.env
+cp skills/runs-page-data/.env.example skills/runs-page-data/.env
 # 编辑 .env，填入 XRUNS_COURSEWARE_TOKEN
-node .agents/skills/runs-page-data/scripts/pagedata.mjs config   # 看生效值与来源（token 掩码显示）
-node .agents/skills/runs-page-data/scripts/pagedata.mjs ping     # 验证连通性
+node skills/runs-page-data/scripts/pagedata.mjs config   # 看生效值与来源（token 掩码显示）
+node skills/runs-page-data/scripts/pagedata.mjs ping     # 验证连通性
 ```
 
 ### 处理用户输入的三个值
@@ -110,7 +110,7 @@ node .agents/skills/runs-page-data/scripts/pagedata.mjs ping     # 验证连通�
 一次性换环境（例如临时打生产）用命令行参数，不落盘：
 
 ```bash
-node .agents/skills/runs-page-data/scripts/pagedata.mjs ping \
+node skills/runs-page-data/scripts/pagedata.mjs ping \
   --base-url https://api.xruns.cn/api/ --web-url https://web.xruns.cn/ --token <token>
 ```
 
@@ -131,7 +131,7 @@ node .agents/skills/runs-page-data/scripts/pagedata.mjs ping \
 用户给模板名称时，先查询确认：
 
 ```bash
-node .agents/skills/runs-page-data/scripts/pagedata.mjs templates:list \
+node skills/runs-page-data/scripts/pagedata.mjs templates:list \
   --keyword "银河互动课件"
 ```
 
@@ -165,7 +165,7 @@ node .agents/skills/runs-page-data/scripts/pagedata.mjs templates:list \
 ### 2. 解析占位符（在这一步按需上传）
 
 ```bash
-node .agents/skills/runs-page-data/scripts/pagedata.mjs pages:resolve ./page.json \
+node skills/runs-page-data/scripts/pagedata.mjs pages:resolve ./page.json \
   --manifest ./assets.manifest.json --out ./page.resolved.json
 ```
 
@@ -177,7 +177,7 @@ node .agents/skills/runs-page-data/scripts/pagedata.mjs pages:resolve ./page.jso
 ### 3. 校验
 
 ```bash
-node .agents/skills/runs-page-data/scripts/pagedata.mjs pages:validate ./page.resolved.json \
+node skills/runs-page-data/scripts/pagedata.mjs pages:validate ./page.resolved.json \
   --template "银河互动课件"
 ```
 
@@ -189,11 +189,11 @@ node .agents/skills/runs-page-data/scripts/pagedata.mjs pages:validate ./page.re
 
 ```bash
 # 先预览（不带 --yes 只做校验和摘要）
-node .agents/skills/runs-page-data/scripts/pagedata.mjs pages:submit ./page.resolved.json \
+node skills/runs-page-data/scripts/pagedata.mjs pages:submit ./page.resolved.json \
   --template "银河互动课件"
 
 # 确认后提交并追踪
-node .agents/skills/runs-page-data/scripts/pagedata.mjs pages:submit ./page.resolved.json \
+node skills/runs-page-data/scripts/pagedata.mjs pages:submit ./page.resolved.json \
   --template "银河互动课件" --yes --watch --report ./report.csv
 ```
 
@@ -222,7 +222,7 @@ node .agents/skills/runs-page-data/scripts/pagedata.mjs pages:submit ./page.reso
 ### 1. 先看现状
 
 ```bash
-node .agents/skills/runs-page-data/scripts/pagedata.mjs courseware:pull \
+node skills/runs-page-data/scripts/pagedata.mjs courseware:pull \
   https://web.dev.xruns.cn/creator/e7c6c8f9f0c44905aaa73edc403fab3c --out ./current.json
 ```
 
@@ -246,10 +246,12 @@ node .agents/skills/runs-page-data/scripts/pagedata.mjs courseware:pull \
 
 合并规则：
 
+- 补丁文档顶层只支持 `title` 和 `pages`；`description` 等不在 business `UPDATE_VERSION` 保存契约中的字段会直接报错，不会静默忽略；
 - 按 `pageId` 定位（没有就按 `pageNumber`），**不做隐式按位置匹配**；
 - 只在**顶层字段**合并：补丁里出现的键覆盖，没出现的键保留服务端值 —— 已生成的 `output`（HTML）、`tts_url`（音频）因此不会被抹掉；
 - `components` 是整个数组替换，不做逐组件深合并；
 - 默认模式只能改已有页。**新增页、删除页、调整页序要用 `--replace`**：那时补丁就是完整页面列表，未出现的页会被删除（服务端保存语义就是「缺页 = 删页」）。
+- 只改课件 `title` 或空页的 `renderType` 也属于有效改动，不能被空写保护跳过。
 
 补丁里可以照常写 `@asset:` 占位符，提交前先跑一次 `pages:resolve`（校验会拦下残留的本地引用）。
 
@@ -257,11 +259,11 @@ node .agents/skills/runs-page-data/scripts/pagedata.mjs courseware:pull \
 
 ```bash
 # 不带 --yes：只做合并、校验和差异预览，不写任何东西
-node .agents/skills/runs-page-data/scripts/pagedata.mjs courseware:update \
+node skills/runs-page-data/scripts/pagedata.mjs courseware:update \
   https://web.dev.xruns.cn/creator/e7c6c8f9f0c44905aaa73edc403fab3c ./patch.json
 
 # 确认后写入
-node .agents/skills/runs-page-data/scripts/pagedata.mjs courseware:update \
+node skills/runs-page-data/scripts/pagedata.mjs courseware:update \
   https://web.dev.xruns.cn/creator/e7c6c8f9f0c44905aaa73edc403fab3c ./patch.json --yes
 ```
 
@@ -270,7 +272,7 @@ node .agents/skills/runs-page-data/scripts/pagedata.mjs courseware:update \
 1. **活跃任务闸门** —— `GET flow/active`，有未完成任务就中止并报出 `taskId`；
 2. **读目标版本**并判定可写性（唯一谓词：`isCurrentVersion && status=DRAFT && !isPublished`）：
    - 可写 → **原位更新**当前工作版本；
-   - 只读（已发布 / 历史版本）→ **自动 fork**：`rollback` 把该版本克隆成新的 DRAFT 当前版本，回查确认版本号确实变大后，把补丁里的 `pageId` 按页序换算到新版本，再在新版本上更新；
+   - 只读（已发布 / 历史版本）→ **自动 fork**：`rollback` 前记录当时的 current，随后只接受 versionId 已变化、版本号高于操作前 current、明确成为 current 且页数与源版本一致的新 DRAFT，再把补丁里的 `pageId` 按页序换算到新版本；
 3. **按模板校验**（模板取课件详情里的 `templateId`，可用 `--template-id` / `--template` 覆盖）。存量课件常有早于当前模板契约的老页面，因此只有**本次改动到的页**的结构错误会阻断保存，未改动页的问题降级为 `!` 告警照常报出；
 4. **提交完整页面快照** `UPDATE_VERSION` + `expectedRevision` CAS。撞 `40901 STALE_REVISION` 会自动重读一次、在最新内容上重放同一份补丁并换新 `requestId` 再提交；其余冲突码（版本已发布 / 已不是当前版本）直接停下，重跑命令即可（那时会自动走 fork）。
 
@@ -281,10 +283,10 @@ node .agents/skills/runs-page-data/scripts/pagedata.mjs courseware:update \
 页面已生成的 HTML 和音频**不会**跟着内容自动更新。需要时显式重跑（服务端同步等待任务结束，页多会比较慢）：
 
 ```bash
-node .agents/skills/runs-page-data/scripts/pagedata.mjs courseware:update <链接> ./patch.json --yes --regen-html
+node skills/runs-page-data/scripts/pagedata.mjs courseware:update <链接> ./patch.json --yes --regen-html
 ```
 
-fork 出的新版本是 DRAFT，线上课程仍在读原来那个已发布版本，需要用户到创作页重新发布才会生效——这句一定要跟用户讲清楚。
+fork 出的新版本是尚未发布的 DRAFT，需要用户到创作页发布后才能作为已发布版本生效。除非已经查询并确认版本历史，否则不要断言线上当前读取的是哪个旧版本。
 
 ---
 
@@ -294,7 +296,7 @@ fork 出的新版本是 DRAFT，线上课程仍在读原来那个已发布版本
 
 ```bash
 # 只传这两个，其他文件不动
-node .agents/skills/runs-page-data/scripts/pagedata.mjs assets:upload \
+node skills/runs-page-data/scripts/pagedata.mjs assets:upload \
   ./course-assets/images/cover.png ./course-assets/audio/intro.mp3 \
   --manifest ./assets.manifest.json
 ```
@@ -328,7 +330,7 @@ node .agents/skills/runs-page-data/scripts/pagedata.mjs assets:upload \
 | 默认音色 | `zh_female_yingyujiaoxue_uranus_bigtts` |
 | 改课件的写入语义 | 只有 `UPDATE_VERSION`；请求体是**完整页面快照**，缺页 = 删页 |
 | 版本可写谓词 | `isCurrentVersion && status === "DRAFT" && isPublished !== true`，三者缺一即只读 |
-| 只读版本怎么改 | `rollback` 克隆成新的 DRAFT 当前版本（`courseware:update` 自动完成），原已发布版本不受影响 |
+| 只读版本怎么改 | `rollback` 克隆成新的 DRAFT 当前版本；回读必须同时确认新 versionId、版本号、current 状态与源页数 |
 | 保存冲突码 | `40901` revision 过期（自动重放一次）／`40902` requestId 撞内容／`40903` 已非当前版本／`40904` 已发布，后三者不重试 |
 | 改完的媒体与 HTML | 不会自动更新，要显式 `--regen-media` / `--regen-html` |
 
@@ -337,5 +339,5 @@ node .agents/skills/runs-page-data/scripts/pagedata.mjs assets:upload \
 ## 测试
 
 ```bash
-node --test .agents/skills/runs-page-data/scripts/pagedata.test.mjs
+node --test skills/runs-page-data/scripts/pagedata.test.mjs
 ```

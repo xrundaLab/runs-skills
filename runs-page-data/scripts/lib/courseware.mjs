@@ -6,8 +6,8 @@
  * 与 creator/src/clients/business-client.ts）：保存永远是 UPDATE_VERSION + 完整页面快照 + CAS。
  */
 
-/** 页面身份字段：属于保存请求的外层，不能混进 pageData。 */
-export const PAGE_IDENTITY_FIELDS = [
+/** 保存请求的页面外层字段：不能混进 pageData。 */
+export const PAGE_SAVE_OUTER_FIELDS = [
   'pageId',
   'pageKey',
   'pageNumber',
@@ -16,9 +16,25 @@ export const PAGE_IDENTITY_FIELDS = [
   'coursewareVersionId',
 ];
 
+/** 比较页面内容时忽略的身份字段；空页的 renderType 是可写字段，不能一律当身份剥离。 */
+const PAGE_COMPARISON_IDENTITY_FIELDS = PAGE_SAVE_OUTER_FIELDS.filter((field) => field !== 'renderType');
+
+const COURSEWARE_PATCH_TOP_LEVEL_FIELDS = new Set(['title', 'pages']);
+
 const ID_PATTERN = /^[A-Za-z0-9_-]+$/;
 
 const isPlainObject = (value) => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+
+/** courseware:update 只透传 business UPDATE_VERSION 契约支持的课件顶层字段。 */
+export function assertSupportedCoursewarePatchFields(doc) {
+  if (!isPlainObject(doc)) throw new Error('补丁 JSON 顶层应为对象');
+  const unsupported = Object.keys(doc).filter((field) => !COURSEWARE_PATCH_TOP_LEVEL_FIELDS.has(field));
+  if (unsupported.length === 0) return;
+  throw new Error(
+    `courseware:update 补丁顶层只支持 title、pages；不支持：${unsupported.join('、')}。`
+    + '这些字段不在 business UPDATE_VERSION 保存契约中，已停止以免静默忽略。',
+  );
+}
 
 /**
  * 从预览链接或裸 ID 解析目标课件。
@@ -136,6 +152,50 @@ export function describeVersion(version) {
   return parts.join(' ');
 }
 
+/**
+ * 判断 rollback 后回读到的 current 是否确实是本次新建版本。
+ * 只比较 `candidate > source` 不够：编辑 V1 时旧 current V2 也满足该条件。
+ */
+export function assessForkCandidate({
+  sourceVersion,
+  previousCurrentVersion,
+  candidateVersion,
+  sourcePageCount,
+  candidatePageCount,
+}) {
+  const reasons = [];
+  const sourceNumber = Number(sourceVersion?.version);
+  const previousNumber = Number(previousCurrentVersion?.version);
+  const candidateNumber = Number(candidateVersion?.version);
+  const previousId = optionalIdentity(previousCurrentVersion?.versionId);
+  const candidateId = optionalIdentity(candidateVersion?.versionId);
+
+  if (!Number.isInteger(sourceNumber) || sourceNumber <= 0) reasons.push('源版本号无效');
+  if (!Number.isInteger(previousNumber) || previousNumber <= 0) reasons.push('操作前当前版本号无效');
+  if (!previousId) reasons.push('操作前当前 versionId 缺失');
+  if (candidateVersion?.isCurrentVersion !== true) reasons.push('候选版本尚未成为当前工作版本');
+  if (!isDraftStatus(candidateVersion?.status) || isPublishedVersion(candidateVersion ?? {})) {
+    reasons.push('候选版本不是可写的 DRAFT');
+  }
+  if (!candidateId) reasons.push('候选 versionId 缺失');
+  else if (previousId && candidateId === previousId) reasons.push('候选 versionId 仍是操作前当前版本');
+
+  if (Number.isInteger(sourceNumber) && Number.isInteger(previousNumber)) {
+    const versionFloor = Math.max(sourceNumber, previousNumber);
+    if (!Number.isInteger(candidateNumber) || candidateNumber <= versionFloor) {
+      reasons.push(`候选版本号未超过操作前上界 V${versionFloor}`);
+    }
+  }
+
+  if (!Number.isInteger(sourcePageCount) || sourcePageCount < 0) reasons.push('源版本页数无效');
+  if (!Number.isInteger(candidatePageCount) || candidatePageCount < 0) reasons.push('候选版本页面尚未完整返回');
+  else if (Number.isInteger(sourcePageCount) && candidatePageCount !== sourcePageCount) {
+    reasons.push(`候选版本页数 ${candidatePageCount} 与源版本 ${sourcePageCount} 不一致`);
+  }
+
+  return { ready: reasons.length === 0, reasons };
+}
+
 function parsePageData(raw) {
   if (typeof raw === 'string') {
     if (!raw.trim()) return {};
@@ -202,11 +262,20 @@ export function derivePageRenderType(components, modeByType) {
   return hasPageComponent ? 'component' : 'html';
 }
 
-function stripIdentity(page) {
+function stripFields(page, fields) {
   const content = { ...page };
-  for (const field of PAGE_IDENTITY_FIELDS) delete content[field];
+  for (const field of fields) delete content[field];
   return content;
 }
+
+const stripPageDataOuterFields = (page) => stripFields(page, PAGE_SAVE_OUTER_FIELDS);
+const pageComparisonSnapshot = (page) => {
+  const content = stripFields(page, PAGE_COMPARISON_IDENTITY_FIELDS);
+  // 有组件时 renderType 会由模板 compositionMode 重新派生，显式值不会进入最终保存语义；
+  // 只有空页无法派生，才会透传已有 renderType，因此空页的该字段必须参与比较。
+  if (Array.isArray(page?.components) && page.components.length > 0) delete content.renderType;
+  return content;
+};
 
 function locateServerPage(patch, index, { byPageId, byPageNumber }) {
   const pageId = optionalIdentity(patch?.pageId);
@@ -282,7 +351,8 @@ export function mergePatchPages(serverPages, patchPages, { replace = false } = {
       return { ...patch, pageNumber };
     }
     const merged = { ...target, ...patch, pageNumber };
-    const contentChanged = JSON.stringify(stripIdentity(target)) !== JSON.stringify(stripIdentity(merged));
+    const contentChanged = JSON.stringify(pageComparisonSnapshot(target))
+      !== JSON.stringify(pageComparisonSnapshot(merged));
     const moved = (Number(target.pageNumber) || 0) !== pageNumber;
     changes.push({
       status: contentChanged ? 'updated' : (moved ? 'moved' : 'unchanged'),
@@ -371,9 +441,9 @@ export function summarizeChanges(changes) {
   return summary;
 }
 
-/** 有实际写入意义的改动（unchanged 不算）。 */
-export function hasEffectiveChanges(changes) {
-  return changes.some((item) => item.status !== 'unchanged');
+/** 有实际写入意义的课件或页面改动（页面全 unchanged 且标题未变才算空操作）。 */
+export function hasEffectiveChanges(changes, { titleChanged = false } = {}) {
+  return titleChanged || changes.some((item) => item.status !== 'unchanged');
 }
 
 /** 一次业务保存动作一个 requestId；内容变了必须换新值，只有网络重试才复用。 */
@@ -422,7 +492,7 @@ export function buildSavePayload({
       ...(pageId ? { pageId } : {}),
       pageNumber: index + 1,
       title: typeof page?.title === 'string' ? page.title : '',
-      pageData: stripIdentity(page ?? {}),
+      pageData: stripPageDataOuterFields(page ?? {}),
       ...(renderType ? { renderType } : {}),
     };
   });

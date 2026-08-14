@@ -15,6 +15,8 @@ import {
   summarizePageData,
 } from './pagedata.mjs';
 import {
+  assessForkCandidate,
+  assertSupportedCoursewarePatchFields,
   buildSavePayload,
   derivePageRenderType,
   docFromDetail,
@@ -888,6 +890,44 @@ test('内容一致的补丁不算改动，避免空写入推进 revision', () =>
   assert.equal(hasEffectiveChanges(changes), false);
 });
 
+test('只改课件标题也算有效改动', () => {
+  const serverPages = pagesFromDetail(detailFixture());
+  const { changes } = mergePatchPages(serverPages, [{ pageId: '101' }]);
+  assert.equal(hasEffectiveChanges(changes), false);
+  assert.equal(hasEffectiveChanges(changes, { titleChanged: true }), true);
+});
+
+test('只改空页 renderType 会被识别为页面更新', () => {
+  const serverPages = [{
+    pageId: 'empty-1',
+    pageNumber: 1,
+    title: '空页',
+    prompt: '生成一页',
+    components: [],
+    renderType: 'component',
+  }];
+  const { pages, changes } = mergePatchPages(serverPages, [{ pageId: 'empty-1', renderType: 'html' }]);
+  assert.equal(pages[0].renderType, 'html');
+  assert.equal(changes[0].status, 'updated');
+  assert.equal(hasEffectiveChanges(changes), true);
+});
+
+test('有组件页的 renderType 由模板派生，单改显式值不制造空写入', () => {
+  const serverPages = pagesFromDetail(detailFixture());
+  const { changes } = mergePatchPages(serverPages, [{ pageId: '101', renderType: 'html' }]);
+  assert.equal(changes[0].status, 'unchanged');
+  assert.equal(hasEffectiveChanges(changes), false);
+});
+
+test('courseware:update 拒绝保存契约不支持的顶层字段', () => {
+  assert.doesNotThrow(() => assertSupportedCoursewarePatchFields({ title: '新标题', pages: [{}] }));
+  assert.throws(
+    () => assertSupportedCoursewarePatchFields({ title: '新标题', description: '不会被保存', pages: [{}] }),
+    /只支持 title、pages.*description.*静默忽略/,
+  );
+  assert.throws(() => assertSupportedCoursewarePatchFields([]), /顶层应为对象/);
+});
+
 test('--replace 用补丁定页集合与页序：未出现的页删除、无身份的页新增', () => {
   const serverPages = pagesFromDetail(detailFixture());
   const { pages, changes } = mergePatchPages(
@@ -971,6 +1011,46 @@ test('rebasePatchPages 按页序把补丁 pageId 换算到 fork 出的新版本'
     [{ pageId: '202', title: '新讲解' }, { title: '无身份页' }],
   );
   assert.throws(() => rebasePatchPages([{ pageId: '101' }], source, [{ pageId: '201' }]), /页数/);
+});
+
+test('fork 回读不能把操作前旧 current 误认成本次新版本', () => {
+  const sourceVersion = { version: '1', versionId: 'v1', isCurrentVersion: false };
+  const previousCurrentVersion = { version: '2', versionId: 'v2', isCurrentVersion: true };
+  const stale = assessForkCandidate({
+    sourceVersion,
+    previousCurrentVersion,
+    candidateVersion: previousCurrentVersion,
+    sourcePageCount: 0,
+    candidatePageCount: 3,
+  });
+  assert.equal(stale.ready, false);
+  assert.match(stale.reasons.join('；'), /versionId 仍是操作前当前版本/);
+  assert.match(stale.reasons.join('；'), /未超过操作前上界 V2/);
+
+  const fresh = assessForkCandidate({
+    sourceVersion,
+    previousCurrentVersion,
+    candidateVersion: {
+      version: '3', versionId: 'v3', status: 'DRAFT', isPublished: false, isCurrentVersion: true,
+    },
+    sourcePageCount: 0,
+    candidatePageCount: 0,
+  });
+  assert.deepEqual(fresh, { ready: true, reasons: [] });
+});
+
+test('fork 回读要求新 current 的克隆页数与源版本一致', () => {
+  const result = assessForkCandidate({
+    sourceVersion: { version: '2', versionId: 'v2' },
+    previousCurrentVersion: { version: '3', versionId: 'v3' },
+    candidateVersion: {
+      version: '4', versionId: 'v4', status: 'DRAFT', isPublished: false, isCurrentVersion: true,
+    },
+    sourcePageCount: 2,
+    candidatePageCount: 1,
+  });
+  assert.equal(result.ready, false);
+  assert.match(result.reasons.join('；'), /页数 1 与源版本 2 不一致/);
 });
 
 test('只有改动到的页的结构错误才阻断保存', () => {

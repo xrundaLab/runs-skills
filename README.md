@@ -47,7 +47,7 @@
    利用 runs-page-data skill，把 https://web.dev.xruns.cn/creator/e7c6c8f9f0c44905aaa73edc403fab3c 第 3 页的正文换成……
    ```
 
-   技能会先导出课件现状，再按 `pageId` 合并改动、按模板校验、以完整页面快照原位更新当前工作版本；目标版本已发布或是历史版本时自动 fork 出新的工作版本再改。课件有未完成任务时会停下来，不与任务抢写。
+   技能会先导出课件现状，再按 `pageId` 合并改动、按模板校验、以完整页面快照原位更新当前工作版本；目标版本已发布或是历史版本时自动 fork 出新的工作版本再改，并严格确认新 versionId、版本号、current 状态与源页数。补丁文档顶层只支持 `title` / `pages`，不在保存契约内的字段会直接报错。课件有未完成任务时会停下来，不与任务抢写。
 
 详细规则、命令、组件 schema 见 [runs-page-data/SKILL.md](./runs-page-data/SKILL.md)。
 
