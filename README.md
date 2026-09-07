@@ -58,3 +58,14 @@
 - 入口：[SKILL.md](./ai-general-courseware-production/SKILL.md)
 - 包含输入清单、S1-S6 合同、schema、静态校验器、装配器、页面 OneShot 与 Demo。
 - 支持本地输入或固定 GitHub commit 输入；不会自动执行 RunS 导入、create、渲染、浏览器验收或发布。
+
+## runs-course-admin
+
+**润思课程后台数据管理**：通过管理 API 安全地查询、上传素材、新增与编辑线上课程包 / 课程数据，可用于管理后台的课程运营。
+
+- 入口：[SKILL.md](./runs-course-admin/SKILL.md)
+- 每个请求前需明确选择**开发环境**（`api.dev.xruns.cn`）或**生产环境**（`api.xruns.cn`），两套管理员 token 独立配置且不会相互回退。
+- token 通过 `configure-token` 存入 macOS Keychain，不写入源码、历史记录或请求体。
+- 写操作（create / update）必须使用 `--confirm` 显式确认后才执行；生产写入视为高影响操作。
+- 内置命令：`get-package` / `find-package` / `get-course` / `find-course` / `learning-methods` / `upload` / `create-package` / `update-package` / `create-course` / `update-course`。
+- 仅适用于 mac OS（依赖 Keychain 的 `security` 命令）。
