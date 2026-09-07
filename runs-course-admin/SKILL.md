@@ -12,9 +12,17 @@ Use the bundled script for all API calls. It keeps hosts and request headers con
 Do not add tokens to `SKILL.md`, shell history, source code, a request payload, or chat output. Configure **each environment separately**; development and production credentials never fall back to one another:
 
 ```bash
-export RUNS_ADMIN_TOKEN='Bearer …' # 也可直接填写原始 token
+# 通过静默交互输入 token：不回显、不进入 shell history，命令文本中也永不出现 token
+# （禁止用 export 直接携带真实 token 录入，例如 export RUNS_ADMIN_TOKEN 等于号后接真实 token）
+printf 'Paste the development admin token (input is hidden): '
+read -rs RUNS_ADMIN_TOKEN
+echo
+export RUNS_ADMIN_TOKEN
 python3 scripts/runs_course_admin.py --env development configure-token
-# 在拿到生产管理员 token 后，再单独配置：
+# 在拿到生产管理员 token 后，再单独静默配置生产环境：
+printf 'Paste the production admin token (input is hidden): '
+read -rs RUNS_ADMIN_TOKEN
+echo
 python3 scripts/runs_course_admin.py --env production configure-token
 unset RUNS_ADMIN_TOKEN
 ```
