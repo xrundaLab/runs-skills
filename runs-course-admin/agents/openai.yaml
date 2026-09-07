@@ -1,0 +1,4 @@
+interface:
+  display_name: "润思课程后台数据管理"
+  short_description: "安全查询、上传、添加和编辑课程及课包数据"
+  default_prompt: "使用 $runs-course-admin 管理润思课程或课包数据，并先选择开发或生产环境。"
